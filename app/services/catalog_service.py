@@ -32,10 +32,7 @@ class CatalogService:
             from app.lib.druvo_api.client import DruvoApiClient
 
             client = DruvoApiClient.from_settings(self._settings)
-            products = await client.list_products()
-            # Category derivation from live API will be implemented with DRUVO AI.
-            _ = products
-            raise NotImplementedError("Live category sync is not yet available")
+            return await client.list_categories()
         return mock_catalog.all_categories()
 
     async def list_products(self, filters: CatalogFilters | None = None) -> list[Product]:

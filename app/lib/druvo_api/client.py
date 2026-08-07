@@ -1,4 +1,4 @@
-"""Future DRUVO AI Enterprise API client — not wired to live data yet."""
+"""DRUVO AI Enterprise API client for master inventory sync."""
 
 from __future__ import annotations
 
@@ -7,7 +7,8 @@ from dataclasses import dataclass
 import httpx
 
 from app.config import Settings
-from app.types.commerce import Order, Product
+from app.lib.druvo_api.mapper import map_category, map_product
+from app.types.commerce import Category, Order, Product
 
 
 @dataclass
@@ -33,14 +34,13 @@ class DruvoApiClient:
         return headers
 
     async def list_products(self) -> list[Product]:
-        """Fetch master catalog from DRUVO AI (future endpoint)."""
         if not self.base_url:
             raise RuntimeError("DRUVO_API_BASE_URL is not configured")
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.get(f"{self.base_url}/api/v1/products", headers=self._headers())
             response.raise_for_status()
-            # Mapping will be implemented when DRUVO AI exposes a stable REST API.
-            raise NotImplementedError("DRUVO AI catalog API mapping is not yet available")
+            payload = response.json()
+            return [map_product(item) for item in payload.get("products", [])]
 
     async def get_product(self, slug: str) -> Product | None:
         if not self.base_url:
@@ -52,7 +52,28 @@ class DruvoApiClient:
             if response.status_code == 404:
                 return None
             response.raise_for_status()
-            raise NotImplementedError("DRUVO AI product API mapping is not yet available")
+            return map_product(response.json())
+
+    async def list_categories(self) -> list[Category]:
+        if not self.base_url:
+            raise RuntimeError("DRUVO_API_BASE_URL is not configured")
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(f"{self.base_url}/api/v1/categories", headers=self._headers())
+            response.raise_for_status()
+            payload = response.json()
+            return [map_category(item) for item in payload.get("categories", [])]
+
+    async def submit_order(self, payload: dict) -> dict:
+        if not self.base_url:
+            raise RuntimeError("DRUVO_API_BASE_URL is not configured")
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f"{self.base_url}/api/v1/orders",
+                headers=self._headers(),
+                json=payload,
+            )
+            response.raise_for_status()
+            return response.json()
 
     async def list_orders_for_customer(self, customer_id: str) -> list[Order]:
         if not self.base_url:
@@ -63,4 +84,4 @@ class DruvoApiClient:
                 headers=self._headers(),
             )
             response.raise_for_status()
-            raise NotImplementedError("DRUVO AI orders API mapping is not yet available")
+            raise NotImplementedError("DRUVO AI customer orders API is not yet available")
