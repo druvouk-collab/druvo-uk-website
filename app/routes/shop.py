@@ -39,8 +39,9 @@ def _filter_params(
 
 
 async def _shop_context(request: Request, filters: CatalogFilters, page_title: str, heading: str):
-    products = await catalog.list_products(filters)
-    categories = await catalog.list_categories()
+    snapshot = await catalog.load_snapshot(filters)
+    products = snapshot.products
+    categories = snapshot.categories
     return {
         "request": request,
         "page_title": page_title,
@@ -50,13 +51,16 @@ async def _shop_context(request: Request, filters: CatalogFilters, page_title: s
         "filters": filters,
         "sizes": catalog.available_sizes(products),
         "colours": catalog.available_colours(products),
+        "catalog_degraded": snapshot.degraded,
+        "catalog_notice": snapshot.notice,
     }
 
 
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    products = await catalog.list_products()
-    categories = await catalog.list_categories()
+    snapshot = await catalog.load_snapshot()
+    products = snapshot.products
+    categories = snapshot.categories
     new_arrivals = [p for p in products if p.is_new_arrival][:4]
     sale_items = [p for p in products if p.is_on_sale][:4]
     return templates.TemplateResponse(
@@ -68,6 +72,8 @@ async def home(request: Request):
             "new_arrivals": new_arrivals,
             "sale_items": sale_items,
             "featured": products[:6],
+            "catalog_degraded": snapshot.degraded,
+            "catalog_notice": snapshot.notice,
         },
     )
 

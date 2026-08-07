@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from app.types.commerce import Category, Order, OrderLine, Product, ProductVariant
 
+_PLACEHOLDER_PRODUCT = "/static/images/placeholder-product.svg"
+_PLACEHOLDER_CATEGORY = "/static/images/placeholder-category.svg"
+
 
 def map_product(payload: dict) -> Product:
     variants = [
@@ -16,6 +19,9 @@ def map_product(payload: dict) -> Product:
         )
         for v in payload.get("variants", [])
     ]
+    images = [img for img in (payload.get("images") or []) if img]
+    if not images:
+        images = [_PLACEHOLDER_PRODUCT]
     return Product(
         id=str(payload["id"]),
         slug=payload["slug"],
@@ -25,7 +31,7 @@ def map_product(payload: dict) -> Product:
         category_name=payload.get("category_name", "Uncategorised"),
         brand=payload.get("brand", ""),
         condition=payload.get("condition", "Pre-loved"),
-        images=list(payload.get("images") or [""]),
+        images=images,
         variants=variants,
         tags=list(payload.get("tags") or []),
         is_new_arrival=bool(payload.get("is_new_arrival")),
@@ -35,11 +41,12 @@ def map_product(payload: dict) -> Product:
 
 
 def map_category(payload: dict) -> Category:
+    image = payload.get("image", "") or _PLACEHOLDER_CATEGORY
     return Category(
         slug=payload["slug"],
         name=payload["name"],
         description=payload.get("description", ""),
-        image=payload.get("image", ""),
+        image=image,
     )
 
 

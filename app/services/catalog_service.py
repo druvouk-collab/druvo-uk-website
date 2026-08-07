@@ -1,15 +1,24 @@
-"""Catalog service — switches between mock data and future DRUVO AI API."""
+"""Catalog service — switches between mock data and DRUVO AI master inventory API."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-from dataclasses import replace
+import logging
+from dataclasses import dataclass, replace
 
 from app.config import Settings, get_settings
 from app.data import mock_catalog
+from app.lib.druvo_api.client import DruvoApiClient
+from app.lib.druvo_api.errors import CatalogApiError
 from app.lib.druvo_api.image_proxy import to_website_proxy_url
+from app.services.catalog_snapshot import CatalogSnapshot
 from app.types.commerce import Category, Product
+
+logger = logging.getLogger(__name__)
+
+_DEGRADED_NOTICE = (
+    "Our live catalog is temporarily unavailable. Please try again shortly — "
+    "your basket is saved in this browser."
+)
 
 
 @dataclass
@@ -28,40 +37,62 @@ class CatalogFilters:
 
 class CatalogService:
     def __init__(self, settings: Settings | None = None) -> None:
-        self._settings = settings or get_settings()
+        self._settings_override = settings
+
+    @property
+    def _settings(self) -> Settings:
+        return self._settings_override or get_settings()
+
+    @property
+    def uses_live_api(self) -> bool:
+        return self._settings.catalog_source == "druvo_api"
+
+    async def load_snapshot(self, filters: CatalogFilters | None = None) -> CatalogSnapshot:
+        filters = filters or CatalogFilters()
+        if not self.uses_live_api:
+            products = self._apply_filters(mock_catalog.all_products(), filters)
+            return CatalogSnapshot(
+                products=products,
+                categories=mock_catalog.all_categories(),
+            )
+
+        client = DruvoApiClient.from_settings(self._settings)
+        try:
+            products = self._proxy_images(await client.list_products())
+            categories = await client.list_categories()
+            return CatalogSnapshot(
+                products=self._apply_filters(products, filters),
+                categories=categories,
+            )
+        except CatalogApiError as exc:
+            logger.warning("DRUVO catalog unavailable (%s): %s", exc.cause, exc)
+            return CatalogSnapshot(degraded=True, notice=_DEGRADED_NOTICE)
+        except Exception as exc:
+            logger.exception("Unexpected catalog failure")
+            return CatalogSnapshot(degraded=True, notice=_DEGRADED_NOTICE)
 
     async def list_categories(self) -> list[Category]:
-        if self._settings.catalog_source == "druvo_api":
-            from app.lib.druvo_api.client import DruvoApiClient
-
-            client = DruvoApiClient.from_settings(self._settings)
-            return await client.list_categories()
-        return mock_catalog.all_categories()
+        snapshot = await self.load_snapshot()
+        return snapshot.categories
 
     async def list_products(self, filters: CatalogFilters | None = None) -> list[Product]:
-        filters = filters or CatalogFilters()
-        if self._settings.catalog_source == "druvo_api":
-            from app.lib.druvo_api.client import DruvoApiClient
-
-            client = DruvoApiClient.from_settings(self._settings)
-            products = await client.list_products()
-            return self._apply_filters(self._proxy_images(products), filters)
-        return self._apply_filters(mock_catalog.all_products(), filters)
+        snapshot = await self.load_snapshot(filters)
+        return snapshot.products
 
     async def get_product(self, slug: str) -> Product | None:
-        if self._settings.catalog_source == "druvo_api":
-            from app.lib.druvo_api.client import DruvoApiClient
+        if not self.uses_live_api:
+            return mock_catalog.get_product(slug)
 
-            client = DruvoApiClient.from_settings(self._settings)
+        client = DruvoApiClient.from_settings(self._settings)
+        try:
             product = await client.get_product(slug)
             return self._proxy_product(product) if product else None
-        return mock_catalog.get_product(slug)
+        except CatalogApiError:
+            return None
 
     async def get_category(self, slug: str) -> Category | None:
-        if self._settings.catalog_source == "druvo_api":
-            categories = await self.list_categories()
-            return next((c for c in categories if c.slug == slug), None)
-        return mock_catalog.get_category(slug)
+        categories = await self.list_categories()
+        return next((c for c in categories if c.slug == slug), None)
 
     def _apply_filters(self, products: list[Product], filters: CatalogFilters) -> list[Product]:
         result = products
@@ -110,7 +141,6 @@ class CatalogService:
             return sorted(products, key=lambda p: p.min_price, reverse=True)
         if sort == "name":
             return sorted(products, key=lambda p: p.name.lower())
-        # featured: new arrivals first, then name
         return sorted(products, key=lambda p: (not p.is_new_arrival, p.name.lower()))
 
     def available_sizes(self, products: list[Product]) -> list[str]:
@@ -122,15 +152,17 @@ class CatalogService:
         return sorted(colours)
 
     def _proxy_images(self, products: list[Product]) -> list[Product]:
-        if self._settings.catalog_source != "druvo_api":
+        if not self.uses_live_api:
             return products
-        return [self._proxy_product(product) for product in products]
+        return [self._proxy_product(product) for product in products if product]
 
     @staticmethod
     def _proxy_product(product: Product | None) -> Product | None:
         if product is None:
             return None
         images = [to_website_proxy_url(image) for image in product.images if image]
+        if not images:
+            images = ["/static/images/placeholder-product.svg"]
         if images == product.images:
             return product
-        return replace(product, images=images or product.images)
+        return replace(product, images=images)

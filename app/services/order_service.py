@@ -27,11 +27,20 @@ class WebsiteOrderService:
     """Forward validated checkout payloads to DRUVO AI when API mode is enabled."""
 
     def __init__(self, client: DruvoApiClient | None = None) -> None:
-        settings = get_settings()
-        self._settings = settings
-        self._client = client or (
-            DruvoApiClient.from_settings(settings) if settings.catalog_source == "druvo_api" else None
-        )
+        self._client_override = client
+
+    @property
+    def _settings(self):
+        return get_settings()
+
+    @property
+    def _client(self) -> DruvoApiClient | None:
+        if self._client_override is not None:
+            return self._client_override
+        settings = self._settings
+        if settings.catalog_source != "druvo_api":
+            return None
+        return DruvoApiClient.from_settings(settings)
 
     @property
     def orders_enabled(self) -> bool:

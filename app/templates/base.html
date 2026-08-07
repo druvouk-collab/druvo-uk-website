@@ -14,6 +14,9 @@
 <body>
   <a class="sr-only" href="#main-content">Skip to content</a>
   {% include "components/header.html" %}
+  {% if catalog_degraded and catalog_notice %}
+  <div class="container notice catalog-notice" role="status">{{ catalog_notice }}</div>
+  {% endif %}
   <main id="main-content">{% block content %}{% endblock %}</main>
   {% include "components/footer.html" %}
   <script type="module" src="/static/js/cart.js"></script>
