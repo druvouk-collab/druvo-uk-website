@@ -21,7 +21,7 @@ services:
       - key: CATALOG_SOURCE
         value: mock
       - key: SITE_URL
-        sync: false
+        value: "https://druvo-uk-website.onrender.com"
       - key: SESSION_SECRET
         generateValue: true
       - key: DRUVO_API_BASE_URL

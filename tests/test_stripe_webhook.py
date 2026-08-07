@@ -165,6 +165,12 @@ async def test_expired_session_marks_checkout_expired(checkout_db, stripe_env):
 
 
 @pytest.mark.asyncio
+async def test_webhook_route_exists_not_404(client, stripe_env):
+    response = await client.post("/webhooks/stripe", content=b"{}", headers={"stripe-signature": "bad"})
+    assert response.status_code != 404
+
+
+@pytest.mark.asyncio
 async def test_invalid_webhook_signature_rejected(client, stripe_env):
     import stripe
 
@@ -173,12 +179,97 @@ async def test_invalid_webhook_signature_rejected(client, stripe_env):
         side_effect=stripe.error.SignatureVerificationError("bad sig", "sig"),
     ):
         response = await client.post(
-            "/api/webhooks/stripe",
+            "/webhooks/stripe",
             content=b"{}",
             headers={"stripe-signature": "bad"},
         )
     assert response.status_code == 400
     assert "signature" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_valid_checkout_session_completed_accepted(client, checkout_db, stripe_env):
+    external_order_id = "web-stripe-http"
+    save_pending(external_order_id, "buyer@druvo.uk", "Stripe Tester", _pending_lines(), stripe_session_id="cs_http")
+
+    event = {"type": "checkout.session.completed", "data": {"object": _completed_session(external_order_id, "cs_http")}}
+    with patch("app.services.stripe_service.stripe.Webhook.construct_event", return_value=event), patch(
+        "app.services.stripe_service.WebsiteOrderService.submit_after_payment",
+        new=AsyncMock(return_value={"order_id": 77, "external_order_id": external_order_id, "duplicate": False}),
+    ):
+        response = await client.post(
+            "/webhooks/stripe",
+            content=b'{"id":"evt_test"}',
+            headers={"stripe-signature": "sig_test"},
+        )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["handled"] is True
+    assert payload["duplicate"] is False
+
+
+@pytest.mark.asyncio
+async def test_duplicate_webhook_http_does_not_resubmit(client, checkout_db, stripe_env):
+    external_order_id = "web-stripe-http-dup"
+    save_pending(external_order_id, "buyer@druvo.uk", "Stripe Tester", _pending_lines(), stripe_session_id="cs_http_dup")
+    mark_status(external_order_id, "paid")
+
+    event = {"type": "checkout.session.completed", "data": {"object": _completed_session(external_order_id, "cs_http_dup")}}
+    submit_mock = AsyncMock()
+    with patch("app.services.stripe_service.stripe.Webhook.construct_event", return_value=event), patch(
+        "app.services.stripe_service.WebsiteOrderService.submit_after_payment",
+        new=submit_mock,
+    ), patch(
+        "app.services.stripe_service.WebsiteOrderService.get_by_external_id",
+        new=AsyncMock(return_value={"order_id": 88, "external_order_id": external_order_id}),
+    ):
+        response = await client.post(
+            "/webhooks/stripe",
+            content=b'{"id":"evt_test_dup"}',
+            headers={"stripe-signature": "sig_test"},
+        )
+    assert response.status_code == 200
+    assert response.json()["duplicate"] is True
+    submit_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_old_api_webhook_path_returns_404(client, stripe_env):
+    response = await client.post("/api/webhooks/stripe", content=b"{}", headers={"stripe-signature": "bad"})
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_production_checkout_urls_use_render_host(checkout_db, stripe_env, monkeypatch):
+    monkeypatch.setenv("SITE_URL", "http://127.0.0.1:8080")
+    monkeypatch.setenv("RENDER_EXTERNAL_URL", "https://druvo-uk-website.onrender.com")
+    get_settings.cache_clear()
+
+    mock_orders = MagicMock(spec=WebsiteOrderService)
+    mock_orders.validate_stock = AsyncMock(return_value={"ok": True, "lines": []})
+    service = StripeCheckoutService(order_service=mock_orders)
+
+    fake_session = MagicMock()
+    fake_session.id = "cs_prod"
+    fake_session.url = "https://checkout.stripe.com/c/pay/cs_prod"
+    captured: dict = {}
+
+    def _capture_create(**kwargs):
+        captured.update(kwargs)
+        return fake_session
+
+    with patch("app.services.stripe_service.stripe.checkout.Session.create", side_effect=_capture_create):
+        await service.create_checkout_session(
+            customer_email="buyer@druvo.uk",
+            customer_name="Stripe Tester",
+            lines=[CheckoutLine(sku="DRUVO-2-NAVY-M", quantity=1, unit_price_gbp=40.0, variant_id=1)],
+        )
+
+    assert captured["success_url"].startswith("https://druvo-uk-website.onrender.com/checkout/success")
+    assert captured["cancel_url"].startswith("https://druvo-uk-website.onrender.com/checkout/cancel")
+    assert "127.0.0.1" not in captured["success_url"]
+    assert "127.0.0.1" not in captured["cancel_url"]
+    get_settings.cache_clear()
 
 
 @pytest.mark.asyncio

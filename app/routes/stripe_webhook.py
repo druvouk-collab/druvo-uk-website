@@ -55,7 +55,7 @@ async def create_payment_session(payload: PaymentSessionPayload) -> dict:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-@router.post("/api/webhooks/stripe")
+@router.post("/webhooks/stripe")
 async def stripe_webhook(request: Request) -> dict:
     if not stripe_checkout._settings.stripe_webhook_secret:
         raise HTTPException(status_code=503, detail="Stripe webhook secret is not configured.")

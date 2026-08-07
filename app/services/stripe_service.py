@@ -88,8 +88,8 @@ class StripeCheckoutService:
                 }
                 for line in lines
             ],
-            success_url=f"{self._settings.site_url.rstrip('/')}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{self._settings.site_url.rstrip('/')}/checkout/cancel?external_order_id={order_ref}",
+            success_url=f"{self._settings.public_site_url}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{self._settings.public_site_url}/checkout/cancel?external_order_id={order_ref}",
         )
         attach_session(order_ref, session.id)
         return {

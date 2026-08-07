@@ -21,6 +21,10 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR.parent / "static"
 
+
+def _json_error_path(path: str) -> bool:
+    return path.startswith("/api/") or path.startswith("/webhooks/")
+
 app = FastAPI(
     title="DRUVO UK",
     description="Public e-commerce storefront for DRUVO UK resale",
@@ -81,7 +85,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
             {"page_title": "Page not found"},
             status_code=404,
         )
-    if request.url.path.startswith("/api/"):
+    if _json_error_path(request.url.path):
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
     return templates.TemplateResponse(
         request,
@@ -94,7 +98,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> HTMLResponse | JSONResponse:
     logger.exception("Unhandled error on %s", request.url.path)
-    if request.url.path.startswith("/api/"):
+    if _json_error_path(request.url.path):
         return JSONResponse({"detail": "Service temporarily unavailable."}, status_code=503)
     return templates.TemplateResponse(
         request,

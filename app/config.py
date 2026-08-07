@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.lib.druvo_api.key_sanitize import sanitize_api_base_url, sanitize_api_key
+
+PRODUCTION_SITE_URL = "https://druvo-uk-website.onrender.com"
 
 
 class Settings(BaseSettings):
@@ -36,6 +39,30 @@ class Settings(BaseSettings):
             and bool(self.druvo_api_base_url)
             and bool(self.druvo_api_key)
             and self.stripe_enabled
+        )
+
+    @property
+    def public_site_url(self) -> str:
+        """Public HTTPS base URL for Stripe redirects (never localhost on Render)."""
+        configured = self.site_url.strip().rstrip("/")
+        if configured and not self._is_local_url(configured):
+            return configured
+        for candidate in (
+            os.getenv("RENDER_EXTERNAL_URL", "").strip(),
+            PRODUCTION_SITE_URL,
+        ):
+            if candidate:
+                return candidate.rstrip("/")
+        return configured or "http://127.0.0.1:8080"
+
+    @staticmethod
+    def _is_local_url(url: str) -> bool:
+        lowered = url.lower()
+        return (
+            lowered.startswith("http://127.0.0.1")
+            or lowered.startswith("http://localhost")
+            or lowered.startswith("https://127.0.0.1")
+            or lowered.startswith("https://localhost")
         )
 
     @field_validator("druvo_api_key", mode="before")
