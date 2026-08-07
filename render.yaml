@@ -19,7 +19,7 @@ services:
       - key: CONTACT_EMAIL
         value: druvo.uk@gmail.com
       - key: CATALOG_SOURCE
-        value: mock
+        value: druvo_api
       - key: SITE_URL
         value: "https://druvo-uk-website.onrender.com"
       - key: SESSION_SECRET
@@ -53,4 +53,4 @@ services:
       - key: ADMIN_CHECKLIST_TOKEN
         sync: false
       - key: PRODUCTION_MODE
-        value: "false"
+        value: "true"

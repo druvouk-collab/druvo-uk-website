@@ -30,6 +30,16 @@ async def delivery(request: Request):
     return templates.TemplateResponse(request, "pages/delivery.html", {"page_title": "Delivery Information"})
 
 
+@router.get("/shipping-returns", response_class=HTMLResponse)
+async def shipping_returns(request: Request):
+    """Alias for delivery + returns content (launch checklist path)."""
+    return templates.TemplateResponse(
+        request,
+        "pages/delivery.html",
+        {"page_title": "Shipping & Returns"},
+    )
+
+
 @router.get("/returns", response_class=HTMLResponse)
 async def returns_policy(request: Request):
     return templates.TemplateResponse(request, "pages/returns.html", {"page_title": "Returns Policy"})
