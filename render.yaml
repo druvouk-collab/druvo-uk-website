@@ -36,3 +36,5 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: CHECKOUT_DB_PATH
+        value: "/tmp/druvo_checkout.db"

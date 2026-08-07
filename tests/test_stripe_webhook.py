@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.config import get_settings
 from app.main import app
+from app.lib.druvo_api.errors import CatalogApiError
 from app.services.order_service import CheckoutLine, WebsiteOrderService
 from app.services.stripe_service import StripeCheckoutService
 from app.storage.checkout_store import get_pending, mark_status, save_pending
@@ -270,6 +271,79 @@ async def test_production_checkout_urls_use_render_host(checkout_db, stripe_env,
     assert "127.0.0.1" not in captured["success_url"]
     assert "127.0.0.1" not in captured["cancel_url"]
     get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_webhook_fulfills_from_stripe_metadata_when_pending_missing(stripe_env):
+    external_order_id = "web-meta-fallback"
+    lines = _pending_lines()
+    event = {
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                **_completed_session(external_order_id, "cs_meta"),
+                "metadata": {
+                    "external_order_id": external_order_id,
+                    "customer_email": "buyer@druvo.uk",
+                    "customer_name": "Stripe Tester",
+                    "lines_json": json.dumps(lines, separators=(",", ":")),
+                },
+            }
+        },
+    }
+    mock_orders = MagicMock(spec=WebsiteOrderService)
+    mock_orders.submit_after_payment = AsyncMock(
+        return_value={"order_id": 55, "external_order_id": external_order_id, "duplicate": False}
+    )
+    service = StripeCheckoutService(order_service=mock_orders)
+    with patch("app.services.stripe_service.stripe.Webhook.construct_event", return_value=event):
+        result = await service.handle_webhook(b"{}", "sig")
+    assert result["handled"] is True
+    assert mock_orders.submit_after_payment.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_druvo_rejection_returns_clear_503_not_generic(client, checkout_db, stripe_env):
+    external_order_id = "web-druvo-fail"
+    save_pending(external_order_id, "buyer@druvo.uk", "Stripe Tester", _pending_lines())
+    event = {"type": "checkout.session.completed", "data": {"object": _completed_session(external_order_id)}}
+    with patch("app.services.stripe_service.stripe.Webhook.construct_event", return_value=event), patch(
+        "app.routes.stripe_webhook.stripe_checkout._orders.submit_after_payment",
+        new=AsyncMock(side_effect=CatalogApiError("reject", cause="http_500")),
+    ):
+        response = await client.post(
+            "/webhooks/stripe",
+            content=b'{"id":"evt_fail"}',
+            headers={"stripe-signature": "sig_test"},
+        )
+    assert response.status_code == 503
+    assert response.json()["detail"] == "DRUVO master order system could not accept the paid order."
+    assert "Service temporarily unavailable" not in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_create_payment_session_stores_metadata_backup(checkout_db, stripe_env):
+    mock_orders = MagicMock(spec=WebsiteOrderService)
+    mock_orders.validate_stock = AsyncMock(return_value={"ok": True, "lines": []})
+    service = StripeCheckoutService(order_service=mock_orders)
+    fake_session = MagicMock(id="cs_meta2", url="https://checkout.stripe.com/c/pay/cs_meta2")
+    captured: dict = {}
+
+    def _capture_create(**kwargs):
+        captured.update(kwargs)
+        return fake_session
+
+    with patch("app.services.stripe_service.stripe.checkout.Session.create", side_effect=_capture_create):
+        await service.create_checkout_session(
+            customer_email="buyer@druvo.uk",
+            customer_name="Stripe Tester",
+            lines=[CheckoutLine(sku="DRUVO-2-NAVY-M", quantity=1, unit_price_gbp=40.0, variant_id=1)],
+        )
+
+    metadata = captured["metadata"]
+    assert metadata["customer_email"] == "buyer@druvo.uk"
+    assert "lines_json" in metadata
+    assert "DRUVO-2-NAVY-M" in metadata["lines_json"]
 
 
 @pytest.mark.asyncio

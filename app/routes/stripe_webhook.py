@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import logging
+
+import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.services.order_service import CheckoutLine, CheckoutRequest, WebsiteOrderService
+from app.lib.druvo_api.errors import CatalogApiError
+from app.services.order_service import CheckoutLine, WebsiteOrderService
 from app.services.stripe_service import StripeCheckoutService
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["stripe"])
 stripe_checkout = StripeCheckoutService()
 orders = WebsiteOrderService()
@@ -67,4 +72,16 @@ async def stripe_webhook(request: Request) -> dict:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except CatalogApiError as exc:
+        logger.warning("Stripe webhook catalog error: %s", exc.cause or type(exc).__name__)
+        raise HTTPException(
+            status_code=502,
+            detail="DRUVO master order system is unavailable.",
+        ) from exc
+    except httpx.HTTPError as exc:
+        logger.warning("Stripe webhook upstream HTTP error: %s", type(exc).__name__)
+        raise HTTPException(
+            status_code=502,
+            detail="DRUVO master order system is unavailable.",
+        ) from exc
     return result

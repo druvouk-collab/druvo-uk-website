@@ -3,11 +3,25 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parents[2] / "data" / "checkout.db"
+LOCAL_DB_PATH = Path(__file__).resolve().parents[2] / "data" / "checkout.db"
+RENDER_DB_PATH = Path("/tmp/druvo_checkout.db")
+
+
+def _default_db_path() -> Path:
+    configured = os.getenv("CHECKOUT_DB_PATH", "").strip()
+    if configured:
+        return Path(configured)
+    if os.getenv("RENDER"):
+        return RENDER_DB_PATH
+    return LOCAL_DB_PATH
+
+
+DEFAULT_DB_PATH = _default_db_path()
 
 
 @dataclass(frozen=True)

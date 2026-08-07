@@ -84,7 +84,11 @@ class DruvoApiClient:
 
     async def submit_order(self, payload: dict) -> dict:
         response = await self._request("POST", "/api/v1/orders", json=payload)
-        response.raise_for_status()
+        if response.status_code >= 400:
+            raise CatalogApiError(
+                "DRUVO API rejected order submission.",
+                cause=f"http_{response.status_code}",
+            )
         return response.json()
 
     async def check_stock(self, lines: list[dict]) -> dict:
