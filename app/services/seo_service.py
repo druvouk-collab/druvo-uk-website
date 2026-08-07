@@ -16,6 +16,7 @@ NOINDEX_PATH_PREFIXES = (
     "/cart",
     "/checkout",
     "/admin",
+    "/search",
     "/api/",
     "/webhooks/",
     "/health",
@@ -71,6 +72,7 @@ def robots_txt(settings: Settings | None = None) -> str:
         "Disallow: /cart",
         "Disallow: /checkout",
         "Disallow: /admin/",
+        "Disallow: /search",
         "Disallow: /api/",
         "Disallow: /webhooks/",
         "Disallow: /health",
@@ -128,6 +130,13 @@ def sitemap_xml(urls: list[dict[str, str]]) -> str:
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + tostring(urlset, encoding="unicode")
 
 
+def meta_description(text: str, max_len: int = 155) -> str:
+    cleaned = " ".join((text or "").split())
+    if len(cleaned) <= max_len:
+        return cleaned
+    return cleaned[: max_len - 1].rstrip() + "…"
+
+
 def organization_json_ld(settings: Settings | None = None) -> str:
     cfg = settings or get_settings()
     base = canonical_site_url(cfg)
@@ -155,7 +164,10 @@ def website_json_ld(settings: Settings | None = None) -> str:
         "url": base,
         "potentialAction": {
             "@type": "SearchAction",
-            "target": f"{base}/search?q={{search_term_string}}",
+            "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": f"{base}/search?q={{search_term_string}}",
+            },
             "query-input": "required name=search_term_string",
         },
     }
@@ -183,13 +195,26 @@ def product_json_ld(product: Product, settings: Settings | None = None) -> str:
             }
         )
 
-    payload = {
+    product_url = f"{base}/product/{product.slug}"
+    payload: dict = {
         "@context": "https://schema.org",
         "@type": "Product",
         "name": product.name,
-        "description": product.description[:500] if product.description else product.name,
+        "description": meta_description(product.description or product.name, 500),
         "image": image,
+        "url": product_url,
         "brand": {"@type": "Brand", "name": product.brand or cfg.site_name},
-        "offers": offers if len(offers) > 1 else (offers[0] if offers else {}),
     }
+    if len(offers) > 1:
+        prices = [variant.price_gbp for variant in product.variants]
+        payload["offers"] = {
+            "@type": "AggregateOffer",
+            "priceCurrency": "GBP",
+            "lowPrice": f"{min(prices):.2f}",
+            "highPrice": f"{max(prices):.2f}",
+            "offerCount": len(offers),
+            "offers": offers,
+        }
+    elif len(offers) == 1:
+        payload["offers"] = offers[0]
     return json.dumps(payload, ensure_ascii=False)

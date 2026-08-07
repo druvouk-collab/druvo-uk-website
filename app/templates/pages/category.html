@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "components/macros.html" import product_card, filters_form %}
+{% block meta_description %}Shop {{ category.name }} at DRUVO UK{% if category.description %} — {{ category.description[:120] }}{% endif %}.{% endblock %}
 {% block content %}
 <div class="container page-header">
   <h1>{{ category.name }}</h1>
