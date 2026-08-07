@@ -50,6 +50,7 @@ async def druvo_health() -> JSONResponse:
         "api_base_url_set": bool(settings.druvo_api_base_url),
         "api_key_set": bool(settings.druvo_api_key),
         "api_key_length": len(settings.druvo_api_key),
+        "api_key_length_ok": len(settings.druvo_api_key) == 43,
         "git_commit": os.getenv("RENDER_GIT_COMMIT", ""),
     }
     if settings.catalog_source == "druvo_api" and settings.druvo_api_base_url:

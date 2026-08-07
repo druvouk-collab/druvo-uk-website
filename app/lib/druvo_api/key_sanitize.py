@@ -35,9 +35,10 @@ def sanitize_api_key(value: object) -> str:
 
     # Recover embedded token from polluted instructional paste text.
     if len(cleaned) > 64 and not _TOKEN_PATTERN.fullmatch(cleaned):
-        match = _TOKEN_PATTERN.search(cleaned)
-        if match:
-            cleaned = match.group(0)
+        matches = _TOKEN_PATTERN.findall(cleaned)
+        if matches:
+            preferred = [token for token in matches if len(token) == 43]
+            cleaned = preferred[0] if preferred else matches[0]
 
     return cleaned
 
