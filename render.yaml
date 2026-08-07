@@ -30,3 +30,9 @@ services:
         sync: false
       - key: DRUVO_API_TIMEOUT_SECONDS
         value: "30"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
