@@ -12,12 +12,12 @@
   data-default-size="{{ product.sizes[0] if product.sizes else '' }}"
   data-default-colour="{{ product.colours[0] if product.colours else '' }}">
   <div>
-    <div class="gallery-main"><img data-gallery-main src="{{ product.images[0] }}" alt="{{ product.name }}"></div>
+    <div class="gallery-main"><img class="druvo-img" data-gallery-main src="{{ product.images[0] }}" alt="{{ product.name }}" data-placeholder="{{ placeholder_product }}"></div>
     {% if product.images|length > 1 %}
     <div class="gallery-thumbs">
       {% for image in product.images %}
         <button type="button" class="{% if loop.first %}active{% endif %}" data-gallery-thumb="{{ image }}">
-          <img src="{{ image }}" alt="">
+          <img class="druvo-img" src="{{ image }}" alt="" data-placeholder="{{ placeholder_product }}">
         </button>
       {% endfor %}
     </div>

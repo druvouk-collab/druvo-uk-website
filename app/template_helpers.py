@@ -17,4 +17,6 @@ def template_globals() -> dict:
         "contact_email": settings.contact_email,
         "format_gbp": format_gbp,
         "current_year": 2026,
+        "placeholder_product": "/static/images/placeholder-product.svg",
+        "placeholder_category": "/static/images/placeholder-category.svg",
     }

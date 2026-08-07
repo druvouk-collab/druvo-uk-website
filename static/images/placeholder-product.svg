@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000" role="img" aria-label="DRUVO product placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141829"/>
+      <stop offset="100%" stop-color="#0f1220"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7c5cff"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <rect x="280" y="340" width="240" height="200" rx="24" fill="none" stroke="url(#accent)" stroke-width="4" opacity="0.55"/>
+  <circle cx="400" cy="420" r="48" fill="none" stroke="url(#accent)" stroke-width="4" opacity="0.7"/>
+  <path d="M320 560 L480 560 L440 620 L360 620 Z" fill="url(#accent)" opacity="0.35"/>
+  <text x="400" y="720" text-anchor="middle" fill="#9aa3b8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="600">DRUVO UK</text>
+  <text x="400" y="760" text-anchor="middle" fill="#6b7280" font-family="Inter, Arial, sans-serif" font-size="18">Image unavailable</text>
+</svg>

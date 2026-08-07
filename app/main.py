@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from app.routes import account, legal, shop
+from app.routes import account, catalog_api, checkout_api, legal, shop
 from app.templating import templates
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -22,6 +22,8 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(shop.router)
+app.include_router(catalog_api.router)
+app.include_router(checkout_api.router)
 app.include_router(account.router)
 app.include_router(legal.router)
 

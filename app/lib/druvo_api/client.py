@@ -75,13 +75,26 @@ class DruvoApiClient:
             response.raise_for_status()
             return response.json()
 
-    async def list_orders_for_customer(self, customer_id: str) -> list[Order]:
+    async def check_stock(self, lines: list[dict]) -> dict:
+        if not self.base_url:
+            raise RuntimeError("DRUVO_API_BASE_URL is not configured")
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f"{self.base_url}/api/v1/stock/check",
+                headers=self._headers(),
+                json={"lines": lines},
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def list_orders_for_email(self, customer_email: str) -> list[dict]:
         if not self.base_url:
             raise RuntimeError("DRUVO_API_BASE_URL is not configured")
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.get(
-                f"{self.base_url}/api/v1/customers/{customer_id}/orders",
+                f"{self.base_url}/api/v1/orders",
                 headers=self._headers(),
+                params={"customer_email": customer_email},
             )
             response.raise_for_status()
-            raise NotImplementedError("DRUVO AI customer orders API is not yet available")
+            return response.json().get("orders", [])

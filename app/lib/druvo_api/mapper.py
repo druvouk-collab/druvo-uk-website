@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.types.commerce import Category, Product, ProductVariant
+from app.types.commerce import Category, Order, OrderLine, Product, ProductVariant
 
 
 def map_product(payload: dict) -> Product:
@@ -40,4 +40,30 @@ def map_category(payload: dict) -> Category:
         name=payload["name"],
         description=payload.get("description", ""),
         image=payload.get("image", ""),
+    )
+
+
+def map_order(payload: dict) -> Order:
+    lines = [
+        OrderLine(
+            product_slug=line.get("sku", ""),
+            product_name=line.get("sku", "Item"),
+            sku=line.get("sku", ""),
+            size=line.get("size", "—"),
+            colour=line.get("colour", "—"),
+            quantity=int(line.get("quantity", 1)),
+            unit_price_gbp=float(line.get("unit_price_gbp", line.get("unit_price", 0))),
+        )
+        for line in payload.get("lines", [])
+    ]
+    subtotal = sum(line.quantity * line.unit_price_gbp for line in lines)
+    return Order(
+        id=str(payload.get("external_order_id") or payload.get("order_id")),
+        placed_at=str(payload.get("created_at", "")),
+        status=str(payload.get("status", "received")).title(),
+        tracking_number=None,
+        lines=lines,
+        subtotal_gbp=subtotal,
+        shipping_gbp=0.0,
+        total_gbp=float(payload.get("total_amount", subtotal)),
     )

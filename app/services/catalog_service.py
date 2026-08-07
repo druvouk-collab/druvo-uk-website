@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from dataclasses import replace
+
 from app.config import Settings, get_settings
 from app.data import mock_catalog
+from app.lib.druvo_api.image_proxy import to_website_proxy_url
 from app.types.commerce import Category, Product
 
 
@@ -42,7 +45,7 @@ class CatalogService:
 
             client = DruvoApiClient.from_settings(self._settings)
             products = await client.list_products()
-            return self._apply_filters(products, filters)
+            return self._apply_filters(self._proxy_images(products), filters)
         return self._apply_filters(mock_catalog.all_products(), filters)
 
     async def get_product(self, slug: str) -> Product | None:
@@ -50,7 +53,8 @@ class CatalogService:
             from app.lib.druvo_api.client import DruvoApiClient
 
             client = DruvoApiClient.from_settings(self._settings)
-            return await client.get_product(slug)
+            product = await client.get_product(slug)
+            return self._proxy_product(product) if product else None
         return mock_catalog.get_product(slug)
 
     async def get_category(self, slug: str) -> Category | None:
@@ -116,3 +120,17 @@ class CatalogService:
     def available_colours(self, products: list[Product]) -> list[str]:
         colours = {v.colour for p in products for v in p.variants}
         return sorted(colours)
+
+    def _proxy_images(self, products: list[Product]) -> list[Product]:
+        if self._settings.catalog_source != "druvo_api":
+            return products
+        return [self._proxy_product(product) for product in products]
+
+    @staticmethod
+    def _proxy_product(product: Product | None) -> Product | None:
+        if product is None:
+            return None
+        images = [to_website_proxy_url(image) for image in product.images if image]
+        if images == product.images:
+            return product
+        return replace(product, images=images or product.images)

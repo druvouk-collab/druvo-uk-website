@@ -1,7 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container page-header"><h1>Order history</h1></div>
+<div class="container">
+  {% if live_orders %}
+  <div class="notice" style="margin-bottom:1rem;">
+    Showing live orders from DRUVO AI for <strong>{{ lookup_email }}</strong>.
+    Customer sign-in is not enabled yet — use the email you entered at checkout.
+  </div>
+  {% else %}
+  <form class="form-grid two content-card" method="get" action="/account/orders" style="margin-bottom:1.5rem;">
+    <div class="form-field" style="grid-column:1/-1;">
+      <label for="email">Look up orders by checkout email (DRUVO API mode)</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" value="{{ lookup_email }}">
+    </div>
+    <button class="btn btn-primary" type="submit">Find orders</button>
+  </form>
+  {% endif %}
+</div>
 <div class="container account-grid">
+  {% if not orders %}
+    <p class="product-meta">No orders found{% if lookup_email %} for {{ lookup_email }}{% endif %}.</p>
+  {% endif %}
   {% for order in orders %}
     <article class="order-card">
       <header>
@@ -14,7 +33,7 @@
         {% endfor %}
       </ul>
       <p><strong>Total:</strong> {{ format_gbp(order.total_gbp) }}</p>
-      <a class="link-arrow" href="/account/orders/{{ order.id }}">Track order</a>
+      <a class="link-arrow" href="/account/orders/{{ order.id }}{% if lookup_email %}?email={{ lookup_email | urlencode }}{% endif %}">Track order</a>
     </article>
   {% endfor %}
 </div>

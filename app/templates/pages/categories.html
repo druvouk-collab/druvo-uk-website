@@ -5,7 +5,7 @@
   <div class="category-grid">
     {% for category in categories %}
       <a class="category-card" href="/categories/{{ category.slug }}">
-        <img src="{{ category.image }}" alt="{{ category.name }}" loading="lazy">
+        <img class="druvo-img" src="{{ category.image }}" alt="{{ category.name }}" loading="lazy" data-placeholder="{{ placeholder_category }}">
         <span>{{ category.name }}</span>
       </a>
     {% endfor %}

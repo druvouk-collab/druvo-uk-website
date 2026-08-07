@@ -3,23 +3,37 @@
 <div class="container page-header"><h1>Checkout</h1></div>
 <div class="container checkout-layout">
   <section class="content-card">
+    {% if not checkout_ready %}
     <div class="notice">
-      Checkout is not yet connected to a live payment provider. This page shows the planned checkout structure for DRUVO UK.
+      Checkout is not yet connected to DRUVO AI master inventory. Configure <code>CATALOG_SOURCE=druvo_api</code> locally to test order submission (no live payment processing).
     </div>
-    <form class="form-grid two" aria-label="Checkout details">
-      <div class="form-field"><label for="email">Email</label><input id="email" type="email" autocomplete="email" required></div>
-      <div class="form-field"><label for="phone">Phone</label><input id="phone" type="tel" autocomplete="tel"></div>
-      <div class="form-field"><label for="first-name">First name</label><input id="first-name" autocomplete="given-name" required></div>
-      <div class="form-field"><label for="last-name">Last name</label><input id="last-name" autocomplete="family-name" required></div>
-      <div class="form-field" style="grid-column:1/-1;"><label for="address">Address</label><input id="address" autocomplete="street-address" required></div>
-      <div class="form-field"><label for="city">City</label><input id="city" autocomplete="address-level2" required></div>
-      <div class="form-field"><label for="postcode">Postcode</label><input id="postcode" autocomplete="postal-code" required></div>
+    {% else %}
+    <div class="notice">
+      Orders submit to DRUVO AI master inventory. Payment processing is not enabled — stock is reserved when you place the order.
+    </div>
+    {% endif %}
+    <form id="checkout-form" class="form-grid two" aria-label="Checkout details">
+      <div class="form-field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+      <div class="form-field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel"></div>
+      <div class="form-field"><label for="first-name">First name</label><input id="first-name" name="first_name" autocomplete="given-name" required></div>
+      <div class="form-field"><label for="last-name">Last name</label><input id="last-name" name="last_name" autocomplete="family-name" required></div>
+      <div class="form-field" style="grid-column:1/-1;"><label for="address">Address</label><input id="address" name="address" autocomplete="street-address" required></div>
+      <div class="form-field"><label for="city">City</label><input id="city" name="city" autocomplete="address-level2" required></div>
+      <div class="form-field"><label for="postcode">Postcode</label><input id="postcode" name="postcode" autocomplete="postal-code" required></div>
     </form>
-    <button class="btn btn-primary" type="button" disabled style="margin-top:1rem;">Place order (coming soon)</button>
+    <p id="checkout-status" class="product-meta" role="status" aria-live="polite"></p>
+    <button id="place-order" class="btn btn-primary" type="button" {% if not checkout_ready %}disabled{% endif %} style="margin-top:1rem;">
+      {% if checkout_ready %}Place order{% else %}Place order (DRUVO API not configured){% endif %}
+    </button>
   </section>
   <aside class="summary-card">
     <h2>Order summary</h2>
-    <p class="product-meta">Items from your basket will appear here once checkout is connected to DRUVO AI order processing.</p>
+    <div id="checkout-summary" data-checkout-ready="{{ 'true' if checkout_ready else 'false' }}">
+      <p class="product-meta">Loading basket…</p>
+    </div>
   </aside>
 </div>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="/static/js/checkout.js"></script>
 {% endblock %}

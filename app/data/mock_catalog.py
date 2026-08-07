@@ -4,36 +4,40 @@ from __future__ import annotations
 
 from app.types.commerce import Category, Product, ProductVariant
 
+# Self-hosted catalog images (Render-safe — no external hotlink dependency)
+_CAT = "/static/images/catalog/categories"
+_PROD = "/static/images/catalog/products"
+
 _CATEGORIES: list[Category] = [
     Category(
         slug="womens-clothing",
         name="Women's Clothing",
         description="Curated pre-loved and new-with-tags womenswear.",
-        image="https://images.unsplash.com/photo-1483985988355-763728e6155b?w=800&q=80",
+        image=f"{_CAT}/womens-clothing.jpg",
     ),
     Category(
         slug="mens-clothing",
         name="Men's Clothing",
         description="Premium streetwear, tailoring, and everyday essentials.",
-        image="https://images.unsplash.com/photo-1617137968427-85924c800a41?w=800&q=80",
+        image=f"{_CAT}/mens-clothing.jpg",
     ),
     Category(
         slug="footwear",
         name="Footwear",
         description="Trainers, boots, and seasonal shoes.",
-        image="https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800&q=80",
+        image=f"{_CAT}/footwear.jpg",
     ),
     Category(
         slug="accessories",
         name="Accessories",
         description="Bags, belts, jewellery, and more.",
-        image="https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&q=80",
+        image=f"{_CAT}/accessories.jpg",
     ),
     Category(
         slug="designer",
         name="Designer",
         description="Authenticated designer pieces at resale prices.",
-        image="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80",
+        image=f"{_CAT}/designer.jpg",
     ),
 ]
 
@@ -47,10 +51,7 @@ _PRODUCTS: list[Product] = [
         category_name="Men's Clothing",
         brand="Reiss",
         condition="Excellent",
-        images=[
-            "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=900&q=80",
-            "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=900&q=80",
-        ],
+        images=[f"{_PROD}/navy-wool-blazer-1.jpg", f"{_PROD}/navy-wool-blazer-2.jpg"],
         variants=[
             ProductVariant("RB-NVY-38", "38R", "Navy", 2, 89.00),
             ProductVariant("RB-NVY-40", "40R", "Navy", 1, 89.00),
@@ -68,10 +69,7 @@ _PRODUCTS: list[Product] = [
         category_name="Women's Clothing",
         brand="John Lewis",
         condition="Very Good",
-        images=[
-            "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=900&q=80",
-            "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=900&q=80",
-        ],
+        images=[f"{_PROD}/cashmere-roll-neck-1.jpg", f"{_PROD}/cashmere-roll-neck-2.jpg"],
         variants=[
             ProductVariant("CN-GRY-S", "S", "Grey", 3, 54.00),
             ProductVariant("CN-GRY-M", "M", "Grey", 2, 54.00),
@@ -91,10 +89,7 @@ _PRODUCTS: list[Product] = [
         category_name="Footwear",
         brand="Common Projects",
         condition="Good",
-        images=[
-            "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=900&q=80",
-            "https://images.unsplash.com/photo-1606107557195-0af29ac8783a?w=900&q=80",
-        ],
+        images=[f"{_PROD}/white-leather-trainers-1.jpg", f"{_PROD}/white-leather-trainers-2.jpg"],
         variants=[
             ProductVariant("CP-WHT-41", "UK 8", "White", 1, 165.00),
             ProductVariant("CP-WHT-42", "UK 9", "White", 2, 165.00),
@@ -111,10 +106,7 @@ _PRODUCTS: list[Product] = [
         category_name="Accessories",
         brand="Coach",
         condition="Excellent",
-        images=[
-            "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=80",
-            "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=900&q=80",
-        ],
+        images=[f"{_PROD}/leather-crossbody-bag-1.jpg", f"{_PROD}/leather-crossbody-bag-2.jpg"],
         variants=[
             ProductVariant("CB-BLK-OS", "One Size", "Black", 4, 120.00),
             ProductVariant("CB-CML-OS", "One Size", "Caramel", 2, 120.00),
@@ -132,10 +124,7 @@ _PRODUCTS: list[Product] = [
         category_name="Women's Clothing",
         brand="Whistles",
         condition="Like New",
-        images=[
-            "https://images.unsplash.com/photo-1496747611176-843222e1e955?w=900&q=80",
-            "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=900&q=80",
-        ],
+        images=[f"{_PROD}/silk-midi-dress-1.jpg", f"{_PROD}/silk-midi-dress-2.jpg"],
         variants=[
             ProductVariant("SD-EMR-8", "UK 8", "Emerald", 1, 78.00),
             ProductVariant("SD-EMR-10", "UK 10", "Emerald", 2, 78.00),
@@ -153,10 +142,7 @@ _PRODUCTS: list[Product] = [
         category_name="Designer",
         brand="Max Mara",
         condition="Excellent",
-        images=[
-            "https://images.unsplash.com/photo-1539533018447-63fcce267805?w=900&q=80",
-            "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=80",
-        ],
+        images=[f"{_PROD}/designer-wool-coat-1.jpg", f"{_PROD}/designer-wool-coat-2.jpg"],
         variants=[
             ProductVariant("MM-CML-12", "UK 12", "Camel", 1, 295.00),
             ProductVariant("MM-CML-14", "UK 14", "Camel", 1, 295.00),
@@ -172,10 +158,7 @@ _PRODUCTS: list[Product] = [
         category_name="Men's Clothing",
         brand="Nudie Jeans",
         condition="Good",
-        images=[
-            "https://images.unsplash.com/photo-1542272604-787c3835535d?w=900&q=80",
-            "https://images.unsplash.com/photo-1473966968600-fa801b279a07?w=900&q=80",
-        ],
+        images=[f"{_PROD}/selvedge-denim-jeans-1.jpg", f"{_PROD}/selvedge-denim-jeans-2.jpg"],
         variants=[
             ProductVariant("NJ-IND-30", "W30 L32", "Indigo", 2, 72.00),
             ProductVariant("NJ-IND-32", "W32 L32", "Indigo", 1, 72.00),
@@ -194,10 +177,7 @@ _PRODUCTS: list[Product] = [
         category_name="Men's Clothing",
         brand="Uniqlo",
         condition="Very Good",
-        images=[
-            "https://images.unsplash.com/photo-1620799140408-edc6dcb086d8?w=900&q=80",
-            "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=900&q=80",
-        ],
+        images=[f"{_PROD}/merino-crew-jumper-1.jpg", f"{_PROD}/merino-crew-jumper-2.jpg"],
         variants=[
             ProductVariant("MC-FGR-S", "S", "Forest Green", 3, 32.00),
             ProductVariant("MC-FGR-M", "M", "Forest Green", 4, 32.00),

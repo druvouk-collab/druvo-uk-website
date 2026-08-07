@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 
+from app.services.account_order_service import AccountOrderService
 from app.templating import templates
 from app.types.commerce import Order, OrderLine
 
 router = APIRouter(prefix="/account")
+account_orders = AccountOrderService()
 
 _MOCK_ORDERS = [
     Order(
@@ -38,12 +40,25 @@ _MOCK_ORDERS = [
 ]
 
 
+async def _orders_for_view(email: str = "") -> tuple[list[Order], bool, str]:
+    if account_orders.live_orders_enabled and email.strip():
+        live = await account_orders.list_orders_for_email(email)
+        return live, True, email.strip()
+    return _MOCK_ORDERS, False, email.strip()
+
+
 @router.get("", response_class=HTMLResponse)
-async def account_dashboard(request: Request):
+async def account_dashboard(request: Request, email: str = Query("")):
+    orders, live_mode, lookup_email = await _orders_for_view(email)
     return templates.TemplateResponse(
         request,
         "pages/account/dashboard.html",
-        {"page_title": "My Account", "orders": _MOCK_ORDERS},
+        {
+            "page_title": "My Account",
+            "orders": orders[:3],
+            "live_orders": live_mode,
+            "lookup_email": lookup_email,
+        },
     )
 
 
@@ -57,17 +72,26 @@ async def account_login(request: Request):
 
 
 @router.get("/orders", response_class=HTMLResponse)
-async def order_history(request: Request):
+async def order_history(request: Request, email: str = Query("")):
+    orders, live_mode, lookup_email = await _orders_for_view(email)
     return templates.TemplateResponse(
         request,
         "pages/account/orders.html",
-        {"page_title": "Order History", "orders": _MOCK_ORDERS},
+        {
+            "page_title": "Order History",
+            "orders": orders,
+            "live_orders": live_mode,
+            "lookup_email": lookup_email,
+        },
     )
 
 
 @router.get("/orders/{order_id}", response_class=HTMLResponse)
-async def order_detail(request: Request, order_id: str):
-    order = next((o for o in _MOCK_ORDERS if o.id == order_id), None)
+async def order_detail(request: Request, order_id: str, email: str = Query("")):
+    if account_orders.live_orders_enabled and email.strip():
+        order = await account_orders.get_order(order_id, email)
+    else:
+        order = next((o for o in _MOCK_ORDERS if o.id == order_id), None)
     if not order:
         return templates.TemplateResponse(request, "pages/404.html", {"page_title": "Not found"}, status_code=404)
     return templates.TemplateResponse(

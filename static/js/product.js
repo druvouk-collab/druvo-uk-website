@@ -1,4 +1,7 @@
-import { addToCart, formatGBP, getCart, removeFromCart, saveCart } from "./cart.js";
+import { addToCart, formatGBP, getCart, removeFromCart, saveCart, updateCartQuantity } from "./cart.js";
+import { initImageFallbacks } from "./images.js";
+
+const PLACEHOLDER = "/static/images/placeholder-product.svg";
 
 function initProductPage() {
   const root = document.querySelector("[data-product-page]");
@@ -120,11 +123,18 @@ function renderCartPage() {
     .map(
       (item, index) => `
       <article class="cart-item">
-        <img src="${item.image}" alt="">
+        <img class="druvo-img" src="${item.image}" alt="" data-placeholder="${PLACEHOLDER}">
         <div>
           <strong>${item.name}</strong>
           <p class="product-meta">${item.colour} · ${item.size}</p>
-          <p>${formatGBP(item.price_gbp)} × ${item.quantity}</p>
+          <div class="cart-qty-row">
+            <div class="qty-control">
+              <button type="button" data-cart-qty-minus="${index}" aria-label="Decrease quantity">−</button>
+              <input type="number" min="1" value="${item.quantity}" data-cart-qty-input="${index}" aria-label="Quantity">
+              <button type="button" data-cart-qty-plus="${index}" aria-label="Increase quantity">+</button>
+            </div>
+            <span>${formatGBP(item.price_gbp)} each</span>
+          </div>
           <button class="btn btn-ghost" data-remove-index="${index}">Remove</button>
         </div>
         <div><strong>${formatGBP(item.price_gbp * item.quantity)}</strong></div>
@@ -146,6 +156,33 @@ function renderCartPage() {
       renderCartPage();
     });
   });
+
+  list.querySelectorAll("[data-cart-qty-minus]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const index = Number(btn.dataset.cartQtyMinus);
+      const cart = getCart();
+      updateCartQuantity(index, Math.max(1, cart[index].quantity - 1));
+      renderCartPage();
+    });
+  });
+
+  list.querySelectorAll("[data-cart-qty-plus]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const index = Number(btn.dataset.cartQtyPlus);
+      const cart = getCart();
+      updateCartQuantity(index, cart[index].quantity + 1);
+      renderCartPage();
+    });
+  });
+
+  list.querySelectorAll("[data-cart-qty-input]").forEach((input) => {
+    input.addEventListener("change", () => {
+      updateCartQuantity(Number(input.dataset.cartQtyInput), input.value);
+      renderCartPage();
+    });
+  });
+
+  initImageFallbacks(list);
 }
 
 document.addEventListener("DOMContentLoaded", () => {

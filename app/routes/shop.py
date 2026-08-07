@@ -8,6 +8,7 @@ from dataclasses import asdict
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 
+from app.config import get_settings
 from app.templating import templates
 from app.services.catalog_service import CatalogFilters, CatalogService
 
@@ -169,8 +170,14 @@ async def cart_page(request: Request):
 
 @router.get("/checkout", response_class=HTMLResponse)
 async def checkout_page(request: Request):
+    settings = get_settings()
+    checkout_ready = (
+        settings.catalog_source == "druvo_api"
+        and bool(settings.druvo_api_base_url)
+        and bool(settings.druvo_api_key)
+    )
     return templates.TemplateResponse(
         request,
         "pages/checkout.html",
-        {"page_title": "Checkout", "checkout_ready": False},
+        {"page_title": "Checkout", "checkout_ready": checkout_ready},
     )

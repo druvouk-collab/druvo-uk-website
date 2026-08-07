@@ -41,6 +41,14 @@ export function removeFromCart(index) {
   saveCart(cart);
 }
 
+export function updateCartQuantity(index, quantity) {
+  const cart = getCart();
+  if (!cart[index]) return;
+  const qty = Math.max(1, Number(quantity) || 1);
+  cart[index].quantity = qty;
+  saveCart(cart);
+}
+
 export function formatGBP(value) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(value);
 }
