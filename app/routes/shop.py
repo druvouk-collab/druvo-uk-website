@@ -185,8 +185,43 @@ async def checkout_page(request: Request):
         and bool(settings.druvo_api_base_url)
         and bool(settings.druvo_api_key)
     )
+    payments_enabled = settings.payments_enabled
     return templates.TemplateResponse(
         request,
         "pages/checkout.html",
-        {"page_title": "Checkout", "checkout_ready": checkout_ready},
+        {
+            "page_title": "Checkout",
+            "checkout_ready": checkout_ready,
+            "payments_enabled": payments_enabled,
+            "stripe_publishable_key": settings.stripe_publishable_key if payments_enabled else "",
+        },
+    )
+
+
+@router.get("/checkout/success", response_class=HTMLResponse)
+async def checkout_success(request: Request, session_id: str = ""):
+    from app.services.stripe_service import StripeCheckoutService
+
+    context = {
+        "page_title": "Payment successful",
+        "session_id": session_id,
+        "paid": False,
+        "order": None,
+        "external_order_id": "",
+        "customer_email": "",
+    }
+    if session_id and get_settings().stripe_enabled:
+        try:
+            context.update(await StripeCheckoutService().get_success_context(session_id))
+        except Exception:
+            pass
+    return templates.TemplateResponse(request, "pages/checkout_success.html", context)
+
+
+@router.get("/checkout/cancel", response_class=HTMLResponse)
+async def checkout_cancel(request: Request, external_order_id: str = ""):
+    return templates.TemplateResponse(
+        request,
+        "pages/checkout_cancel.html",
+        {"page_title": "Checkout cancelled", "external_order_id": external_order_id},
     )

@@ -22,7 +22,9 @@ function renderSummary() {
 }
 
 async function placeOrder() {
-  const ready = document.getElementById("checkout-summary")?.dataset.checkoutReady === "true";
+  const summary = document.getElementById("checkout-summary");
+  const ready = summary?.dataset.checkoutReady === "true";
+  const paymentsEnabled = summary?.dataset.paymentsEnabled === "true";
   const status = document.getElementById("checkout-status");
   const button = document.getElementById("place-order");
   const cart = getCart();
@@ -63,6 +65,26 @@ async function placeOrder() {
     }
     if (!validatePayload.ok) {
       throw new Error("Some items are no longer in stock. Update your basket and try again.");
+    }
+
+    if (paymentsEnabled) {
+      status.textContent = "Redirecting to secure Stripe checkout (test mode)…";
+      const response = await fetch("/api/checkout/payment-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          customer_email: email,
+          customer_name: `${first} ${last}`.trim(),
+          external_order_id: externalOrderId,
+          lines,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.detail || "Could not start payment session.");
+      }
+      window.location.href = payload.checkout_url;
+      return;
     }
 
     status.textContent = "Submitting order to DRUVO AI…";

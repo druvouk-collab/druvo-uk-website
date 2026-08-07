@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.config import get_settings
 from app.services.order_service import CheckoutLine, CheckoutRequest, WebsiteOrderService
 
 router = APIRouter(prefix="/api/checkout", tags=["checkout"])
@@ -47,6 +48,11 @@ async def validate_checkout_stock(payload: CheckoutOrderPayload) -> dict:
 
 @router.post("/orders")
 async def submit_checkout_order(payload: CheckoutOrderPayload) -> dict:
+    if get_settings().payments_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Direct order submission is disabled. Complete payment via Stripe checkout.",
+        )
     if not orders.orders_enabled:
         raise HTTPException(
             status_code=503,

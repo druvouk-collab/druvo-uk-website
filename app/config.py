@@ -21,6 +21,22 @@ class Settings(BaseSettings):
     druvo_api_key: str = ""
     druvo_api_timeout_seconds: int = 30
     session_secret: str = "dev-only-change-in-production"
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+
+    @property
+    def stripe_enabled(self) -> bool:
+        return bool(self.stripe_secret_key and self.stripe_publishable_key)
+
+    @property
+    def payments_enabled(self) -> bool:
+        return (
+            self.catalog_source == "druvo_api"
+            and bool(self.druvo_api_base_url)
+            and bool(self.druvo_api_key)
+            and self.stripe_enabled
+        )
 
     @field_validator("druvo_api_key", mode="before")
     @classmethod

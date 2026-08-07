@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container page-header"><h1>Payment successful</h1></div>
+<div class="container content-card">
+  {% if paid and order %}
+  <p>Thank you — your payment was received and your order is confirmed in DRUVO AI.</p>
+  <p><strong>Order reference:</strong> #{{ order.order_id or order.external_order_id }}</p>
+  {% if customer_email %}
+  <p><a href="/account/orders?email={{ customer_email | urlencode }}">View order history</a></p>
+  {% endif %}
+  {% elif paid %}
+  <p>Thank you — your payment was received. Your order is being confirmed; refresh shortly or check your email for updates.</p>
+  {% if external_order_id %}
+  <p class="product-meta">Reference: {{ external_order_id }}</p>
+  {% endif %}
+  {% else %}
+  <p>We could not confirm payment for this session yet. If you completed checkout, your order will appear shortly once Stripe confirms payment.</p>
+  {% if session_id %}
+  <p class="product-meta">Session: {{ session_id }}</p>
+  {% endif %}
+  {% endif %}
+  <p style="margin-top:1.5rem;"><a class="btn btn-primary" href="/shop">Continue shopping</a></p>
+</div>
+{% endblock %}

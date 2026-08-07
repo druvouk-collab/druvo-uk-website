@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container page-header"><h1>Checkout cancelled</h1></div>
+<div class="container content-card">
+  <p>Your payment was not completed. No order was created and no stock was deducted.</p>
+  {% if external_order_id %}
+  <p class="product-meta">Checkout reference: {{ external_order_id }}</p>
+  {% endif %}
+  <p style="margin-top:1.5rem;">
+    <a class="btn btn-primary" href="/checkout">Return to checkout</a>
+    <a class="btn btn-secondary" href="/cart" style="margin-left:0.5rem;">View basket</a>
+  </p>
+</div>
+{% endblock %}

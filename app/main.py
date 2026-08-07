@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
 from app.lib.druvo_api.client import DruvoApiClient
-from app.routes import account, catalog_api, checkout_api, legal, shop
+from app.routes import account, catalog_api, checkout_api, legal, shop, stripe_webhook
 from app.templating import templates
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(shop.router)
 app.include_router(catalog_api.router)
 app.include_router(checkout_api.router)
+app.include_router(stripe_webhook.router)
 app.include_router(account.router)
 app.include_router(legal.router)
 
@@ -53,6 +54,8 @@ async def druvo_health() -> JSONResponse:
         "api_key_raw_length": len(raw_key),
         "api_key_length": len(settings.druvo_api_key),
         "api_key_length_ok": len(settings.druvo_api_key) == 43,
+        "stripe_enabled": settings.stripe_enabled,
+        "payments_enabled": settings.payments_enabled,
         "git_commit": os.getenv("RENDER_GIT_COMMIT", ""),
     }
     if settings.catalog_source == "druvo_api" and settings.druvo_api_base_url:

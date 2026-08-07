@@ -5,11 +5,15 @@
   <section class="content-card">
     {% if not checkout_ready %}
     <div class="notice">
-      Checkout is not yet connected to DRUVO AI master inventory. Configure <code>CATALOG_SOURCE=druvo_api</code> locally to test order submission (no live payment processing).
+      Checkout is not yet connected to DRUVO AI master inventory. Configure <code>CATALOG_SOURCE=druvo_api</code> locally to test order submission.
+    </div>
+    {% elif payments_enabled %}
+    <div class="notice">
+      Secure test-mode payment via Stripe. Your DRUVO order is created only after payment is confirmed — not when you reach the success page.
     </div>
     {% else %}
     <div class="notice">
-      Orders submit to DRUVO AI master inventory. Payment processing is not enabled — stock is reserved when you place the order.
+      Orders submit to DRUVO AI master inventory. Stripe test-mode payments are not configured — configure Stripe env vars to enable card checkout.
     </div>
     {% endif %}
     <form id="checkout-form" class="form-grid two" aria-label="Checkout details">
@@ -23,12 +27,14 @@
     </form>
     <p id="checkout-status" class="product-meta" role="status" aria-live="polite"></p>
     <button id="place-order" class="btn btn-primary" type="button" {% if not checkout_ready %}disabled{% endif %} style="margin-top:1rem;">
-      {% if checkout_ready %}Place order{% else %}Place order (DRUVO API not configured){% endif %}
+      {% if payments_enabled %}Pay securely with Stripe (test mode){% elif checkout_ready %}Place order{% else %}Place order (DRUVO API not configured){% endif %}
     </button>
   </section>
   <aside class="summary-card">
     <h2>Order summary</h2>
-    <div id="checkout-summary" data-checkout-ready="{{ 'true' if checkout_ready else 'false' }}">
+    <div id="checkout-summary"
+         data-checkout-ready="{{ 'true' if checkout_ready else 'false' }}"
+         data-payments-enabled="{{ 'true' if payments_enabled else 'false' }}">
       <p class="product-meta">Loading basket…</p>
     </div>
   </aside>

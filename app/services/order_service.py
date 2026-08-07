@@ -67,12 +67,15 @@ class WebsiteOrderService:
             ]
         )
 
-    async def submit(
+    async def submit_after_payment(
         self,
         request: CheckoutRequest,
         *,
-        external_order_id: str | None = None,
+        external_order_id: str,
+        stripe_session_id: str = "",
+        stripe_payment_intent_id: str = "",
     ) -> dict:
+        """Create a DRUVO order after Stripe confirms payment (webhook-only path)."""
         client = self._client
         if client is None:
             raise RuntimeError(
@@ -83,16 +86,16 @@ class WebsiteOrderService:
         stock = await self.validate_stock(request.lines)
         if not stock.get("ok"):
             insufficient = [
-                line["sku"]
-                for line in stock.get("lines", [])
-                if not line.get("sufficient")
+                line["sku"] for line in stock.get("lines", []) if not line.get("sufficient")
             ]
             raise ValueError(f"Insufficient stock for: {', '.join(insufficient)}")
-        order_id = external_order_id or f"web-{uuid.uuid4().hex[:16]}"
         payload = {
-            "external_order_id": order_id,
+            "external_order_id": external_order_id.strip(),
             "customer_email": request.customer_email.strip(),
             "customer_name": request.customer_name.strip(),
+            "stripe_session_id": stripe_session_id,
+            "stripe_payment_intent_id": stripe_payment_intent_id,
+            "payment_provider": "stripe",
             "lines": [
                 {
                     "sku": line.sku,
@@ -103,6 +106,24 @@ class WebsiteOrderService:
             ],
         }
         return await client.submit_order(payload)
+
+    async def get_by_external_id(self, external_order_id: str) -> dict | None:
+        client = self._client
+        if client is None or not external_order_id.strip():
+            return None
+        return await client.get_order(external_order_id.strip())
+
+    async def submit(
+        self,
+        request: CheckoutRequest,
+        *,
+        external_order_id: str | None = None,
+    ) -> dict:
+        """Legacy direct submit — blocked when Stripe payments are enabled."""
+        if self._settings.payments_enabled:
+            raise RuntimeError("Direct order submission is disabled when Stripe payments are enabled.")
+        order_id = external_order_id or f"web-{uuid.uuid4().hex[:16]}"
+        return await self.submit_after_payment(request, external_order_id=order_id)
 
     async def list_orders(self, customer_email: str) -> list[dict]:
         if not self.orders_enabled or self._client is None:
