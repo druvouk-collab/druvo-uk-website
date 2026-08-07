@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.config import get_settings
+from app.services.seo_service import canonical_site_url, canonical_url_for
 
 
 def format_gbp(amount: float) -> str:
@@ -14,7 +15,11 @@ def template_globals() -> dict:
     return {
         "site_name": settings.site_name,
         "site_url": settings.site_url,
+        "canonical_base": canonical_site_url(settings),
+        "canonical_url_for": canonical_url_for,
         "contact_email": settings.contact_email,
+        "google_site_verification": settings.google_site_verification,
+        "chat_enabled": settings.chat_enabled,
         "format_gbp": format_gbp,
         "current_year": 2026,
         "placeholder_product": "/static/images/placeholder-product.svg",

@@ -333,6 +333,67 @@ button, input, select, textarea { font: inherit; }
 }
 .order-card header { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 
-@media (min-width: 900px) {
-  .account-grid.two-col { grid-template-columns: 280px 1fr; }
+
+/* DRUVO Chat */
+.druvo-chat-root {
+  position: fixed; right: 1rem; bottom: 1rem; z-index: 1200;
 }
+.druvo-chat-launcher {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.85rem 1.1rem; border-radius: 999px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--accent), var(--accent-blue));
+  color: #fff; font-weight: 600; box-shadow: 0 12px 32px rgba(124, 92, 255, 0.35);
+}
+.druvo-chat-launcher:hover { filter: brightness(1.05); }
+.druvo-chat-launcher-label { font-size: 0.9rem; }
+.druvo-chat-panel {
+  position: absolute; right: 0; bottom: calc(100% + 0.75rem);
+  width: min(380px, calc(100vw - 2rem)); height: min(520px, calc(100vh - 6rem));
+  display: flex; flex-direction: column;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px); box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+.druvo-chat-header {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem; border-bottom: 1px solid var(--border);
+  background: rgba(124, 92, 255, 0.08);
+}
+.druvo-chat-header h2 { margin: 0; font-size: 1rem; }
+.druvo-chat-subtitle { margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
+.druvo-chat-close { color: var(--text-muted); }
+.druvo-chat-messages {
+  flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.65rem;
+}
+.druvo-chat-bubble {
+  max-width: 88%; padding: 0.75rem 0.9rem; border-radius: 14px; font-size: 0.92rem; line-height: 1.45;
+}
+.druvo-chat-bubble--assistant {
+  align-self: flex-start; background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+}
+.druvo-chat-bubble--user {
+  align-self: flex-end; background: linear-gradient(135deg, var(--accent), var(--accent-blue)); color: #fff;
+}
+.druvo-chat-typing { opacity: 0.7; font-style: italic; }
+.druvo-chat-form {
+  display: grid; grid-template-columns: 1fr auto; gap: 0.5rem;
+  padding: 0.75rem; border-top: 1px solid var(--border); background: var(--bg-card);
+}
+.druvo-chat-form textarea {
+  resize: none; min-height: 42px; max-height: 120px;
+  padding: 0.65rem 0.75rem; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg-input); color: var(--text);
+  font-family: inherit; font-size: 0.9rem;
+}
+.druvo-chat-send { padding: 0.65rem 1rem; white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .druvo-chat-root { right: 0.75rem; bottom: 0.75rem; left: 0.75rem; }
+  .druvo-chat-launcher-label { display: none; }
+  .druvo-chat-panel {
+    position: fixed; inset: 0; width: 100%; height: 100%; max-height: none;
+    border-radius: 0; bottom: 0;
+  }
+  .druvo-chat-launcher { position: fixed; right: 0.75rem; bottom: 0.75rem; z-index: 1201; }
+}
+

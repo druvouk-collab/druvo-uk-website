@@ -1,26 +1,47 @@
-<!DOCTYPE html>
-<html lang="en-GB">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ page_title }} · {{ site_name }}{% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}DRUVO UK — premium pre-loved and new resale fashion, footwear, and accessories.{% endblock %}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/druvo.css">
-  {% block head_extra %}{% endblock %}
-</head>
-<body>
-  <a class="sr-only" href="#main-content">Skip to content</a>
-  {% include "components/header.html" %}
-  {% if catalog_degraded and catalog_notice %}
-  <div class="container notice catalog-notice" role="status">{{ catalog_notice }}</div>
-  {% endif %}
-  <main id="main-content">{% block content %}{% endblock %}</main>
-  {% include "components/footer.html" %}
-  <script type="module" src="/static/js/cart.js"></script>
-  <script type="module" src="/static/js/images.js"></script>
-  {% block scripts %}{% endblock %}
-</body>
-</html>
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title }} · {{ site_name }}{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}DRUVO UK — premium pre-loved and new resale fashion, footwear, and accessories. Shop curated UK resale with live stock from DRUVO AI Enterprise.{% endblock %}">
+  <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
+  <link rel="canonical" href="{% block canonical_url %}{{ canonical_url_for(request.url.path) }}{% endblock %}">
+  {% if google_site_verification %}
+  <meta name="google-site-verification" content="{{ google_site_verification }}">
+  {% endif %}
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:site_name" content="{{ site_name }}">
+  <meta property="og:title" content="{% block og_title %}{{ page_title }} · {{ site_name }}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}DRUVO UK — premium pre-loved and new resale fashion, footwear, and accessories.{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}{{ canonical_url_for(request.url.path) }}{% endblock %}">
+  <meta property="og:locale" content="en_GB">
+  {% block og_image %}
+  <meta property="og:image" content="{{ canonical_base }}/static/images/placeholder-category.svg">
+  {% endblock %}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{% block twitter_title %}{{ page_title }} · {{ site_name }}{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}Premium UK resale fashion, footwear and accessories from DRUVO UK.{% endblock %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/druvo.css">
+  {% block head_extra %}{% endblock %}
+  {% block structured_data %}{% endblock %}
+</head>
+<body>
+  <a class="sr-only" href="#main-content">Skip to content</a>
+  {% include "components/header.html" %}
+  {% if catalog_degraded and catalog_notice %}
+  <div class="container notice catalog-notice" role="status">{{ catalog_notice }}</div>
+  {% endif %}
+  <main id="main-content">{% block content %}{% endblock %}</main>
+  {% include "components/footer.html" %}
+  {% if chat_enabled %}{% include "components/chat_widget.html" %}{% endif %}
+  <script type="module" src="/static/js/cart.js"></script>
+  <script type="module" src="/static/js/images.js"></script>
+  {% if chat_enabled %}<script type="module" src="/static/js/chat.js"></script>{% endif %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>
+

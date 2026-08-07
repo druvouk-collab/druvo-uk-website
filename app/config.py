@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     smtp_from: str = ""
     smtp_use_tls: bool = True
     admin_checklist_token: str = ""
+    openai_api_key: str = ""
+    chat_model: str = "gpt-4o-mini"
+    chat_enabled: bool = True
+    chat_rate_limit_per_hour: int = 30
+    google_site_verification: str = ""
 
     @property
     def stripe_mode(self) -> str:

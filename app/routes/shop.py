@@ -9,6 +9,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 
 from app.config import get_settings
+from app.services.seo_service import organization_json_ld, product_json_ld, website_json_ld
 from app.templating import templates
 from app.services.catalog_service import CatalogFilters, CatalogService
 
@@ -63,6 +64,7 @@ async def home(request: Request):
     categories = snapshot.categories
     new_arrivals = [p for p in products if p.is_new_arrival][:4]
     sale_items = [p for p in products if p.is_on_sale][:4]
+
     return templates.TemplateResponse(
         request,
         "pages/home.html",
@@ -74,6 +76,8 @@ async def home(request: Request):
             "featured": products[:6],
             "catalog_degraded": snapshot.degraded,
             "catalog_notice": snapshot.notice,
+            "organization_json_ld": organization_json_ld(),
+            "website_json_ld": website_json_ld(),
         },
     )
 
@@ -146,6 +150,12 @@ async def product_detail(request: Request, slug: str):
     related = await catalog.list_products(CatalogFilters(category_slug=product.category_slug))
     related = [p for p in related if p.slug != slug][:4]
     default_variant = product.first_in_stock_variant()
+    from app.services.seo_service import canonical_site_url
+
+    base = canonical_site_url()
+    image = product.images[0] if product.images else "/static/images/placeholder-product.svg"
+    og_image_url = image if image.startswith("http") else f"{base}{image}"
+
     return templates.TemplateResponse(
         request,
         "pages/product.html",
@@ -156,6 +166,8 @@ async def product_detail(request: Request, slug: str):
             "variants_json": json.dumps([asdict(v) for v in product.variants]),
             "default_size": default_variant.size if default_variant else "",
             "default_colour": default_variant.colour if default_variant else "",
+            "product_json_ld": product_json_ld(product),
+            "og_image_url": og_image_url,
         },
     )
 

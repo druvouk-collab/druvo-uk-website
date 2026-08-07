@@ -54,3 +54,13 @@ services:
         sync: false
       - key: PRODUCTION_MODE
         value: "true"
+      - key: CHAT_ENABLED
+        value: "true"
+      - key: CHAT_MODEL
+        value: "gpt-4o-mini"
+      - key: CHAT_RATE_LIMIT_PER_HOUR
+        value: "30"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false

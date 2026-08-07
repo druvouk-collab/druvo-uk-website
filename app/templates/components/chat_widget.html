@@ -1,0 +1,25 @@
+<div id="druvo-chat-root" class="druvo-chat-root" aria-live="polite">
+  <button type="button" class="druvo-chat-launcher" id="druvo-chat-launcher" aria-expanded="false" aria-controls="druvo-chat-panel" aria-label="Open DRUVO Chat">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 5.5C4 4.67 4.67 4 5.5 4h13c.83 0 1.5.67 1.5 1.5v9c0 .83-.67 1.5-1.5 1.5H9l-4.5 3V5.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+    <span class="druvo-chat-launcher-label">DRUVO Chat</span>
+  </button>
+
+  <div class="druvo-chat-panel" id="druvo-chat-panel" hidden role="dialog" aria-labelledby="druvo-chat-title">
+    <header class="druvo-chat-header">
+      <div>
+        <h2 id="druvo-chat-title">DRUVO Chat</h2>
+        <p class="druvo-chat-subtitle">Ask about products, delivery &amp; returns</p>
+      </div>
+      <button type="button" class="druvo-chat-close icon-btn" id="druvo-chat-close" aria-label="Close chat">✕</button>
+    </header>
+    <div class="druvo-chat-messages" id="druvo-chat-messages"></div>
+    <form class="druvo-chat-form" id="druvo-chat-form">
+      <label class="sr-only" for="druvo-chat-input">Message DRUVO Chat</label>
+      <textarea id="druvo-chat-input" rows="1" maxlength="500" placeholder="Ask about products, sizes, delivery…" required></textarea>
+      <button type="submit" class="btn btn-primary druvo-chat-send" id="druvo-chat-send" aria-label="Send message">Send</button>
+    </form>
+  </div>
+</div>
+

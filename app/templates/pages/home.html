@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% from "components/macros.html" import product_card %}
+{% block meta_description %}Shop premium UK resale fashion, footwear and accessories at DRUVO UK. Curated pre-loved and new-with-tags pieces with live stock.{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">{{ organization_json_ld | safe }}</script>
+<script type="application/ld+json">{{ website_json_ld | safe }}</script>
+{% endblock %}
 {% block content %}
 <section class="hero container">
   <div class="hero-copy">

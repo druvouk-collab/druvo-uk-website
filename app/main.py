@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import CANONICAL_HOST, get_settings
 from app.lib.druvo_api.client import DruvoApiClient
-from app.routes import account, admin, catalog_api, checkout_api, legal, shop, stripe_webhook
+from app.routes import account, admin, catalog_api, chat_api, checkout_api, legal, seo, shop, stripe_webhook
 from app.services.readiness_service import build_readiness_report
 from app.templating import templates
 
@@ -48,6 +48,8 @@ app.include_router(stripe_webhook.router)
 app.include_router(account.router)
 app.include_router(admin.router)
 app.include_router(legal.router)
+app.include_router(seo.router)
+app.include_router(chat_api.router)
 
 
 @app.middleware("http")
