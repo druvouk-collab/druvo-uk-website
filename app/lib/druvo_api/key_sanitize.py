@@ -33,12 +33,26 @@ def sanitize_api_key(value: object) -> str:
     # DRUVO keys are ASCII; strip accidental Unicode from bad pastes (e.g. em dash).
     cleaned = cleaned.encode("ascii", "ignore").decode("ascii").strip()
 
+    runs = re.findall(r"[A-Za-z0-9_-]+", cleaned)
+    forty_three_runs = [token for token in runs if len(token) == 43]
+    if forty_three_runs:
+        return forty_three_runs[0]
+
+    joined = "".join(runs)
+    if len(joined) == 43:
+        return joined
+
     # Recover embedded token from polluted instructional paste text.
     if len(cleaned) > 64 and not _TOKEN_PATTERN.fullmatch(cleaned):
         matches = _TOKEN_PATTERN.findall(cleaned)
         if matches:
             preferred = [token for token in matches if len(token) == 43]
             cleaned = preferred[0] if preferred else matches[0]
+    elif len(cleaned) > 43:
+        matches = _TOKEN_PATTERN.findall(cleaned)
+        preferred = [token for token in matches if len(token) == 43]
+        if preferred:
+            cleaned = preferred[0]
 
     return cleaned
 

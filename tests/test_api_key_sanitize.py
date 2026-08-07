@@ -24,6 +24,12 @@ def test_sanitize_removes_unicode_for_headers():
     httpx.Headers(bearer_auth_header(cleaned))
 
 
+def test_sanitize_joins_split_token_runs():
+    key43 = "a" * 43
+    split = "\n".join(key43[i : i + 7] for i in range(0, 43, 7))
+    assert sanitize_api_key(split) == key43
+
+
 def test_sanitize_env_line_paste():
     assert sanitize_api_key("DRUVO_API_KEY=token12345678901234567890123456789012") == (
         "token12345678901234567890123456789012"

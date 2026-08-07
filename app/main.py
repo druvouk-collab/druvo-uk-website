@@ -44,11 +44,13 @@ async def health() -> JSONResponse:
 @app.get("/health/druvo")
 async def druvo_health() -> JSONResponse:
     settings = get_settings()
+    raw_key = os.getenv("DRUVO_API_KEY", "")
     payload = {
         "catalog_source": settings.catalog_source,
         "api_configured": bool(settings.druvo_api_base_url and settings.druvo_api_key),
         "api_base_url_set": bool(settings.druvo_api_base_url),
         "api_key_set": bool(settings.druvo_api_key),
+        "api_key_raw_length": len(raw_key),
         "api_key_length": len(settings.druvo_api_key),
         "api_key_length_ok": len(settings.druvo_api_key) == 43,
         "git_commit": os.getenv("RENDER_GIT_COMMIT", ""),
