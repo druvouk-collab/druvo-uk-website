@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container page-header"><h1>Sign in</h1></div>
+<article class="container content-card" style="max-width:480px;margin-bottom:3rem;">
+  <div class="notice">Customer login is not yet connected to a live account database. This page shows the planned sign-in structure.</div>
+  <form class="form-grid">
+    <div class="form-field"><label for="email">Email</label><input id="email" type="email" autocomplete="email"></div>
+    <div class="form-field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password"></div>
+    <button class="btn btn-primary" type="button" disabled>Sign in (coming soon)</button>
+  </form>
+</article>
+{% endblock %}

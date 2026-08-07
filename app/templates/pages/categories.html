@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container page-header"><h1>Categories</h1></div>
+<section class="container section">
+  <div class="category-grid">
+    {% for category in categories %}
+      <a class="category-card" href="/categories/{{ category.slug }}">
+        <img src="{{ category.image }}" alt="{{ category.name }}" loading="lazy">
+        <span>{{ category.name }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

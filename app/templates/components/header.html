@@ -1,0 +1,35 @@
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="logo" href="/" aria-label="{{ site_name }} home">{{ site_name }}</a>
+    <nav class="nav-desktop" aria-label="Primary">
+      <a href="/shop">Shop</a>
+      <a href="/new-arrivals">New Arrivals</a>
+      <a href="/categories">Categories</a>
+      <a href="/sale">Sale</a>
+      <a href="/about">About</a>
+    </nav>
+    <form class="search-form" action="/search" method="get" role="search">
+      <label class="sr-only" for="header-search">Search products</label>
+      <input id="header-search" type="search" name="q" placeholder="Search DRUVO UK" autocomplete="off">
+    </form>
+    <div class="header-actions">
+      <a class="icon-btn" href="/account/login" aria-label="Account">👤</a>
+      <a class="icon-btn" href="/cart" aria-label="Basket">
+        🛒
+        <span class="cart-count" data-cart-count hidden>0</span>
+      </a>
+      <button class="icon-btn menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Open menu">☰</button>
+    </div>
+  </div>
+  <nav class="container mobile-nav" data-mobile-nav aria-label="Mobile">
+    <a href="/shop">Shop</a>
+    <a href="/new-arrivals">New Arrivals</a>
+    <a href="/categories">Categories</a>
+    <a href="/sale">Sale</a>
+    <a href="/search">Search</a>
+    <a href="/account">Account</a>
+    <a href="/cart">Basket</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+  </nav>
+</header>

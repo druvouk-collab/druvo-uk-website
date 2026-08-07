@@ -1,0 +1,32 @@
+# Render Blueprint — DRUVO UK website
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: druvo-uk
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash scripts/start.sh
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: SITE_NAME
+        value: DRUVO UK
+      - key: CONTACT_EMAIL
+        value: druvo.uk@gmail.com
+      - key: CATALOG_SOURCE
+        value: mock
+      - key: SITE_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DRUVO_API_BASE_URL
+        value: ""
+      - key: DRUVO_API_KEY
+        sync: false
+      - key: DRUVO_API_TIMEOUT_SECONDS
+        value: "30"

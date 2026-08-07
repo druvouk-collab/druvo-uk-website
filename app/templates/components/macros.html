@@ -1,0 +1,82 @@
+{% macro product_card(product) %}
+<article class="product-card">
+  <a href="/product/{{ product.slug }}" aria-label="{{ product.name }}">
+    <div class="product-card-image">
+      <img src="{{ product.images[0] }}" alt="{{ product.name }}" loading="lazy" width="400" height="500">
+      <div class="card-badges">
+        {% if product.is_new_arrival %}<span class="badge badge-new">New</span>{% endif %}
+        {% if product.is_on_sale %}<span class="badge badge-sale">Sale</span>{% endif %}
+        {% if not product.in_stock %}<span class="badge badge-oos">Sold out</span>{% endif %}
+      </div>
+    </div>
+    <div class="product-card-body">
+      <p class="product-meta">{{ product.brand }} · {{ product.category_name }}</p>
+      <h3>{{ product.name }}</h3>
+      <div class="price-row">
+        {% if product.is_on_sale and product.sale_price_gbp %}
+          <span class="price">{{ format_gbp(product.sale_price_gbp) }}</span>
+          <span class="price-was">{{ format_gbp(product.min_price) }}</span>
+        {% else %}
+          <span class="price">
+            {% if product.min_price == product.max_price %}
+              {{ format_gbp(product.min_price) }}
+            {% else %}
+              {{ format_gbp(product.min_price) }} – {{ format_gbp(product.max_price) }}
+            {% endif %}
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+</article>
+{% endmacro %}
+
+{% macro filters_form(filters, action="/shop") %}
+<form class="filters" method="get" action="{{ action }}">
+  <h3>Filters</h3>
+  {% if filters.query %}
+    <input type="hidden" name="q" value="{{ filters.query }}">
+  {% endif %}
+  <div class="filter-group">
+    <label for="sort">Sort by</label>
+    <select id="sort" name="sort">
+      <option value="featured" {% if filters.sort == 'featured' %}selected{% endif %}>Featured</option>
+      <option value="price-asc" {% if filters.sort == 'price-asc' %}selected{% endif %}>Price: low to high</option>
+      <option value="price-desc" {% if filters.sort == 'price-desc' %}selected{% endif %}>Price: high to low</option>
+      <option value="name" {% if filters.sort == 'name' %}selected{% endif %}>Name</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="category">Category</label>
+    <select id="category" name="category">
+      <option value="">All categories</option>
+      {% for cat in categories %}
+        <option value="{{ cat.slug }}" {% if filters.category_slug == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="size">Size</label>
+    <select id="size" name="size">
+      <option value="">Any size</option>
+      {% for size in sizes %}
+        <option value="{{ size }}" {% if filters.size == size %}selected{% endif %}>{{ size }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="colour">Colour</label>
+    <select id="colour" name="colour">
+      <option value="">Any colour</option>
+      {% for colour in colours %}
+        <option value="{{ colour }}" {% if filters.colour == colour %}selected{% endif %}>{{ colour }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <label class="filter-check">
+    <input type="checkbox" name="in_stock" value="true" {% if filters.in_stock_only %}checked{% endif %}>
+    In stock only
+  </label>
+  <button class="btn btn-primary" type="submit" style="width:100%;margin-top:1rem;">Apply filters</button>
+</form>
+{% endmacro %}

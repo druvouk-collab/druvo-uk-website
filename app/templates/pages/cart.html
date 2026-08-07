@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container page-header"><h1>Basket</h1></div>
+<div class="container cart-layout">
+  <section class="content-card">
+    <div data-cart-list></div>
+    <div class="empty-state" data-cart-empty hidden>
+      <p>Your basket is empty.</p>
+      <a class="btn btn-primary" href="/shop">Continue shopping</a>
+    </div>
+  </section>
+  <aside class="summary-card" data-cart-summary></aside>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="/static/js/product.js"></script>{% endblock %}

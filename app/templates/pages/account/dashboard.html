@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container page-header"><h1>My Account</h1></div>
+<div class="container account-grid two-col">
+  <aside class="summary-card">
+    <a href="/account/orders">Order history</a>
+    <a href="/account/login">Sign in</a>
+    <a href="/contact">Support</a>
+  </aside>
+  <section>
+    <h2>Recent orders</h2>
+    {% for order in orders %}
+      <article class="order-card">
+        <header>
+          <div><strong>{{ order.id }}</strong><p class="product-meta">{{ order.placed_at }}</p></div>
+          <span class="badge badge-new">{{ order.status }}</span>
+        </header>
+        <p>{{ order.lines | length }} item(s) · {{ format_gbp(order.total_gbp) }}</p>
+        <a class="link-arrow" href="/account/orders/{{ order.id }}">View order</a>
+      </article>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

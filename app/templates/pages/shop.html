@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import product_card, filters_form %}
+{% block content %}
+<div class="container page-header"><h1>{{ heading }}</h1></div>
+<div class="container shop-layout">
+  {{ filters_form(filters) }}
+  <section>
+    {% if products %}
+      <div class="product-grid">
+        {% for product in products %}{{ product_card(product) }}{% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state"><p>No products match your filters.</p><a class="btn btn-secondary" href="/shop">Clear filters</a></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

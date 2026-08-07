@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import product_card, filters_form %}
+{% block content %}
+<div class="container page-header">
+  <h1>{{ category.name }}</h1>
+  <p class="product-meta">{{ category.description }}</p>
+</div>
+<div class="container shop-layout">
+  {{ filters_form(filters, action='/categories/' ~ category.slug) }}
+  <section>
+    <div class="product-grid">
+      {% for product in products %}{{ product_card(product) }}{% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

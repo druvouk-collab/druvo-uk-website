@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container page-header"><h1>Order {{ order.id }}</h1></div>
+<article class="container content-card" style="margin-bottom:3rem;">
+  <p class="product-meta">Placed {{ order.placed_at }} · {{ order.status }}</p>
+  {% if order.tracking_number %}
+    <p><strong>Tracking:</strong> {{ order.tracking_number }}</p>
+    <p class="product-meta">Full carrier tracking links will appear here when live shipping integration is enabled.</p>
+  {% endif %}
+  <h2>Items</h2>
+  <ul>
+    {% for line in order.lines %}
+      <li>{{ line.product_name }} · {{ line.colour }} · {{ line.size }} × {{ line.quantity }} — {{ format_gbp(line.unit_price_gbp * line.quantity) }}</li>
+    {% endfor %}
+  </ul>
+  <div class="summary-row"><span>Subtotal</span><span>{{ format_gbp(order.subtotal_gbp) }}</span></div>
+  <div class="summary-row"><span>Shipping</span><span>{{ format_gbp(order.shipping_gbp) }}</span></div>
+  <div class="summary-row total"><span>Total</span><span>{{ format_gbp(order.total_gbp) }}</span></div>
+</article>
+{% endblock %}

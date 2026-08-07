@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container page-header"><h1>Checkout</h1></div>
+<div class="container checkout-layout">
+  <section class="content-card">
+    <div class="notice">
+      Checkout is not yet connected to a live payment provider. This page shows the planned checkout structure for DRUVO UK.
+    </div>
+    <form class="form-grid two" aria-label="Checkout details">
+      <div class="form-field"><label for="email">Email</label><input id="email" type="email" autocomplete="email" required></div>
+      <div class="form-field"><label for="phone">Phone</label><input id="phone" type="tel" autocomplete="tel"></div>
+      <div class="form-field"><label for="first-name">First name</label><input id="first-name" autocomplete="given-name" required></div>
+      <div class="form-field"><label for="last-name">Last name</label><input id="last-name" autocomplete="family-name" required></div>
+      <div class="form-field" style="grid-column:1/-1;"><label for="address">Address</label><input id="address" autocomplete="street-address" required></div>
+      <div class="form-field"><label for="city">City</label><input id="city" autocomplete="address-level2" required></div>
+      <div class="form-field"><label for="postcode">Postcode</label><input id="postcode" autocomplete="postal-code" required></div>
+    </form>
+    <button class="btn btn-primary" type="button" disabled style="margin-top:1rem;">Place order (coming soon)</button>
+  </section>
+  <aside class="summary-card">
+    <h2>Order summary</h2>
+    <p class="product-meta">Items from your basket will appear here once checkout is connected to DRUVO AI order processing.</p>
+  </aside>
+</div>
+{% endblock %}

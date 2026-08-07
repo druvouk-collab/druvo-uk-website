@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "components/macros.html" import product_card, filters_form %}
+{% block content %}
+<div class="container page-header">
+  <h1>Search</h1>
+  <form action="/search" method="get" role="search" style="margin-top:1rem;max-width:480px;">
+    <input type="search" name="q" value="{{ search_query }}" placeholder="Search products, brands, tags..." style="width:100%;padding:0.85rem 1rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-input);color:var(--text);">
+  </form>
+</div>
+<div class="container shop-layout">
+  {{ filters_form(filters, action='/search') }}
+  <section>
+    {% if search_query and not products %}
+      <div class="empty-state"><p>No results for “{{ search_query }}”.</p></div>
+    {% elif products %}
+      <div class="product-grid">{% for product in products %}{{ product_card(product) }}{% endfor %}</div>
+    {% else %}
+      <div class="empty-state"><p>Enter a search term to browse the catalogue.</p></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

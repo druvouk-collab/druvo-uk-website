@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="container prose">
+  <h1>Privacy Policy</h1>
+  <p class="product-meta">Last updated: 7 August 2026</p>
+
+  <p>
+    This Privacy Policy describes how <strong>DRUVO UK</strong> (“we”, “us”) handles personal information
+    when you visit our website, create an account, or purchase products from us. It also explains how
+    DRUVO UK relates to <strong>DRUVO AI Enterprise</strong>, the desktop business management application
+    used to manage inventory and sales channels.
+  </p>
+
+  <h2>Who we are</h2>
+  <p>
+    DRUVO UK is a UK-focused resale store for clothing, footwear, and accessories. DRUVO AI Enterprise
+    is separate desktop software used by the business to manage master product inventory, stock, pricing,
+    and multi-channel sales operations. The website is designed to become one sales channel alongside
+    marketplaces such as eBay — it is not limited to any single marketplace integration.
+  </p>
+
+  <h2>Information we collect</h2>
+  <p>Depending on how you interact with DRUVO UK, we may collect:</p>
+  <ul>
+    <li><strong>Account details:</strong> name, email address, and password (when account registration is enabled)</li>
+    <li><strong>Order details:</strong> delivery address, phone number, items purchased, and payment status</li>
+    <li><strong>Customer support messages:</strong> information you send via contact forms or email</li>
+    <li><strong>Website usage data:</strong> basic technical logs such as IP address, browser type, and pages visited (when server logging is enabled on our hosting platform)</li>
+  </ul>
+  <p>
+    At present, checkout and live customer accounts are not fully connected. Until those features launch,
+    we only collect information you voluntarily submit (for example via email).
+  </p>
+
+  <h2>How we use information</h2>
+  <ul>
+    <li>Process and deliver orders</li>
+    <li>Provide customer support and respond to enquiries</li>
+    <li>Maintain order history and account access</li>
+    <li>Improve our website, catalogue, and service quality</li>
+    <li>Meet legal, tax, and accounting obligations in the United Kingdom</li>
+  </ul>
+
+  <h2>DRUVO AI Enterprise and sales channels</h2>
+  <p>
+    Product listings, stock quantities, variants, images, and pricing shown on this website are intended
+    to be sourced from DRUVO AI Enterprise as the master inventory system. Orders placed on DRUVO UK
+    will eventually be recorded in DRUVO AI alongside orders from other channels.
+  </p>
+  <p>
+    DRUVO AI Enterprise, when installed on a seller’s Mac, stores business data locally on that device.
+    The website does not automatically upload your personal DRUVO AI desktop data to the internet.
+    Any future connection between this website and DRUVO AI will use secure server-side APIs — not direct
+    access to your local desktop database.
+  </p>
+
+  <h2>Marketplace integrations</h2>
+  <p>
+    DRUVO AI may connect to third-party marketplaces (for example eBay) as separate sales channels.
+    Those platforms have their own privacy policies. We do not share your DRUVO UK website account
+    details with marketplaces unless required to fulfil an order or comply with law.
+  </p>
+
+  <h2>Cookies and local storage</h2>
+  <p>
+    This website may use essential cookies or browser local storage for basket functionality and session
+    management. We do not currently use third-party advertising trackers on this site.
+  </p>
+
+  <h2>Data retention</h2>
+  <p>
+    We retain order and account information for as long as needed to provide our services, resolve
+    disputes, and comply with UK legal requirements. You may request deletion of personal data where
+    we are not required to retain it.
+  </p>
+
+  <h2>Your rights (UK)</h2>
+  <p>
+    Under UK data protection law you may have rights to access, correct, erase, restrict, or object to
+    processing of your personal data, and to data portability where applicable. Contact us to exercise
+    these rights.
+  </p>
+
+  <h2>Security</h2>
+  <p>
+    We use HTTPS for public pages and follow reasonable technical and organisational measures to protect
+    personal information. No online service can guarantee absolute security.
+  </p>
+
+  <h2>Children</h2>
+  <p>DRUVO UK is not directed at children under 16 and we do not knowingly collect their personal data.</p>
+
+  <h2>Changes</h2>
+  <p>We may update this policy from time to time. The “Last updated” date above will reflect the latest version.</p>
+
+  <h2>Contact</h2>
+  <p>
+    Privacy enquiries: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+  </p>
+</article>
+{% endblock %}
