@@ -57,3 +57,10 @@ async def test_sale_page(client):
     response = await client.get("/sale")
     assert response.status_code == 200
     assert "Sale" in response.text or "sale" in response.text.lower()
+
+
+@pytest.mark.asyncio
+async def test_www_redirects_to_canonical(client):
+    response = await client.get("/shop", headers={"Host": "www.druvo.uk"}, follow_redirects=False)
+    assert response.status_code == 301
+    assert response.headers["location"] == "https://druvo.uk/shop"

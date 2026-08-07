@@ -10,7 +10,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.lib.druvo_api.key_sanitize import sanitize_api_base_url, sanitize_api_key
 
-PRODUCTION_SITE_URL = "https://druvo-uk-website.onrender.com"
+PRODUCTION_SITE_URL = "https://druvo.uk"
+CANONICAL_HOST = "druvo.uk"
 
 
 class Settings(BaseSettings):

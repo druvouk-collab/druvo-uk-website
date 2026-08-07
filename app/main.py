@@ -8,11 +8,11 @@ import sys
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.config import get_settings
+from app.config import CANONICAL_HOST, get_settings
 from app.lib.druvo_api.client import DruvoApiClient
 from app.routes import account, admin, catalog_api, checkout_api, legal, shop, stripe_webhook
 from app.services.readiness_service import build_readiness_report
@@ -48,6 +48,17 @@ app.include_router(stripe_webhook.router)
 app.include_router(account.router)
 app.include_router(admin.router)
 app.include_router(legal.router)
+
+
+@app.middleware("http")
+async def www_to_canonical_redirect(request: Request, call_next):
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host == f"www.{CANONICAL_HOST}":
+        target = f"https://{CANONICAL_HOST}{request.url.path}"
+        if request.url.query:
+            target = f"{target}?{request.url.query}"
+        return RedirectResponse(url=target, status_code=301)
+    return await call_next(request)
 
 
 @app.get("/health")

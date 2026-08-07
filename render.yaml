@@ -21,7 +21,7 @@ services:
       - key: CATALOG_SOURCE
         value: druvo_api
       - key: SITE_URL
-        value: "https://druvo-uk-website.onrender.com"
+        value: "https://druvo.uk"
       - key: SESSION_SECRET
         generateValue: true
       - key: DRUVO_API_BASE_URL
