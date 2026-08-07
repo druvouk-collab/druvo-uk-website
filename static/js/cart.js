@@ -57,6 +57,31 @@ export function formatGBP(value) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(value);
 }
 
+let shippingConfig = { standard_gbp: 3.99, free_threshold_gbp: 75 };
+
+export function getShippingConfig() {
+  return shippingConfig;
+}
+
+export async function loadShippingConfig() {
+  try {
+    const response = await fetch("/api/checkout/shipping-config");
+    if (response.ok) {
+      shippingConfig = await response.json();
+    }
+  } catch {
+    /* keep defaults */
+  }
+  return shippingConfig;
+}
+
+export function calculateShipping(subtotal) {
+  const cfg = shippingConfig;
+  const free = subtotal >= Number(cfg.free_threshold_gbp || 75);
+  const shipping = free ? 0 : Number(cfg.standard_gbp || 3.99);
+  return { subtotal, shipping, total: subtotal + shipping, free };
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   updateCartBadge();
 

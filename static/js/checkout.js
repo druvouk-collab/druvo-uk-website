@@ -1,6 +1,6 @@
-import { formatGBP, getCart } from "./cart.js";
+import { formatGBP, getCart, calculateShipping, loadShippingConfig } from "./cart.js";
 
-function renderSummary() {
+async function renderSummary() {
   const summary = document.getElementById("checkout-summary");
   if (!summary) return;
   const cart = getCart();
@@ -9,6 +9,7 @@ function renderSummary() {
     document.getElementById("place-order")?.setAttribute("disabled", "disabled");
     return;
   }
+  await loadShippingConfig();
   const rows = cart
     .map(
       (item) =>
@@ -16,9 +17,12 @@ function renderSummary() {
     )
     .join("");
   const subtotal = cart.reduce((sum, item) => sum + item.price_gbp * item.quantity, 0);
+  const quote = calculateShipping(subtotal);
   summary.innerHTML = `
     ${rows}
-    <div class="summary-row total"><span>Subtotal</span><span>${formatGBP(subtotal)}</span></div>`;
+    <div class="summary-row"><span>Subtotal</span><span>${formatGBP(quote.subtotal)}</span></div>
+    <div class="summary-row"><span>Shipping (UK)</span><span>${quote.free ? "Free" : formatGBP(quote.shipping)}</span></div>
+    <div class="summary-row total"><span>Total</span><span>${formatGBP(quote.total)}</span></div>`;
 }
 
 async function placeOrder() {

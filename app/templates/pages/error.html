@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container page-header">
-  <h1>{{ page_title }}</h1>
-  <p>{{ message }}</p>
-  <p><a class="btn btn-primary" href="/">Return home</a></p>
+  <h1>Something went wrong</h1>
+  <p>We're sorry — this page could not be loaded right now. Your payment and order data in DRUVO AI are not affected by a website display error.</p>
+  <p class="product-meta">If you were checking out, please check your email for confirmation or look up your order by checkout email.</p>
+  <p style="margin-top:1.5rem;">
+    <a class="btn btn-primary" href="/">Return home</a>
+    <a class="btn btn-secondary" href="/account/login" style="margin-left:0.5rem;">Find my orders</a>
+  </p>
 </div>
 {% endblock %}

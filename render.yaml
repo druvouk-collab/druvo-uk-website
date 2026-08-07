@@ -38,3 +38,19 @@ services:
         sync: false
       - key: CHECKOUT_DB_PATH
         value: "/tmp/druvo_checkout.db"
+      - key: SHIPPING_STANDARD_GBP
+        value: "3.99"
+      - key: SHIPPING_FREE_THRESHOLD_GBP
+        value: "75"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: ADMIN_CHECKLIST_TOKEN
+        sync: false
+      - key: PRODUCTION_MODE
+        value: "false"

@@ -74,6 +74,7 @@ class WebsiteOrderService:
         external_order_id: str,
         stripe_session_id: str = "",
         stripe_payment_intent_id: str = "",
+        shipping_gbp: float = 0.0,
     ) -> dict:
         """Create a DRUVO order after Stripe confirms payment (webhook-only path)."""
         client = self._client
@@ -96,6 +97,7 @@ class WebsiteOrderService:
             "stripe_session_id": stripe_session_id,
             "stripe_payment_intent_id": stripe_payment_intent_id,
             "payment_provider": "stripe",
+            "shipping_gbp": round(float(shipping_gbp), 2),
             "lines": [
                 {
                     "sku": line.sku,

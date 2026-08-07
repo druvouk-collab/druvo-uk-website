@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container page-header">
+  <h1>Production launch checklist</h1>
+  <p class="product-meta">Admin report — not linked from the public storefront.</p>
+</div>
+<div class="container content-card" style="margin-bottom:2rem;">
+  <h2>Automated readiness</h2>
+  <p><strong>Overall:</strong> {% if report.ready %}Ready{% else %}Not ready{% endif %}</p>
+  <p class="product-meta">Environment: {{ report.environment }} · Stripe: {{ report.stripe_mode }} · Commit: {{ report.git_commit or "local" }}</p>
+  {% if report.required_failures %}
+  <div class="notice" style="margin:1rem 0;">Required failures: {{ report.required_failures | join(", ") }}</div>
+  {% endif %}
+  <table style="width:100%;margin-top:1rem;border-collapse:collapse;">
+    <thead><tr><th align="left">Check</th><th align="left">Status</th><th align="left">Detail</th></tr></thead>
+    <tbody>
+      {% for check in report.checks %}
+      <tr>
+        <td>{{ check.name }}{% if check.required %} *{% endif %}</td>
+        <td>{% if check.ok %}PASS{% else %}FAIL{% endif %}</td>
+        <td>{{ check.detail }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="container content-card">
+  <h2>Manual sign-off</h2>
+  <ul>
+    {% for item in manual_items %}
+    <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

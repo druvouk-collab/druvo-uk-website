@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -13,8 +14,15 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
 from app.lib.druvo_api.client import DruvoApiClient
-from app.routes import account, catalog_api, checkout_api, legal, shop, stripe_webhook
+from app.routes import account, admin, catalog_api, checkout_api, legal, shop, stripe_webhook
+from app.services.readiness_service import build_readiness_report
 from app.templating import templates
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    stream=sys.stdout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +46,20 @@ app.include_router(catalog_api.router)
 app.include_router(checkout_api.router)
 app.include_router(stripe_webhook.router)
 app.include_router(account.router)
+app.include_router(admin.router)
 app.include_router(legal.router)
 
 
 @app.get("/health")
 async def health() -> JSONResponse:
     return JSONResponse({"status": "ok", "service": "druvo-uk-website"})
+
+
+@app.get("/health/readiness")
+async def readiness() -> JSONResponse:
+    report = await build_readiness_report()
+    status_code = 200 if report["ready"] else 503
+    return JSONResponse(report, status_code=status_code)
 
 
 @app.get("/health/druvo")
@@ -59,7 +75,9 @@ async def druvo_health() -> JSONResponse:
         "api_key_length": len(settings.druvo_api_key),
         "api_key_length_ok": len(settings.druvo_api_key) == 43,
         "stripe_enabled": settings.stripe_enabled,
+        "stripe_mode": settings.stripe_mode,
         "payments_enabled": settings.payments_enabled,
+        "email_configured": settings.email_configured,
         "git_commit": os.getenv("RENDER_GIT_COMMIT", ""),
     }
     if settings.catalog_source == "druvo_api" and settings.druvo_api_base_url:
@@ -97,7 +115,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> HTMLResponse | JSONResponse:
-    logger.exception("Unhandled error on %s", request.url.path)
+    logger.exception("Unhandled error on %s: %s", request.url.path, type(exc).__name__)
     if _json_error_path(request.url.path):
         return JSONResponse({"detail": "Service temporarily unavailable."}, status_code=503)
     return templates.TemplateResponse(

@@ -27,6 +27,29 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""
+    stripe_live_mode_confirmed: bool = False
+    production_mode: bool = False
+    shipping_standard_gbp: float = 3.99
+    shipping_free_threshold_gbp: float = 75.0
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_use_tls: bool = True
+    admin_checklist_token: str = ""
+
+    @property
+    def stripe_mode(self) -> str:
+        if self.stripe_secret_key.startswith("sk_live"):
+            return "live"
+        if self.stripe_secret_key.startswith("sk_test"):
+            return "test"
+        return "missing"
+
+    @property
+    def email_configured(self) -> bool:
+        return bool(self.smtp_host and self.smtp_from)
 
     @property
     def stripe_enabled(self) -> bool:

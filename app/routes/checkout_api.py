@@ -7,9 +7,24 @@ from pydantic import BaseModel, Field
 
 from app.config import get_settings
 from app.services.order_service import CheckoutLine, CheckoutRequest, WebsiteOrderService
+from app.services.shipping_service import calculate_shipping
 
 router = APIRouter(prefix="/api/checkout", tags=["checkout"])
 orders = WebsiteOrderService()
+
+
+@router.get("/shipping-config")
+async def shipping_config() -> dict:
+    settings = get_settings()
+    return {
+        "standard_gbp": settings.shipping_standard_gbp,
+        "free_threshold_gbp": settings.shipping_free_threshold_gbp,
+    }
+
+
+@router.get("/shipping-quote")
+async def shipping_quote(subtotal: float = 0) -> dict:
+    return calculate_shipping(subtotal).as_dict()
 
 
 class CheckoutLinePayload(BaseModel):

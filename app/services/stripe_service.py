@@ -13,6 +13,7 @@ import stripe
 from app.config import Settings, get_settings
 from app.lib.druvo_api.errors import CatalogApiError
 from app.services.order_service import CheckoutLine, CheckoutRequest, WebsiteOrderService
+from app.services.shipping_service import calculate_shipping
 from app.storage.checkout_store import (
     PendingCheckout,
     attach_session,
@@ -75,10 +76,35 @@ class StripeCheckoutService:
             }
             for line in lines
         ]
+        subtotal = sum(line.quantity * line.unit_price_gbp for line in lines)
+        shipping_quote = calculate_shipping(subtotal, self._settings)
         save_pending(order_ref, customer_email, customer_name, line_payloads)
         lines_json = json.dumps(line_payloads, separators=(",", ":"))
         if len(lines_json) > 500:
             raise ValueError("Checkout basket is too large for Stripe metadata backup.")
+
+        stripe_line_items = [
+            {
+                "price_data": {
+                    "currency": "gbp",
+                    "unit_amount": self._to_pence(line.unit_price_gbp),
+                    "product_data": {"name": f"{line.sku} × {line.quantity}"},
+                },
+                "quantity": line.quantity,
+            }
+            for line in lines
+        ]
+        if shipping_quote.shipping_gbp > 0:
+            stripe_line_items.append(
+                {
+                    "price_data": {
+                        "currency": "gbp",
+                        "unit_amount": self._to_pence(shipping_quote.shipping_gbp),
+                        "product_data": {"name": "UK standard shipping"},
+                    },
+                    "quantity": 1,
+                }
+            )
 
         self._configure_stripe()
         session = stripe.checkout.Session.create(
@@ -91,18 +117,9 @@ class StripeCheckoutService:
                 "customer_email": customer_email.strip()[:500],
                 "customer_name": customer_name.strip()[:500],
                 "lines_json": lines_json,
+                "shipping_gbp": str(shipping_quote.shipping_gbp),
             },
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": "gbp",
-                        "unit_amount": self._to_pence(line.unit_price_gbp),
-                        "product_data": {"name": f"{line.sku} × {line.quantity}"},
-                    },
-                    "quantity": line.quantity,
-                }
-                for line in lines
-            ],
+            line_items=stripe_line_items,
             success_url=f"{self._settings.public_site_url}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{self._settings.public_site_url}/checkout/cancel?external_order_id={order_ref}",
         )
@@ -157,6 +174,7 @@ class StripeCheckoutService:
                 external_order_id=external_order_id,
                 stripe_session_id=self._session_field(session, "id"),
                 stripe_payment_intent_id=self._payment_intent_id(session),
+                shipping_gbp=self._shipping_gbp(session, pending.lines),
             )
         except CatalogApiError as exc:
             logger.warning(
@@ -332,6 +350,18 @@ class StripeCheckoutService:
         if hasattr(value, "id"):
             return str(value.id)
         return str(value)
+
+    @classmethod
+    def _shipping_gbp(cls, session: Any, lines: list[dict]) -> float:
+        metadata = cls._metadata_dict(session)
+        raw = metadata.get("shipping_gbp", "")
+        if raw:
+            try:
+                return float(raw)
+            except ValueError:
+                pass
+        subtotal = sum(int(item.get("quantity", 1)) * float(item.get("unit_price_gbp", 0)) for item in lines)
+        return calculate_shipping(subtotal).shipping_gbp
 
     @classmethod
     def _lines_from_stripe_session(cls, session: Any) -> list[dict]:
