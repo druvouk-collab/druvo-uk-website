@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import httpx
 
 from app.config import Settings
+from app.lib.druvo_api.key_sanitize import bearer_auth_header
 from app.lib.druvo_api.mapper import map_category, map_product
 from app.types.commerce import Category, Order, Product
 
@@ -29,8 +30,7 @@ class DruvoApiClient:
 
     def _headers(self) -> dict[str, str]:
         headers = {"Accept": "application/json", "User-Agent": "DRUVO-UK-Website/0.1"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
+        headers.update(bearer_auth_header(self.api_key))
         return headers
 
     async def list_products(self) -> list[Product]:

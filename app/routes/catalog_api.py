@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
 from app.config import get_settings
+from app.lib.druvo_api.key_sanitize import bearer_auth_header
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 
@@ -23,7 +24,7 @@ async def proxy_catalog_image(image_path: str) -> Response:
 
     base = settings.druvo_api_base_url.rstrip("/")
     url = f"{base}/api/v1/images/{rel}"
-    headers = {"Authorization": f"Bearer {settings.druvo_api_key}"}
+    headers = bearer_auth_header(settings.druvo_api_key)
 
     try:
         async with httpx.AsyncClient(timeout=float(settings.druvo_api_timeout_seconds)) as client:
