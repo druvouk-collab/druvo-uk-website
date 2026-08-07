@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from unittest.mock import AsyncMock, patch
 
 from app.lib.druvo_api.mapper import map_order
 from app.main import app
@@ -103,10 +104,31 @@ def test_account_service_reads_latest_status(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_order_detail_shows_tracking_when_present():
+async def test_order_detail_shows_tracking_when_present(monkeypatch):
+    monkeypatch.setenv("CATALOG_SOURCE", "druvo_api")
+    monkeypatch.setenv("DRUVO_API_BASE_URL", "http://127.0.0.1:8790")
+    monkeypatch.setenv("DRUVO_API_KEY", "d" * 43)
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    fake_client = AsyncMock()
+    fake_client.get_order = AsyncMock(
+        return_value={
+            "external_order_id": "web-track-1",
+            "customer_email": "shopper@druvo.uk",
+            "status": "shipped",
+            "status_label": "Shipped",
+            "created_at": "2026-08-07 12:00:00",
+            "total_amount": 40.0,
+            "tracking_number": "RM123456789GB",
+            "carrier": "Royal Mail",
+            "lines": [],
+        }
+    )
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/account/orders/DRU-10042")
+        with patch.object(AccountOrderService, "_client", lambda self: fake_client):
+            response = await client.get("/account/orders/web-track-1?email=shopper@druvo.uk")
         assert response.status_code == 200
         assert "RM123456789GB" in response.text
         assert "Royal Mail" in response.text

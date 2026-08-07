@@ -3,12 +3,29 @@
 <div class="container page-header"><h1>My Account</h1></div>
 <div class="container account-grid two-col">
   <aside class="summary-card">
-    <a href="/account/orders">Order history</a>
-    <a href="/account/login">Sign in</a>
+    <a href="/account/orders{% if lookup_email %}?email={{ lookup_email | urlencode }}{% endif %}">Order history</a>
+    <a href="/account/login">Find orders</a>
     <a href="/contact">Support</a>
   </aside>
   <section>
+    {% if not has_email %}
+    <div class="content-card" style="margin-bottom:1.5rem;">
+      <p class="product-meta">Enter the email you used at checkout to view your orders from DRUVO AI.</p>
+      <form class="form-grid two" method="get" action="/account">
+        <div class="form-field" style="grid-column:1/-1;">
+          <label for="email">Checkout email</label>
+          <input id="email" name="email" type="email" placeholder="you@example.com" required>
+        </div>
+        <button class="btn btn-primary" type="submit">View orders</button>
+      </form>
+    </div>
+    {% elif live_orders and lookup_email %}
+    <p class="product-meta" style="margin-bottom:1rem;">Orders for <strong>{{ lookup_email }}</strong></p>
+    {% endif %}
     <h2>Recent orders</h2>
+    {% if has_email and not orders %}
+    <p class="product-meta">No orders found for {{ lookup_email }}.</p>
+    {% endif %}
     {% for order in orders %}
       <article class="order-card">
         <header>

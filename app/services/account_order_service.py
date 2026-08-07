@@ -10,14 +10,19 @@ from app.types.commerce import Order
 
 class AccountOrderService:
     def __init__(self) -> None:
-        self._settings = get_settings()
+        pass
+
+    @property
+    def _settings(self):
+        return get_settings()
 
     @property
     def live_orders_enabled(self) -> bool:
+        settings = self._settings
         return (
-            self._settings.catalog_source == "druvo_api"
-            and bool(self._settings.druvo_api_base_url)
-            and bool(self._settings.druvo_api_key)
+            settings.catalog_source == "druvo_api"
+            and bool(settings.druvo_api_base_url)
+            and bool(settings.druvo_api_key)
         )
 
     def _client(self) -> DruvoApiClient:

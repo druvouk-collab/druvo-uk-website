@@ -2,24 +2,28 @@
 {% block content %}
 <div class="container page-header"><h1>Order history</h1></div>
 <div class="container">
-  {% if live_orders %}
-  <div class="notice" style="margin-bottom:1rem;">
-    Showing live orders from DRUVO AI for <strong>{{ lookup_email }}</strong>.
-    Customer sign-in is not enabled yet — use the email you entered at checkout.
-  </div>
-  {% else %}
   <form class="form-grid two content-card" method="get" action="/account/orders" style="margin-bottom:1.5rem;">
     <div class="form-field" style="grid-column:1/-1;">
-      <label for="email">Look up orders by checkout email (DRUVO API mode)</label>
-      <input id="email" name="email" type="email" placeholder="you@example.com" value="{{ lookup_email }}">
+      <label for="email">Look up orders by checkout email</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" value="{{ lookup_email }}" required>
     </div>
     <button class="btn btn-primary" type="submit">Find orders</button>
   </form>
+  {% if live_orders and lookup_email %}
+  <div class="notice" style="margin-bottom:1rem;">
+    Showing live orders from DRUVO AI for <strong>{{ lookup_email }}</strong>.
+  </div>
+  {% elif not live_orders %}
+  <div class="notice" style="margin-bottom:1rem;">
+    Live order lookup requires DRUVO API configuration on this site.
+  </div>
   {% endif %}
 </div>
 <div class="container account-grid">
-  {% if not orders %}
-    <p class="product-meta">No orders found{% if lookup_email %} for {{ lookup_email }}{% endif %}.</p>
+  {% if has_email and not orders %}
+    <p class="product-meta">No orders found for {{ lookup_email }}.</p>
+  {% elif not has_email %}
+    <p class="product-meta">Enter your checkout email above to view your order history.</p>
   {% endif %}
   {% for order in orders %}
     <article class="order-card">
@@ -29,11 +33,11 @@
       </header>
       <ul>
         {% for line in order.lines %}
-          <li>{{ line.product_name }} · {{ line.colour }} · {{ line.size }} × {{ line.quantity }}</li>
+          <li>{{ line.product_name }} · {{ line.colour }} / {{ line.size }} × {{ line.quantity }}</li>
         {% endfor %}
       </ul>
       <p><strong>Total:</strong> {{ format_gbp(order.total_gbp) }}</p>
-      <a class="link-arrow" href="/account/orders/{{ order.id }}{% if lookup_email %}?email={{ lookup_email | urlencode }}{% endif %}">Track order</a>
+      <a class="link-arrow" href="/account/orders/{{ order.id }}{% if lookup_email %}?email={{ lookup_email | urlencode }}{% endif %}">View order</a>
     </article>
   {% endfor %}
 </div>
