@@ -101,6 +101,13 @@ class DruvoApiClient:
         response.raise_for_status()
         return response.json().get("orders", [])
 
+    async def get_order(self, order_ref: str) -> dict | None:
+        response = await self._request("GET", f"/api/v1/orders/{order_ref}")
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.json()
+
     async def ping(self) -> bool:
         """Return True when DRUVO API health responds (no catalog auth required)."""
         if not self.base_url:

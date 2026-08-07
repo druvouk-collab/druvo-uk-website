@@ -16,6 +16,7 @@ def map_product(payload: dict) -> Product:
             colour=v["colour"],
             stock_quantity=int(v["stock_quantity"]),
             price_gbp=float(v["price_gbp"]),
+            variant_id=v.get("variant_id"),
         )
         for v in payload.get("variants", [])
     ]
@@ -54,7 +55,7 @@ def map_order(payload: dict) -> Order:
     lines = [
         OrderLine(
             product_slug=line.get("sku", ""),
-            product_name=line.get("sku", "Item"),
+            product_name=line.get("product_name") or line.get("sku", "Item"),
             sku=line.get("sku", ""),
             size=line.get("size", "—"),
             colour=line.get("colour", "—"),
@@ -64,11 +65,14 @@ def map_order(payload: dict) -> Order:
         for line in payload.get("lines", [])
     ]
     subtotal = sum(line.quantity * line.unit_price_gbp for line in lines)
+    tracking = payload.get("tracking_number")
+    carrier = payload.get("carrier")
     return Order(
         id=str(payload.get("external_order_id") or payload.get("order_id")),
         placed_at=str(payload.get("created_at", "")),
-        status=str(payload.get("status", "received")).title(),
-        tracking_number=None,
+        status=str(payload.get("status_label") or payload.get("status", "received")).title(),
+        tracking_number=tracking if tracking else None,
+        carrier=carrier if carrier else None,
         lines=lines,
         subtotal_gbp=subtotal,
         shipping_gbp=0.0,

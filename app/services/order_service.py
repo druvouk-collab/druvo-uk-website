@@ -14,6 +14,7 @@ class CheckoutLine:
     sku: str
     quantity: int
     unit_price_gbp: float
+    variant_id: int | None = None
 
 
 @dataclass
@@ -52,10 +53,18 @@ class WebsiteOrderService:
         )
 
     async def validate_stock(self, lines: list[CheckoutLine]) -> dict:
-        if not self.orders_enabled or self._client is None:
+        client = self._client
+        if client is None:
             raise RuntimeError("Stock validation requires DRUVO API configuration.")
-        return await self._client.check_stock(
-            [{"sku": line.sku, "quantity": line.quantity} for line in lines]
+        return await client.check_stock(
+            [
+                {
+                    "sku": line.sku,
+                    "quantity": line.quantity,
+                    **({"variant_id": line.variant_id} if line.variant_id is not None else {}),
+                }
+                for line in lines
+            ]
         )
 
     async def submit(
@@ -64,7 +73,8 @@ class WebsiteOrderService:
         *,
         external_order_id: str | None = None,
     ) -> dict:
-        if not self.orders_enabled or self._client is None:
+        client = self._client
+        if client is None:
             raise RuntimeError(
                 "Order submission requires CATALOG_SOURCE=druvo_api with DRUVO_API_BASE_URL and DRUVO_API_KEY."
             )
@@ -92,7 +102,7 @@ class WebsiteOrderService:
                 for line in request.lines
             ],
         }
-        return await self._client.submit_order(payload)
+        return await client.submit_order(payload)
 
     async def list_orders(self, customer_email: str) -> list[dict]:
         if not self.orders_enabled or self._client is None:

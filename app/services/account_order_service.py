@@ -20,18 +20,26 @@ class AccountOrderService:
             and bool(self._settings.druvo_api_key)
         )
 
+    def _client(self) -> DruvoApiClient:
+        return DruvoApiClient.from_settings(self._settings)
+
     async def list_orders_for_email(self, email: str) -> list[Order]:
         if not self.live_orders_enabled or not email.strip():
             return []
-        client = DruvoApiClient.from_settings(self._settings)
-        rows = await client.list_orders_for_email(email.strip())
+        rows = await self._client().list_orders_for_email(email.strip())
         return [map_order(row) for row in rows]
 
     async def get_order(self, order_id: str, email: str = "") -> Order | None:
-        orders = await self.list_orders_for_email(email) if email else []
-        if not orders and self.live_orders_enabled and email:
-            orders = await self.list_orders_for_email(email)
-        for order in orders:
-            if order.id == order_id:
-                return order
+        if not self.live_orders_enabled:
+            return None
+        client = self._client()
+        row = await client.get_order(order_id)
+        if row:
+            if email.strip() and row.get("customer_email", "").lower() != email.strip().lower():
+                return None
+            return map_order(row)
+        if email.strip():
+            for order in await self.list_orders_for_email(email):
+                if order.id == order_id:
+                    return order
         return None

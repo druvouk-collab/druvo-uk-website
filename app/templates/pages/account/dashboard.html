@@ -16,7 +16,7 @@
           <span class="badge badge-new">{{ order.status }}</span>
         </header>
         <p>{{ order.lines | length }} item(s) · {{ format_gbp(order.total_gbp) }}</p>
-        <a class="link-arrow" href="/account/orders/{{ order.id }}">View order</a>
+        <a class="link-arrow" href="/account/orders/{{ order.id }}{% if lookup_email %}?email={{ lookup_email | urlencode }}{% endif %}">View order</a>
       </article>
     {% endfor %}
   </section>

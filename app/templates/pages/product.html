@@ -9,8 +9,8 @@
   data-on-sale="{{ 'true' if product.is_on_sale and product.sale_price_gbp else 'false' }}"
   data-sale-price="{{ product.sale_price_gbp or '' }}"
   data-variants='{{ variants_json | safe }}'
-  data-default-size="{{ product.sizes[0] if product.sizes else '' }}"
-  data-default-colour="{{ product.colours[0] if product.colours else '' }}">
+  data-default-size="{{ default_size }}"
+  data-default-colour="{{ default_colour }}">
   <div>
     <div class="gallery-main"><img class="druvo-img" data-gallery-main src="{{ product.images[0] }}" alt="{{ product.name }}" data-placeholder="{{ placeholder_product }}"></div>
     {% if product.images|length > 1 %}

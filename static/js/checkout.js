@@ -40,6 +40,7 @@ async function placeOrder() {
     sku: item.sku,
     quantity: item.quantity,
     unit_price_gbp: item.price_gbp,
+    ...(item.variant_id != null ? { variant_id: item.variant_id } : {}),
   }));
 
   let externalOrderId = sessionStorage.getItem("druvo_checkout_order_id");
@@ -81,9 +82,10 @@ async function placeOrder() {
     }
     sessionStorage.removeItem("druvo_checkout_order_id");
     localStorage.removeItem("druvo_uk_cart");
-    status.textContent = payload.duplicate
-      ? "Order already recorded (duplicate protection)."
-      : `Order confirmed — reference #${payload.order_id}.`;
+    const accountLink = `/account/orders?email=${encodeURIComponent(email)}`;
+    status.innerHTML = payload.duplicate
+      ? `Order already recorded (duplicate protection). <a href="${accountLink}">View order history</a>.`
+      : `Order confirmed — reference #${payload.order_id}. <a href="${accountLink}">View order history</a>.`;
     renderSummary();
   } catch (error) {
     status.textContent = error.message || "Order failed.";

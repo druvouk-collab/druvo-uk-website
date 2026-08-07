@@ -2,10 +2,13 @@
 {% block content %}
 <div class="container page-header"><h1>Order {{ order.id }}</h1></div>
 <article class="container content-card" style="margin-bottom:3rem;">
-  <p class="product-meta">Placed {{ order.placed_at }} · {{ order.status }}</p>
-  {% if order.tracking_number %}
-    <p><strong>Tracking:</strong> {{ order.tracking_number }}</p>
-    <p class="product-meta">Full carrier tracking links will appear here when live shipping integration is enabled.</p>
+  <p class="product-meta">Placed {{ order.placed_at }}</p>
+  <p><span class="badge badge-new">{{ order.status }}</span></p>
+  {% if order.has_tracking %}
+    <div class="notice" style="margin:1rem 0;">
+      <p><strong>Tracking{% if order.carrier %} · {{ order.carrier }}{% endif %}</strong></p>
+      <p>{{ order.tracking_number }}</p>
+    </div>
   {% endif %}
   <h2>Items</h2>
   <ul>
@@ -16,5 +19,8 @@
   <div class="summary-row"><span>Subtotal</span><span>{{ format_gbp(order.subtotal_gbp) }}</span></div>
   <div class="summary-row"><span>Shipping</span><span>{{ format_gbp(order.shipping_gbp) }}</span></div>
   <div class="summary-row total"><span>Total</span><span>{{ format_gbp(order.total_gbp) }}</span></div>
+  {% if lookup_email %}
+    <p style="margin-top:1rem;"><a class="link-arrow" href="/account/orders?email={{ lookup_email | urlencode }}">Back to order history</a></p>
+  {% endif %}
 </article>
 {% endblock %}

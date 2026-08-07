@@ -25,10 +25,14 @@ export function updateCartBadge() {
 export function addToCart(item) {
   const cart = getCart();
   const existing = cart.find(
-    (row) => row.slug === item.slug && row.size === item.size && row.colour === item.colour
+    (row) =>
+      (item.sku && row.sku === item.sku) ||
+      (row.slug === item.slug && row.size === item.size && row.colour === item.colour)
   );
   if (existing) {
     existing.quantity += item.quantity;
+    existing.sku = item.sku || existing.sku;
+    existing.variant_id = item.variant_id ?? existing.variant_id ?? null;
   } else {
     cart.push(item);
   }

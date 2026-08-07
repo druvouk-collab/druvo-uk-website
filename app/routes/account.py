@@ -18,6 +18,7 @@ _MOCK_ORDERS = [
         placed_at="2026-08-01",
         status="Shipped",
         tracking_number="RM123456789GB",
+        carrier="Royal Mail",
         lines=[
             OrderLine("cashmere-roll-neck", "Cashmere Roll Neck", "CN-GRY-M", "M", "Grey", 1, 44.00),
         ],
@@ -30,6 +31,7 @@ _MOCK_ORDERS = [
         placed_at="2026-07-18",
         status="Delivered",
         tracking_number="RM987654321GB",
+        carrier="Royal Mail",
         lines=[
             OrderLine("white-leather-trainers", "White Leather Trainers", "CP-WHT-42", "UK 9", "White", 1, 165.00),
         ],
@@ -97,5 +99,5 @@ async def order_detail(request: Request, order_id: str, email: str = Query("")):
     return templates.TemplateResponse(
         request,
         "pages/account/order_detail.html",
-        {"page_title": f"Order {order_id}", "order": order},
+        {"page_title": f"Order {order_id}", "order": order, "lookup_email": email.strip()},
     )

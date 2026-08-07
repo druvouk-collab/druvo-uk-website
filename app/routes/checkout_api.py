@@ -15,6 +15,7 @@ class CheckoutLinePayload(BaseModel):
     sku: str
     quantity: int = Field(gt=0)
     unit_price_gbp: float = Field(ge=0)
+    variant_id: int | None = None
 
 
 class CheckoutOrderPayload(BaseModel):
@@ -31,7 +32,12 @@ async def validate_checkout_stock(payload: CheckoutOrderPayload) -> dict:
     try:
         return await orders.validate_stock(
             [
-                CheckoutLine(sku=line.sku, quantity=line.quantity, unit_price_gbp=line.unit_price_gbp)
+                CheckoutLine(
+                    sku=line.sku,
+                    quantity=line.quantity,
+                    unit_price_gbp=line.unit_price_gbp,
+                    variant_id=line.variant_id,
+                )
                 for line in payload.lines
             ]
         )
@@ -56,6 +62,7 @@ async def submit_checkout_order(payload: CheckoutOrderPayload) -> dict:
                         sku=line.sku,
                         quantity=line.quantity,
                         unit_price_gbp=line.unit_price_gbp,
+                        variant_id=line.variant_id,
                     )
                     for line in payload.lines
                 ],

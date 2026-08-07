@@ -145,6 +145,7 @@ async def product_detail(request: Request, slug: str):
         return templates.TemplateResponse(request, "pages/404.html", {"page_title": "Not found"}, status_code=404)
     related = await catalog.list_products(CatalogFilters(category_slug=product.category_slug))
     related = [p for p in related if p.slug != slug][:4]
+    default_variant = product.first_in_stock_variant()
     return templates.TemplateResponse(
         request,
         "pages/product.html",
@@ -153,6 +154,8 @@ async def product_detail(request: Request, slug: str):
             "product": product,
             "related": related,
             "variants_json": json.dumps([asdict(v) for v in product.variants]),
+            "default_size": default_variant.size if default_variant else "",
+            "default_colour": default_variant.colour if default_variant else "",
         },
     )
 

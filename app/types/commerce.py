@@ -12,6 +12,11 @@ class ProductVariant:
     colour: str
     stock_quantity: int
     price_gbp: float
+    variant_id: int | None = None
+
+    @property
+    def in_stock(self) -> bool:
+        return self.stock_quantity > 0
 
 
 @dataclass(frozen=True)
@@ -61,6 +66,24 @@ class Product:
     def colours(self) -> list[str]:
         return sorted({v.colour for v in self.variants})
 
+    def variant_for(self, size: str, colour: str) -> ProductVariant | None:
+        for variant in self.variants:
+            if variant.size == size and variant.colour == colour:
+                return variant
+        return None
+
+    def first_in_stock_variant(self) -> ProductVariant | None:
+        for variant in self.variants:
+            if variant.in_stock:
+                return variant
+        return None
+
+    def colours_for_size(self, size: str) -> list[str]:
+        return sorted({v.colour for v in self.variants if v.size == size and v.in_stock})
+
+    def sizes_for_colour(self, colour: str) -> list[str]:
+        return sorted({v.size for v in self.variants if v.colour == colour and v.in_stock})
+
 
 @dataclass(frozen=True)
 class Category:
@@ -87,7 +110,12 @@ class Order:
     placed_at: str
     status: str
     tracking_number: str | None
+    carrier: str | None
     lines: list[OrderLine]
     subtotal_gbp: float
     shipping_gbp: float
     total_gbp: float
+
+    @property
+    def has_tracking(self) -> bool:
+        return bool(self.tracking_number and self.tracking_number.strip())
