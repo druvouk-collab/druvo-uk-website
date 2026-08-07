@@ -67,6 +67,7 @@ if (!root) {
 
   function setOpen(open) {
     panel.hidden = !open;
+    root.classList.toggle("druvo-chat-open", open);
     launcher.setAttribute("aria-expanded", open ? "true" : "false");
     if (open) {
       if (!welcomeShown && history.length === 0) {
