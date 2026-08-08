@@ -6,7 +6,7 @@ import json
 from dataclasses import asdict
 
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.config import get_settings
 from app.services.seo_service import organization_json_ld, product_json_ld, website_json_ld
@@ -30,7 +30,7 @@ from app.services.seo_metadata import (
 )
 from app.templating import templates
 from app.services.catalog_service import CatalogFilters, CatalogService
-from app.services.catalog_visibility import filter_live_products, is_live_catalog_product
+from app.services.catalog_visibility import is_live_catalog_product
 
 router = APIRouter()
 catalog = CatalogService()
@@ -80,7 +80,6 @@ async def _shop_context(request: Request, filters: CatalogFilters, page_title: s
 async def home(request: Request):
     snapshot = await catalog.load_snapshot()
     products = snapshot.products
-    live_products = filter_live_products(products)
     categories = snapshot.categories
     new_arrivals = [p for p in products if p.is_new_arrival][:4]
     sale_items = [p for p in products if p.is_on_sale][:4]
@@ -89,10 +88,10 @@ async def home(request: Request):
         request,
         "pages/home.html",
         {
-            "page_title": "Premium UK Resale",
-            "document_title": home_document_title(live_products or products),
-            "seo_description": home_meta_description(live_products or products),
-            "catalog_brands": catalog_brands(live_products or products),
+            "page_title": "Curated fashion & lifestyle",
+            "document_title": home_document_title(products),
+            "seo_description": home_meta_description(products),
+            "catalog_brands": catalog_brands(products),
             "categories": categories,
             "new_arrivals": new_arrivals,
             "sale_items": sale_items,
@@ -101,8 +100,8 @@ async def home(request: Request):
             "catalog_notice": snapshot.notice,
             "organization_json_ld": organization_json_ld(),
             "website_json_ld": website_json_ld(),
-            "item_list_json_ld": item_list_json_ld(live_products[:12], "Featured products", "/")
-            if live_products
+            "item_list_json_ld": item_list_json_ld(products[:12], "Featured products", "/")
+            if products
             else None,
         },
     )
@@ -122,13 +121,18 @@ async def shop_page(
 ):
     filters = _filter_params(q, category, size, colour, min_price, max_price, in_stock, sort)
     ctx = await _shop_context(request, filters, "Shop", "Shop All")
-    live = filter_live_products(ctx["products"])
-    ctx["document_title"] = shop_document_title(live or ctx["products"])
-    ctx["seo_description"] = shop_meta_description(live or ctx["products"])
+    products = ctx["products"]
+    ctx["document_title"] = shop_document_title(products)
+    ctx["seo_description"] = shop_meta_description(products)
     ctx["item_list_json_ld"] = (
-        item_list_json_ld(live[:12], "Shop all products", "/shop") if live else None
+        item_list_json_ld(products[:12], "Shop all products", "/shop") if products else None
     )
     return templates.TemplateResponse(request, "pages/shop.html", ctx)
+
+
+@router.get("/new", response_class=HTMLResponse)
+async def new_arrivals_shortcut():
+    return RedirectResponse(url="/new-arrivals", status_code=301)
 
 
 @router.get("/new-arrivals", response_class=HTMLResponse)
@@ -197,7 +201,7 @@ async def product_detail(request: Request, slug: str):
     if not product:
         return templates.TemplateResponse(request, "pages/404.html", {"page_title": "Not found"}, status_code=404)
     related = await catalog.list_products(CatalogFilters(category_slug=product.category_slug))
-    related = [p for p in related if p.slug != slug][:4]
+    related = [p for p in related if p.slug != slug and is_live_catalog_product(p)][:4]
     default_variant = product.first_in_stock_variant()
     from app.services.seo_service import canonical_site_url
 

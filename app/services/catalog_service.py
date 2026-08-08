@@ -11,6 +11,7 @@ from app.lib.druvo_api.client import DruvoApiClient
 from app.lib.druvo_api.errors import CatalogApiError
 from app.lib.druvo_api.image_proxy import to_website_proxy_path, to_website_proxy_url
 from app.services.catalog_snapshot import CatalogSnapshot
+from app.services.catalog_visibility import filter_live_products
 from app.types.commerce import Category, Product
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ class CatalogFilters:
     on_sale_only: bool = False
     new_arrivals_only: bool = False
     sort: str = "featured"
+    public_only: bool = True
 
 
 class CatalogService:
@@ -131,6 +133,9 @@ class CatalogService:
 
         if filters.new_arrivals_only:
             result = [p for p in result if p.is_new_arrival]
+
+        if filters.public_only:
+            result = filter_live_products(result)
 
         return self._sort(result, filters.sort)
 

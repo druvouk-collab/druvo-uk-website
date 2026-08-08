@@ -1,68 +1,135 @@
-{% extends "base.html" %}
-{% from "components/macros.html" import product_card %}
-{% block meta_description %}{{ seo_description }}{% endblock %}
-{% block og_description %}{{ seo_description }}{% endblock %}
-{% block twitter_description %}{{ seo_description }}{% endblock %}
-{% block structured_data %}
-<script type="application/ld+json">{{ organization_json_ld | safe }}</script>
-<script type="application/ld+json">{{ website_json_ld | safe }}</script>
-{% if item_list_json_ld %}<script type="application/ld+json">{{ item_list_json_ld | safe }}</script>{% endif %}
-{% endblock %}
-{% block content %}
-<section class="hero container">
-  <div class="hero-copy">
-    <h1>Premium UK resale, curated for modern wardrobes.</h1>
-    <p>Discover authenticated pre-loved and new-with-tags pieces across clothing, footwear, and accessories{% if catalog_brands %} — including {{ catalog_brands | join(', ') }}{% endif %}. Shop online in the UK with live stock.</p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="/shop">Shop collection</a>
-      <a class="btn btn-secondary" href="/new-arrivals">New arrivals</a>
-    </div>
-  </div>
-  <div class="hero-card">
-    <img class="druvo-img" src="/static/images/catalog/hero/featured.jpg" alt="Curated UK resale fashion collection at DRUVO UK" fetchpriority="high" data-placeholder="{{ placeholder_category }}">
-  </div>
-</section>
-
-<section class="section container">
-  <div class="section-head">
-    <div><h2>Shop by category</h2><p>Find your next favourite piece</p></div>
-    <a class="link-arrow" href="/categories">View all categories</a>
-  </div>
-  <div class="category-grid">
-    {% for category in categories %}
-      <a class="category-card" href="/categories/{{ category.slug }}">
-        <img class="druvo-img" src="{{ category.image }}" alt="{{ category.name }} — shop online at DRUVO UK" loading="lazy" data-placeholder="{{ placeholder_category }}">
-        <span>{{ category.name }}</span>
-      </a>
-    {% endfor %}
-  </div>
-</section>
-
-<section class="section container">
-  <div class="section-head">
-    <div><h2>New arrivals</h2><p>Fresh listings this week</p></div>
-    <a class="link-arrow" href="/new-arrivals">Shop new arrivals</a>
-  </div>
-  <div class="product-grid">
-    {% for product in new_arrivals %}{{ product_card(product) }}{% endfor %}
-  </div>
-</section>
-
-<section class="section container">
-  <div class="section-head">
-    <div><h2>Offers &amp; sale</h2><p>Limited-time reductions</p></div>
-    <a class="link-arrow" href="/sale">View sale items</a>
-  </div>
-  <div class="product-grid">
-    {% for product in sale_items %}{{ product_card(product) }}{% endfor %}
-  </div>
-</section>
-
-<section class="section container">
-  <div class="section-head"><div><h2>Featured resale picks</h2><p>Popular pieces available to shop online now</p></div></div>
-  <div class="product-grid">
-    {% for product in featured %}{{ product_card(product) }}{% endfor %}
-  </div>
-</section>
-{% endblock %}
-
+{% extends "base.html" %}
+
+{% from "components/macros.html" import product_card %}
+
+{% block meta_description %}{{ seo_description }}{% endblock %}
+
+{% block og_description %}{{ seo_description }}{% endblock %}
+
+{% block twitter_description %}{{ seo_description }}{% endblock %}
+
+{% block structured_data %}
+
+<script type="application/ld+json">{{ organization_json_ld | safe }}</script>
+
+<script type="application/ld+json">{{ website_json_ld | safe }}</script>
+
+{% if item_list_json_ld %}<script type="application/ld+json">{{ item_list_json_ld | safe }}</script>{% endif %}
+
+{% endblock %}
+
+{% block content %}
+
+<section class="hero container">
+
+  <div class="hero-copy">
+
+    <h1>Curated fashion and lifestyle products for modern wardrobes.</h1>
+
+    <p>Discover new, new-with-tags and pre-loved pieces across clothing, footwear, and accessories{% if catalog_brands %} — including {{ catalog_brands | join(', ') }}{% endif %}. Shop online in the UK with live stock.</p>
+
+    <div class="hero-actions">
+
+      <a class="btn btn-primary" href="/shop">Shop collection</a>
+
+      <a class="btn btn-secondary" href="/new-arrivals">New arrivals</a>
+
+    </div>
+
+  </div>
+
+  <div class="hero-card">
+
+    <img class="druvo-img" src="/static/images/catalog/hero/featured.jpg" alt="Curated UK resale fashion collection at DRUVO UK" fetchpriority="high" data-placeholder="{{ placeholder_category }}">
+
+  </div>
+
+</section>
+
+
+
+<section class="section container">
+
+  <div class="section-head">
+
+    <div><h2>Shop by category</h2><p>Find your next favourite piece</p></div>
+
+    <a class="link-arrow" href="/categories">View all categories</a>
+
+  </div>
+
+  <div class="category-grid">
+
+    {% for category in categories %}
+
+      <a class="category-card" href="/categories/{{ category.slug }}">
+
+        <img class="druvo-img" src="{{ category.image }}" alt="{{ category.name }} — shop online at DRUVO UK" loading="lazy" data-placeholder="{{ placeholder_category }}">
+
+        <span>{{ category.name }}</span>
+
+      </a>
+
+    {% endfor %}
+
+  </div>
+
+</section>
+
+
+
+<section class="section container">
+
+  <div class="section-head">
+
+    <div><h2>New arrivals</h2><p>Fresh listings this week</p></div>
+
+    <a class="link-arrow" href="/new-arrivals">Shop new arrivals</a>
+
+  </div>
+
+  <div class="product-grid">
+
+    {% for product in new_arrivals %}{{ product_card(product) }}{% endfor %}
+
+  </div>
+
+</section>
+
+
+
+<section class="section container">
+
+  <div class="section-head">
+
+    <div><h2>Offers &amp; sale</h2><p>Limited-time reductions</p></div>
+
+    <a class="link-arrow" href="/sale">View sale items</a>
+
+  </div>
+
+  <div class="product-grid">
+
+    {% for product in sale_items %}{{ product_card(product) }}{% endfor %}
+
+  </div>
+
+</section>
+
+
+
+<section class="section container">
+
+  <div class="section-head"><div><h2>Featured picks</h2><p>Popular pieces available to shop online now</p></div></div>
+
+  <div class="product-grid">
+
+    {% for product in featured %}{{ product_card(product) }}{% endfor %}
+
+  </div>
+
+</section>
+
+{% endblock %}
+
+
