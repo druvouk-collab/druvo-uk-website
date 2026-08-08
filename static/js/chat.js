@@ -290,7 +290,8 @@ if (!root) {
       panel.hidden = false;
       root.classList.add("druvo-chat-open");
       launcher.setAttribute("aria-expanded", "true");
-      document.body.classList.toggle("druvo-chat-mobile-open", isMobileViewport());
+      /* Keep page scrollable on mobile — compact card leaves site visible */
+      document.body.classList.remove("druvo-chat-mobile-open");
 
       ensureLanguageCatalog().then(() => {
         if (!locale) {
@@ -353,6 +354,11 @@ if (!root) {
     }));
   }
 
+  function pageProductSlug() {
+    const el = document.querySelector("[data-product-page][data-slug]");
+    return el ? (el.getAttribute("data-slug") || "").trim() : "";
+  }
+
   async function sendMessage(text) {
     if (sending) return;
     const trimmed = text.trim();
@@ -381,6 +387,7 @@ if (!root) {
           history: history.slice(0, -1).slice(-8),
           cart: cartPayload(),
           last_product_slugs: lastProductSlugs,
+          page_product_slug: pageProductSlug(),
           locale: locale || "",
         }),
       });

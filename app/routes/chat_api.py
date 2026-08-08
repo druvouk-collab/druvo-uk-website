@@ -35,6 +35,7 @@ class ChatRequest(BaseModel):
     history: list[HistoryItem] = Field(default_factory=list, max_length=8)
     cart: list[CartItemPayload] = Field(default_factory=list, max_length=20)
     last_product_slugs: list[str] = Field(default_factory=list, max_length=5)
+    page_product_slug: str = Field(default="", max_length=120)
     locale: str = Field(default="", max_length=16)
 
 
@@ -106,6 +107,7 @@ async def chat_message(request: Request, body: ChatRequest) -> JSONResponse:
         history,
         cart_items=cart_items,
         last_product_slugs=body.last_product_slugs,
+        page_product_slug=body.page_product_slug.strip() or None,
         locale=locale,
     )
     return JSONResponse(

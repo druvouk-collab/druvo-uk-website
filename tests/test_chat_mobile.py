@@ -34,14 +34,15 @@ async def test_chat_panel_hidden_on_load(client):
 
 
 @pytest.mark.asyncio
-async def test_mobile_drawer_css_rules(client):
+async def test_mobile_compact_card_css_rules(client):
     response = await client.get("/static/css/druvo.css")
     css = response.text
     assert ".druvo-chat-panel[hidden]" in css
     assert "display: none !important" in css
-    assert "78dvh" in css or "78vh" in css
-    assert "translateY(100%)" in css
-    assert "border-radius: 1.25rem 1.25rem 0 0" in css
+    assert "calc(100vw - 24px)" in css
+    assert "max-width: 380px" in css
+    assert "60dvh" in css or "560px" in css
+    assert "translateY(100%)" not in css.split("@media (max-width: 640px)")[1]
     assert ".druvo-chat-backdrop[hidden]" in css
     assert "safe-area-inset-bottom" in css
     assert ".druvo-chat-root.druvo-chat-open .druvo-chat-launcher" in css

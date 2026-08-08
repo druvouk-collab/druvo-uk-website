@@ -109,6 +109,7 @@ class ChatService:
         *,
         cart_items: list[dict] | None = None,
         last_product_slugs: list[str] | None = None,
+        page_product_slug: str | None = None,
         locale: str | None = None,
     ) -> ChatReply:
         cleaned = self._sanitize_message(message)
@@ -141,6 +142,8 @@ class ChatService:
             snapshot,
             cart_items=cart_items,
             last_slugs=last_product_slugs,
+            page_product_slug=page_product_slug or None,
+            history=history,
         )
 
         if self._settings.openai_api_key and not self._should_prefer_rules(cleaned, commerce):

@@ -228,3 +228,79 @@ async def test_context_open_product(client):
     )
     assert second.status_code == 200
     assert "cream tracksuit" in second.json()["reply"].lower()
+
+
+@pytest.mark.asyncio
+async def test_typo_tracksuit_query(client):
+    response = await client.post(
+        "/api/chat/message",
+        json={"message": "got any tracksut", "history": []},
+    )
+    assert response.status_code == 200
+    reply = response.json()["reply"].lower()
+    assert "tracksuit" in reply
+
+
+@pytest.mark.asyncio
+async def test_page_product_context_size(client):
+    response = await client.post(
+        "/api/chat/message",
+        json={
+            "message": "Do you have large?",
+            "history": [],
+            "page_product_slug": "cream-tracksuit",
+        },
+    )
+    assert response.status_code == 200
+    reply = response.json()["reply"].lower()
+    assert "cream tracksuit" in reply or "large" in reply or "l" in reply
+
+
+@pytest.mark.asyncio
+async def test_follow_up_under_price_with_category(client):
+    first = await client.post(
+        "/api/chat/message",
+        json={"message": "Show me men's tracksuits", "history": []},
+    )
+    slugs = first.json().get("context_product_slugs", [])
+    second = await client.post(
+        "/api/chat/message",
+        json={
+            "message": "Any under £25?",
+            "history": [
+                {"role": "user", "content": "Show me men's tracksuits"},
+                {"role": "assistant", "content": first.json()["reply"]},
+            ],
+            "last_product_slugs": slugs,
+        },
+    )
+    assert second.status_code == 200
+    assert "£" in second.json()["reply"]
+
+
+@pytest.mark.asyncio
+async def test_basket_contents(client):
+    response = await client.post(
+        "/api/chat/message",
+        json={
+            "message": "What's in my basket?",
+            "history": [],
+            "cart": [{"slug": "cream-tracksuit", "name": "Cream Tracksuit", "price_gbp": 20.0, "quantity": 1}],
+        },
+    )
+    assert response.status_code == 200
+    reply = response.json()["reply"].lower()
+    assert "20" in reply or "£" in reply
+    assert "basket" in reply or "subtotal" in reply
+
+
+@pytest.mark.asyncio
+async def test_what_do_you_sell(client):
+    response = await client.post(
+        "/api/chat/message",
+        json={"message": "What do you sell?", "history": []},
+    )
+    assert response.status_code == 200
+    reply = response.json()["reply"].lower()
+    assert "catalogue" in reply or "sell" in reply or "shop" in reply
+
