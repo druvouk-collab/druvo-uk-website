@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -180,3 +181,52 @@ def test_structured_data_json_valid():
     assert prod["url"].startswith("https://druvo.uk/product/")
     assert prod["itemCondition"].startswith("https://schema.org/")
     assert prod["offers"]["@type"] in {"Offer", "AggregateOffer"}
+    assert prod["brand"]["name"] == "Reiss"
+    assert isinstance(prod["image"], list)
+    assert len(prod["image"]) >= 2
+
+
+def test_merchant_product_schema_has_required_offer_fields():
+    product = mock_catalog.get_product("navy-wool-blazer")
+    assert product is not None
+    prod = json.loads(product_json_ld(product))
+    offers = prod["offers"]
+    if offers["@type"] == "AggregateOffer":
+        offer_list = offers["offers"]
+    else:
+        offer_list = [offers]
+
+    assert offer_list
+    for offer in offer_list:
+        assert offer["priceCurrency"] == "GBP"
+        assert offer["price"]
+        assert offer["availability"].startswith("https://schema.org/")
+        assert offer["sku"]
+        assert offer["itemCondition"].startswith("https://schema.org/")
+        assert offer["seller"]["@type"] == "Organization"
+        assert offer["seller"]["url"] == "https://druvo.uk"
+        assert "color" in offer or "size" in offer
+
+
+@pytest.mark.asyncio
+async def test_legal_pages_have_unique_seo(client):
+    pages = ["/about", "/contact", "/faq", "/delivery", "/shipping-returns", "/returns", "/terms", "/privacy"]
+    descriptions: set[str] = set()
+    for path in pages:
+        response = await client.get(path)
+        assert response.status_code == 200
+        assert 'name="robots" content="index, follow"' in response.text
+        assert f'rel="canonical" href="https://druvo.uk{path}"' in response.text
+        match = re.search(r'name="description" content="([^"]+)"', response.text)
+        assert match, f"{path} missing description"
+        desc = match.group(1)
+        assert desc not in descriptions, f"{path} duplicate description"
+        descriptions.add(desc)
+
+
+@pytest.mark.asyncio
+async def test_shipping_returns_distinct_h1(client):
+    delivery = await client.get("/delivery")
+    shipping = await client.get("/shipping-returns")
+    assert "Delivery Information" in delivery.text
+    assert "Shipping &amp; Returns" in shipping.text or "Shipping & Returns" in shipping.text

@@ -1,99 +1,197 @@
-{% extends "base.html" %}
-{% from "components/macros.html" import product_card %}
-{% block meta_description %}{{ seo_description }}{% endblock %}
-{% block og_description %}{{ seo_description }}{% endblock %}
-{% block twitter_description %}{{ seo_description }}{% endblock %}
-{% block og_type %}product{% endblock %}
-{% block og_image %}<meta property="og:image" content="{{ og_image_url }}">{% endblock %}
-{% block structured_data %}
-<script type="application/ld+json">{{ product_json_ld | safe }}</script>
-<script type="application/ld+json">{{ breadcrumb_json_ld | safe }}</script>
-{% endblock %}
-{% block content %}
-{% include "components/breadcrumbs.html" %}
-<section class="container product-detail"
-  data-product-page
-  data-slug="{{ product.slug }}"
-  data-name="{{ product.name }}"
-  data-image="{{ product.images[0] }}"
-  data-on-sale="{{ 'true' if product.is_on_sale and product.sale_price_gbp else 'false' }}"
-  data-sale-price="{{ product.sale_price_gbp or '' }}"
-  data-variants='{{ variants_json | safe }}'
-  data-default-size="{{ default_size }}"
-  data-default-colour="{{ default_colour }}">
-  <div>
-    <div class="gallery-main"><img class="druvo-img" data-gallery-main src="{{ product.images[0] }}" alt="{{ product_image_alt(product) }}" data-placeholder="{{ placeholder_product }}"></div>
-    {% if product.images|length > 1 %}
-    <div class="gallery-thumbs">
-      {% for image in product.images %}
-        <button type="button" class="{% if loop.first %}active{% endif %}" data-gallery-thumb="{{ image }}">
-          <img class="druvo-img" src="{{ image }}" alt="{{ product_image_alt(product, loop.index0) }}" data-placeholder="{{ placeholder_product }}">
-        </button>
-      {% endfor %}
-    </div>
-    {% endif %}
-  </div>
-  <div class="product-info">
-    <p class="product-meta">
-      {% if product.brand %}{{ product.brand }} · {% endif %}{{ product.condition }} ·
-      {% if product.category_slug and product.category_slug != 'uncategorised' %}
-        <a href="/categories/{{ product.category_slug }}">{{ product.category_name }}</a>
-      {% else %}
-        {{ product.category_name }}
-      {% endif %}
-    </p>
-    <h1>{{ product.name }}</h1>
-    <div class="price-row">
-      <span class="price" data-product-price>{{ format_gbp(product.min_price) }}</span>
-      {% if product.is_on_sale and product.sale_price_gbp %}
-        <span class="price-was">{{ format_gbp(product.variants[0].price_gbp) }}</span>
-        <span class="badge badge-sale">Sale</span>
-      {% endif %}
-    </div>
-
-    <h2 class="sr-only">Product details</h2>
-    <p class="lead">{{ product.description }}</p>
-
-    <div class="variant-group">
-      <h2 class="variant-heading">Size</h2>
-      <div class="variant-options">
-        {% for size in product.sizes %}
-          {% set has_stock = product.variants | selectattr('size', 'equalto', size) | selectattr('stock_quantity', 'gt', 0) | list | length > 0 %}
-          <button type="button" class="variant-btn" data-variant-size="{{ size }}" {% if not has_stock %}disabled{% endif %}>{{ size }}</button>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="variant-group">
-      <h2 class="variant-heading">Colour</h2>
-      <div class="variant-options">
-        {% for colour in product.colours %}
-          <button type="button" class="variant-btn" data-variant-colour="{{ colour }}">{{ colour }}</button>
-        {% endfor %}
-      </div>
-    </div>
-
-    <p class="stock-note" data-stock-note>Select size and colour</p>
-
-    <div class="qty-row">
-      <label for="qty">Quantity</label>
-      <div class="qty-control">
-        <button type="button" data-qty-minus aria-label="Decrease quantity">−</button>
-        <input id="qty" type="number" min="1" value="1" data-qty-input aria-label="Quantity">
-        <button type="button" data-qty-plus aria-label="Increase quantity">+</button>
-      </div>
-    </div>
-
-    <button class="btn btn-primary" type="button" data-add-to-cart>Add to basket</button>
-  </div>
-</section>
-
-{% if related %}
-<section class="section container">
-  <div class="section-head"><h2>You may also like</h2></div>
-  <div class="product-grid">{% for item in related %}{{ product_card(item) }}{% endfor %}</div>
-</section>
-{% endif %}
-{% endblock %}
-{% block scripts %}<script type="module" src="/static/js/product.js"></script>{% endblock %}
-
+{% extends "base.html" %}
+
+{% from "components/macros.html" import product_card %}
+
+{% block meta_description %}{{ seo_description }}{% endblock %}
+
+{% block og_description %}{{ seo_description }}{% endblock %}
+
+{% block twitter_description %}{{ seo_description }}{% endblock %}
+
+{% block og_type %}product{% endblock %}
+
+{% block og_image %}<meta property="og:image" content="{{ og_image_url }}">{% endblock %}
+
+{% block structured_data %}
+
+<script type="application/ld+json">{{ product_json_ld | safe }}</script>
+
+<script type="application/ld+json">{{ breadcrumb_json_ld | safe }}</script>
+
+{% endblock %}
+
+{% block content %}
+
+{% include "components/breadcrumbs.html" %}
+
+<section class="container product-detail"
+
+  data-product-page
+
+  data-slug="{{ product.slug }}"
+
+  data-name="{{ product.name }}"
+
+  data-image="{{ product.images[0] }}"
+
+  data-on-sale="{{ 'true' if product.is_on_sale and product.sale_price_gbp else 'false' }}"
+
+  data-sale-price="{{ product.sale_price_gbp or '' }}"
+
+  data-variants='{{ variants_json | safe }}'
+
+  data-default-size="{{ default_size }}"
+
+  data-default-colour="{{ default_colour }}">
+
+  <div>
+
+    <div class="gallery-main"><img class="druvo-img" data-gallery-main src="{{ product.images[0] }}" alt="{{ product_image_alt(product) }}" data-placeholder="{{ placeholder_product }}"></div>
+
+    {% if product.images|length > 1 %}
+
+    <div class="gallery-thumbs">
+
+      {% for image in product.images %}
+
+        <button type="button" class="{% if loop.first %}active{% endif %}" data-gallery-thumb="{{ image }}">
+
+          <img class="druvo-img" src="{{ image }}" alt="{{ product_image_alt(product, loop.index0) }}" loading="lazy" decoding="async" data-placeholder="{{ placeholder_product }}">
+
+        </button>
+
+      {% endfor %}
+
+    </div>
+
+    {% endif %}
+
+  </div>
+
+  <div class="product-info">
+
+    <p class="product-meta">
+
+      {% if product.brand %}{{ product.brand }} · {% endif %}{{ product.condition }} ·
+
+      {% if product.category_slug and product.category_slug != 'uncategorised' %}
+
+        <a href="/categories/{{ product.category_slug }}">{{ product.category_name }}</a>
+
+      {% else %}
+
+        {{ product.category_name }}
+
+      {% endif %}
+
+    </p>
+
+    <h1>{{ product.name }}</h1>
+
+    <div class="price-row">
+
+      <span class="price" data-product-price>{{ format_gbp(product.min_price) }}</span>
+
+      {% if product.is_on_sale and product.sale_price_gbp %}
+
+        <span class="price-was">{{ format_gbp(product.variants[0].price_gbp) }}</span>
+
+        <span class="badge badge-sale">Sale</span>
+
+      {% endif %}
+
+    </div>
+
+
+
+    <h2 class="sr-only">Product details</h2>
+
+    <p class="lead">{{ product.description }}</p>
+
+
+
+    <div class="variant-group">
+
+      <h2 class="variant-heading">Size</h2>
+
+      <div class="variant-options">
+
+        {% for size in product.sizes %}
+
+          {% set has_stock = product.variants | selectattr('size', 'equalto', size) | selectattr('stock_quantity', 'gt', 0) | list | length > 0 %}
+
+          <button type="button" class="variant-btn" data-variant-size="{{ size }}" {% if not has_stock %}disabled{% endif %}>{{ size }}</button>
+
+        {% endfor %}
+
+      </div>
+
+    </div>
+
+
+
+    <div class="variant-group">
+
+      <h2 class="variant-heading">Colour</h2>
+
+      <div class="variant-options">
+
+        {% for colour in product.colours %}
+
+          <button type="button" class="variant-btn" data-variant-colour="{{ colour }}">{{ colour }}</button>
+
+        {% endfor %}
+
+      </div>
+
+    </div>
+
+
+
+    <p class="stock-note" data-stock-note>Select size and colour</p>
+
+
+
+    <div class="qty-row">
+
+      <label for="qty">Quantity</label>
+
+      <div class="qty-control">
+
+        <button type="button" data-qty-minus aria-label="Decrease quantity">−</button>
+
+        <input id="qty" type="number" min="1" value="1" data-qty-input aria-label="Quantity">
+
+        <button type="button" data-qty-plus aria-label="Increase quantity">+</button>
+
+      </div>
+
+    </div>
+
+
+
+    <button class="btn btn-primary" type="button" data-add-to-cart>Add to basket</button>
+
+  </div>
+
+</section>
+
+
+
+{% if related %}
+
+<section class="section container">
+
+  <div class="section-head"><h2>You may also like</h2></div>
+
+  <div class="product-grid">{% for item in related %}{{ product_card(item) }}{% endfor %}</div>
+
+</section>
+
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}<script type="module" src="/static/js/product.js"></script>{% endblock %}
+
+

@@ -222,6 +222,94 @@ def _schema_condition(condition: str) -> str:
     return "https://schema.org/UsedCondition"
 
 
+def about_document_title() -> str:
+    return f"About DRUVO UK | Premium UK Resale Fashion | {_SITE}"
+
+
+def about_meta_description() -> str:
+    return meta_description(
+        "Learn about DRUVO UK — premium pre-loved and new-with-tags fashion, footwear and accessories. "
+        "Curated UK resale powered by DRUVO AI Enterprise."
+    )
+
+
+def contact_document_title() -> str:
+    return f"Contact DRUVO UK | Customer Support | {_SITE}"
+
+
+def contact_meta_description() -> str:
+    return meta_description(
+        "Contact DRUVO UK for order enquiries, product questions and customer support. "
+        "We respond to UK customers by email during business hours."
+    )
+
+
+def faq_document_title() -> str:
+    return f"FAQ | Shipping, Returns & Authenticity | {_SITE}"
+
+
+def faq_meta_description() -> str:
+    return meta_description(
+        "DRUVO UK FAQ — answers about authenticity, UK delivery times, returns, live stock "
+        "and how we grade pre-loved and new-with-tags fashion."
+    )
+
+
+def delivery_document_title() -> str:
+    return f"UK Delivery Information | Tracked Shipping | {_SITE}"
+
+
+def delivery_meta_description() -> str:
+    return meta_description(
+        "DRUVO UK delivery — standard UK tracked shipping in 2–4 working days (£3.99, free over £75) "
+        "and express 1–2 day delivery. Order tracking by email."
+    )
+
+
+def shipping_returns_document_title() -> str:
+    return f"Shipping & Returns | UK Delivery & Refunds | {_SITE}"
+
+
+def shipping_returns_meta_description() -> str:
+    return meta_description(
+        "DRUVO UK shipping and returns — tracked UK delivery options plus 14-day returns on eligible items. "
+        "Read delivery times, costs and refund policy."
+    )
+
+
+def returns_document_title() -> str:
+    return f"Returns Policy | 14-Day UK Returns | {_SITE}"
+
+
+def returns_meta_description() -> str:
+    return meta_description(
+        "DRUVO UK returns policy — return eligible unworn items within 14 days of delivery. "
+        "How to start a return, postage and refund timelines explained."
+    )
+
+
+def terms_document_title() -> str:
+    return f"Terms & Conditions | DRUVO UK Online Shop | {_SITE}"
+
+
+def terms_meta_description() -> str:
+    return meta_description(
+        "DRUVO UK terms and conditions for online purchases — ordering, payment, delivery, "
+        "returns and your consumer rights when shopping with us."
+    )
+
+
+def privacy_document_title() -> str:
+    return f"Privacy Policy | How DRUVO UK Uses Your Data | {_SITE}"
+
+
+def privacy_meta_description() -> str:
+    return meta_description(
+        "DRUVO UK privacy policy — how we collect, use and protect personal data for orders, "
+        "accounts and customer communications under UK GDPR."
+    )
+
+
 def item_list_json_ld(products: list[Product], list_name: str, path: str) -> str:
     base_items = []
     for index, product in enumerate(products[:12], start=1):

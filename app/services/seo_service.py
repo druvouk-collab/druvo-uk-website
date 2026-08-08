@@ -185,26 +185,83 @@ def _product_item_condition(condition: str) -> str:
     return "https://schema.org/UsedCondition"
 
 
+def _absolute_image_url(image: str, base: str) -> str:
+    if image.startswith("/"):
+        return f"{base}{image}"
+    if image.startswith("http"):
+        return image
+    return f"{base}/{image.lstrip('/')}"
+
+
+def _product_images(product: Product, base: str) -> list[str]:
+    images = [_absolute_image_url(img, base) for img in product.images if img]
+    if not images:
+        images = [f"{base}/static/images/placeholder-product.svg"]
+    return images
+
+
+def _seller_organization(cfg: Settings, base: str) -> dict:
+    return {
+        "@type": "Organization",
+        "name": cfg.site_name,
+        "url": base,
+    }
+
+
+def _product_schema_description(product: Product) -> str:
+    desc = " ".join((product.description or "").split())
+    if len(desc) >= 20:
+        return meta_description(desc, 500)
+    parts = [product.name]
+    brand = (product.brand or "").strip()
+    if brand:
+        parts.insert(0, brand)
+    condition = (product.condition or "").strip()
+    if condition:
+        parts.append(f"{condition} condition")
+    return meta_description(". ".join(parts), 500)
+
+
+def _variant_offer(
+    variant,
+    product: Product,
+    base: str,
+    condition_url: str,
+    seller: dict,
+) -> dict:
+    availability = (
+        "https://schema.org/InStock"
+        if variant.stock_quantity > 0
+        else "https://schema.org/OutOfStock"
+    )
+    offer: dict = {
+        "@type": "Offer",
+        "priceCurrency": "GBP",
+        "price": f"{variant.price_gbp:.2f}",
+        "availability": availability,
+        "sku": variant.sku,
+        "url": f"{base}/product/{product.slug}",
+        "itemCondition": condition_url,
+        "seller": seller,
+    }
+    if variant.colour:
+        offer["color"] = variant.colour
+    if variant.size:
+        offer["size"] = variant.size
+    return offer
+
+
 def product_json_ld(product: Product, settings: Settings | None = None) -> str:
     cfg = settings or get_settings()
     base = canonical_site_url(cfg)
-    image = product.images[0] if product.images else f"{base}/static/images/placeholder-product.svg"
-    if image.startswith("/"):
-        image = f"{base}{image}"
+    images = _product_images(product, base)
+    condition_url = _product_item_condition(product.condition)
+    seller = _seller_organization(cfg, base)
 
-    offers = []
-    for variant in product.variants:
-        availability = "https://schema.org/InStock" if variant.stock_quantity > 0 else "https://schema.org/OutOfStock"
-        offers.append(
-            {
-                "@type": "Offer",
-                "priceCurrency": "GBP",
-                "price": f"{variant.price_gbp:.2f}",
-                "availability": availability,
-                "sku": variant.sku,
-                "url": f"{base}/product/{product.slug}",
-            }
-        )
+    offers = [
+        _variant_offer(variant, product, base, condition_url, seller)
+        for variant in product.variants
+    ]
 
     product_url = f"{base}/product/{product.slug}"
     colours = sorted({v.colour for v in product.variants if v.colour})
@@ -213,11 +270,11 @@ def product_json_ld(product: Product, settings: Settings | None = None) -> str:
         "@context": "https://schema.org",
         "@type": "Product",
         "name": product.name,
-        "description": meta_description(product.description or product.name, 500),
-        "image": image,
+        "description": _product_schema_description(product),
+        "image": images if len(images) > 1 else images[0],
         "url": product_url,
         "sku": product.variants[0].sku if product.variants else product.slug,
-        "itemCondition": _product_item_condition(product.condition),
+        "itemCondition": condition_url,
     }
     if product.category_name and product.category_name.lower() not in {"uncategorised", "uncategorized"}:
         payload["category"] = product.category_name

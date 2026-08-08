@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.config import CANONICAL_HOST, get_settings
 from app.lib.druvo_api.client import DruvoApiClient
@@ -39,6 +40,8 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(shop.router)
@@ -50,6 +53,15 @@ app.include_router(admin.router)
 app.include_router(legal.router)
 app.include_router(seo.router)
 app.include_router(chat_api.router)
+
+
+@app.middleware("http")
+async def static_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/"):
+        response.headers["Cache-Control"] = "public, max-age=604800, immutable"
+    return response
 
 
 @app.middleware("http")
