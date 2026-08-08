@@ -77,6 +77,31 @@ async def test_chat_status(client):
     data = response.json()
     assert data["enabled"] is True
     assert "welcome" in data
+    assert "locale" in data
+
+
+@pytest.mark.asyncio
+async def test_chat_english_unchanged_with_explicit_locale(client):
+    response = await client.post(
+        "/api/chat/message",
+        json={"message": "good evening", "history": [], "locale": "en-GB"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "Good evening" in data["reply"]
+    assert data["locale"] == "en-GB"
+    assert data["rtl"] is False
+
+
+@pytest.mark.asyncio
+async def test_chat_delivery_preserves_gbp_with_locale(client):
+    response = await client.post(
+        "/api/chat/message",
+        json={"message": "How much is delivery?", "history": [], "locale": "en-GB"},
+    )
+    assert response.status_code == 200
+    reply = response.json()["reply"]
+    assert "£" in reply
 
 
 @pytest.mark.asyncio
@@ -160,7 +185,8 @@ async def test_chat_mobile_css_hides_closed_panel(client):
     assert ".druvo-chat-panel[hidden]" in css
     assert "display: none !important" in css
     assert '.druvo-chat-panel:not([hidden])' in css
-    assert "left: auto" in css
+    assert ".druvo-chat-backdrop[hidden]" in css
+    assert "left: auto" in css or "bottom: calc" in css
 
 
 @pytest.mark.asyncio

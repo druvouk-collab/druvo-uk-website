@@ -11,6 +11,7 @@ import httpx
 
 from app.config import Settings, get_settings
 from app.services.chat_commerce_service import ChatCommerceReply, ChatCommerceService, ChatProductCard
+from app.services.chat_i18n import ChatPresentationService, is_english, normalize_locale
 from app.services.website_knowledge_service import WebsiteKnowledgeService
 
 logger = logging.getLogger(__name__)
@@ -85,10 +86,16 @@ class ChatService:
         self._settings = settings or get_settings()
         self._knowledge = WebsiteKnowledgeService(self._settings)
         self._commerce = ChatCommerceService(self._knowledge)
+        self._presentation = ChatPresentationService(
+            openai_api_key=self._settings.openai_api_key,
+            chat_model=self._settings.chat_model,
+        )
 
-    @property
-    def welcome_message(self) -> str:
-        return _WELCOME
+    async def welcome_message(self, locale: str | None = None) -> str:
+        text = _WELCOME
+        if locale and not is_english(locale):
+            return await self._presentation.present(text, locale)
+        return text
 
     async def reply(
         self,
@@ -97,21 +104,28 @@ class ChatService:
         *,
         cart_items: list[dict] | None = None,
         last_product_slugs: list[str] | None = None,
+        locale: str | None = None,
     ) -> ChatReply:
         cleaned = self._sanitize_message(message)
+        active_locale = self._presentation.resolve_locale(cleaned, locale)
         if not cleaned:
+            empty = "Please type a question and I'll do my best to help."
             return ChatReply(
-                reply="Please type a question and I'll do my best to help.",
+                reply=await self._present(empty, active_locale),
                 source="rules",
             )
 
         snapshot = await self._knowledge.load()
         cart = self._knowledge.cart_summary(cart_items or []) if cart_items else None
         context = self._knowledge.build_ai_context(snapshot, cart)
+        context = self._append_locale_instruction(context, active_locale)
 
         conversational = _conversational_reply(cleaned)
         if conversational:
-            return ChatReply(reply=conversational, source="rules")
+            return ChatReply(
+                reply=await self._present(conversational, active_locale),
+                source="rules",
+            )
 
         commerce = await self._commerce.answer(
             cleaned,
@@ -122,17 +136,45 @@ class ChatService:
 
         if self._settings.openai_api_key and not self._should_prefer_rules(cleaned, commerce):
             try:
-                text = await self._ask_openai(cleaned, history or [], context)
-                return self._merge_commerce(ChatReply(reply=text, source="openai"), commerce)
+                text = await self._ask_openai(cleaned, history or [], context, active_locale)
+                merged = self._merge_commerce(ChatReply(reply=text, source="openai"), commerce)
+                return await self._finalize_reply(merged, active_locale)
             except Exception as exc:
                 logger.warning("OpenAI chat failed, falling back to rules: %s", type(exc).__name__)
 
         if commerce:
-            return self._commerce_to_reply(commerce, source="rules")
+            base = self._commerce_to_reply(commerce, source="rules")
+            return await self._finalize_reply(base, active_locale)
 
+        fallback = _CONTACT_FALLBACK.format(email=self._settings.contact_email)
         return ChatReply(
-            reply=_CONTACT_FALLBACK.format(email=self._settings.contact_email),
+            reply=await self._present(fallback, active_locale),
             source="rules",
+        )
+
+    async def _present(self, english_text: str, locale: str, products: list[dict] | None = None) -> str:
+        return await self._presentation.present(english_text, locale, products=products)
+
+    async def _finalize_reply(self, reply: ChatReply, locale: str) -> ChatReply:
+        if is_english(locale):
+            return reply
+        translated = await self._present(reply.reply, locale, products=reply.products)
+        return ChatReply(
+            reply=translated,
+            source=reply.source,
+            products=reply.products,
+            context_product_slugs=reply.context_product_slugs,
+            add_to_cart=reply.add_to_cart,
+        )
+
+    @staticmethod
+    def _append_locale_instruction(context: str, locale: str) -> str:
+        target = normalize_locale(locale)
+        if is_english(target):
+            return context
+        return (
+            f"{context}\n\nCUSTOMER LANGUAGE: Respond in {target}. "
+            "Keep prices in GBP (£), SKUs, URLs and stock counts exactly as provided."
         )
 
     @staticmethod
@@ -180,7 +222,11 @@ class ChatService:
         message: str,
         history: list[ChatMessage],
         catalog_context: str,
+        locale: str,
     ) -> str:
+        language_line = ""
+        if not is_english(locale):
+            language_line = f"- Reply in the customer's language ({normalize_locale(locale)}).\n"
         system = f"""You are DRUVO Chat, the friendly customer assistant for DRUVO UK (https://druvo.uk).
 You help shoppers with products, sizes, colours, availability, delivery, returns, promotions, and general store questions.
 
@@ -194,7 +240,7 @@ STRICT RULES:
 - Keep replies concise, warm, and professional (2–4 short paragraphs max).
 - Use GBP (£) for prices.
 - Do not mention OpenAI, APIs, or internal systems.
-
+{language_line}
 LIVE WEBSITE DATA:
 {catalog_context}
 """

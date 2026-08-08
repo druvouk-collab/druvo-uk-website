@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.config import get_settings
+from app.services.chat_i18n import QUICK_LANGUAGES, is_rtl, language_catalog, normalize_locale
 from app.services.chat_rate_limit import get_chat_rate_limiter
 from app.services.chat_service import ChatMessage, ChatService
 
@@ -34,6 +35,7 @@ class ChatRequest(BaseModel):
     history: list[HistoryItem] = Field(default_factory=list, max_length=8)
     cart: list[CartItemPayload] = Field(default_factory=list, max_length=20)
     last_product_slugs: list[str] = Field(default_factory=list, max_length=5)
+    locale: str = Field(default="", max_length=16)
 
 
 def _client_ip(request: Request) -> str:
@@ -46,13 +48,26 @@ def _client_ip(request: Request) -> str:
 
 
 @router.get("/status")
-async def chat_status() -> JSONResponse:
+async def chat_status(locale: str = "en-GB") -> JSONResponse:
     settings = get_settings()
+    service = ChatService(settings)
     return JSONResponse(
         {
             "enabled": settings.chat_enabled,
             "ai_enabled": bool(settings.openai_api_key),
-            "welcome": ChatService(settings).welcome_message,
+            "welcome": await service.welcome_message(locale),
+            "locale": normalize_locale(locale),
+            "rtl": is_rtl(locale),
+        }
+    )
+
+
+@router.get("/languages")
+async def chat_languages() -> JSONResponse:
+    return JSONResponse(
+        {
+            "quick": QUICK_LANGUAGES,
+            "languages": language_catalog(),
         }
     )
 
@@ -83,6 +98,7 @@ async def chat_message(request: Request, body: ChatRequest) -> JSONResponse:
     ]
 
     cart_items = [item.model_dump() for item in body.cart]
+    locale = normalize_locale(body.locale)
 
     service = ChatService(settings)
     result = await service.reply(
@@ -90,6 +106,7 @@ async def chat_message(request: Request, body: ChatRequest) -> JSONResponse:
         history,
         cart_items=cart_items,
         last_product_slugs=body.last_product_slugs,
+        locale=locale,
     )
     return JSONResponse(
         {
@@ -98,5 +115,7 @@ async def chat_message(request: Request, body: ChatRequest) -> JSONResponse:
             "products": result.products,
             "context_product_slugs": result.context_product_slugs,
             "add_to_cart": result.add_to_cart,
+            "locale": locale,
+            "rtl": is_rtl(locale),
         }
     )
