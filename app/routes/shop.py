@@ -20,9 +20,11 @@ from app.services.seo_metadata import (
     home_document_title,
     home_meta_description,
     item_list_json_ld,
+    new_arrivals_meta_description,
     product_breadcrumbs,
     product_document_title,
     product_meta_description,
+    sale_meta_description,
     shop_document_title,
     shop_meta_description,
 )
@@ -127,7 +129,7 @@ async def new_arrivals(request: Request, sort: str = "featured"):
     filters = CatalogFilters(new_arrivals_only=True, sort=sort)
     ctx = await _shop_context(request, filters, "New Arrivals", "New Arrivals")
     ctx["document_title"] = f"New Arrivals | Shop Online UK | DRUVO UK"
-    ctx["seo_description"] = shop_meta_description(ctx["products"])
+    ctx["seo_description"] = new_arrivals_meta_description(ctx["products"])
     ctx["item_list_json_ld"] = item_list_json_ld(ctx["products"][:12], "New arrivals", "/new-arrivals")
     return templates.TemplateResponse(request, "pages/shop.html", ctx)
 
@@ -137,7 +139,7 @@ async def sale(request: Request, sort: str = "price-asc"):
     filters = CatalogFilters(on_sale_only=True, sort=sort)
     ctx = await _shop_context(request, filters, "Sale", "Offers & Sale")
     ctx["document_title"] = f"Sale Offers | Shop Online UK | DRUVO UK"
-    ctx["seo_description"] = shop_meta_description(ctx["products"])
+    ctx["seo_description"] = sale_meta_description(ctx["products"])
     ctx["item_list_json_ld"] = item_list_json_ld(ctx["products"][:12], "Sale offers", "/sale")
     return templates.TemplateResponse(request, "pages/shop.html", ctx)
 

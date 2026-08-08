@@ -118,6 +118,26 @@ def shop_meta_description(products: list[Product]) -> str:
     )
 
 
+def new_arrivals_meta_description(products: list[Product]) -> str:
+    brands = catalog_brands(products, limit=3)
+    count = len(products)
+    listing = f"{count} new listings" if count else "latest listings"
+    return meta_description(
+        f"Discover new arrivals at DRUVO UK — fresh pre-loved and new-with-tags pieces from {_brand_phrase(brands)}. "
+        f"Browse {listing} with live UK stock."
+    )
+
+
+def sale_meta_description(products: list[Product]) -> str:
+    brands = catalog_brands(products, limit=3)
+    count = len(products)
+    listing = f"{count} sale items" if count else "discounted listings"
+    return meta_description(
+        f"Shop sale offers at DRUVO UK — reduced pre-loved and new-with-tags fashion from {_brand_phrase(brands)}. "
+        f"Browse {listing} online with UK delivery."
+    )
+
+
 def categories_document_title() -> str:
     return f"Shop by Category | Clothing, Footwear & Accessories | {_SITE}"
 
