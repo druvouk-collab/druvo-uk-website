@@ -188,6 +188,26 @@ _PRODUCTS: list[Product] = [
         tags=["knitwear", "merino"],
         is_new_arrival=True,
     ),
+    Product(
+        id="p009",
+        slug="cream-tracksuit",
+        name="Cream Tracksuit",
+        description="Premium cream tracksuit set. Soft fleece lining, perfect for casual wear.",
+        category_slug="mens-clothing",
+        category_name="Men's Clothing",
+        brand="DRUVO",
+        condition="New with tags",
+        images=[f"{_PROD}/cream-tracksuit-1.jpg"],
+        variants=[
+            ProductVariant("CTS-CRM-M", "M", "Cream", 2, 45.00),
+            ProductVariant("CTS-CRM-L", "L", "Cream", 1, 45.00),
+            ProductVariant("CTS-CRM-XL", "XL", "Cream", 3, 45.00),
+        ],
+        tags=["tracksuit", "cream", "loungewear"],
+        is_on_sale=True,
+        sale_price_gbp=30.00,
+        compare_at_price_gbp=40.00,
+    ),
 ]
 
 

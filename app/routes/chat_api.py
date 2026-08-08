@@ -18,9 +18,22 @@ class HistoryItem(BaseModel):
     content: str
 
 
+class CartItemPayload(BaseModel):
+    slug: str = ""
+    sku: str = ""
+    name: str = ""
+    size: str = ""
+    colour: str = ""
+    price_gbp: float = 0.0
+    quantity: int = Field(default=1, ge=1)
+    variant_id: int | None = None
+
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=500)
     history: list[HistoryItem] = Field(default_factory=list, max_length=8)
+    cart: list[CartItemPayload] = Field(default_factory=list, max_length=20)
+    last_product_slugs: list[str] = Field(default_factory=list, max_length=5)
 
 
 def _client_ip(request: Request) -> str:
@@ -69,6 +82,21 @@ async def chat_message(request: Request, body: ChatRequest) -> JSONResponse:
         if item.role in {"user", "assistant"} and item.content.strip()
     ]
 
+    cart_items = [item.model_dump() for item in body.cart]
+
     service = ChatService(settings)
-    result = await service.reply(body.message, history)
-    return JSONResponse({"reply": result.reply, "source": result.source})
+    result = await service.reply(
+        body.message,
+        history,
+        cart_items=cart_items,
+        last_product_slugs=body.last_product_slugs,
+    )
+    return JSONResponse(
+        {
+            "reply": result.reply,
+            "source": result.source,
+            "products": result.products,
+            "context_product_slugs": result.context_product_slugs,
+            "add_to_cart": result.add_to_cart,
+        }
+    )

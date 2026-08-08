@@ -393,6 +393,23 @@ button, input, select, textarea { font: inherit; }
   font-family: inherit; font-size: 0.9rem;
 }
 .druvo-chat-send { padding: 0.65rem 1rem; white-space: nowrap; }
+.druvo-chat-product-card {
+  display: grid; grid-template-columns: 72px 1fr; gap: 0.65rem;
+  margin-top: 0.65rem; padding: 0.65rem; border-radius: 10px;
+  background: var(--bg-input); border: 1px solid var(--border);
+}
+.druvo-chat-product-card img {
+  width: 72px; height: 72px; object-fit: cover; border-radius: 8px;
+}
+.druvo-chat-product-body h3 { margin: 0 0 0.25rem; font-size: 0.85rem; }
+.druvo-chat-product-price { margin: 0; font-weight: 600; font-size: 0.85rem; }
+.druvo-chat-card-was {
+  margin-left: 0.35rem; font-weight: 400; color: var(--text-muted);
+  text-decoration: line-through; font-size: 0.8rem;
+}
+.druvo-chat-product-meta { margin: 0.15rem 0 0.5rem; font-size: 0.75rem; color: var(--text-muted); }
+.druvo-chat-product-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.druvo-chat-product-actions .btn-sm { font-size: 0.72rem; padding: 0.35rem 0.55rem; }
 
 @media (max-width: 640px) {
   .druvo-chat-root {

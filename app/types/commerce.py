@@ -35,6 +35,7 @@ class Product:
     is_new_arrival: bool = False
     is_on_sale: bool = False
     sale_price_gbp: float | None = None
+    compare_at_price_gbp: float | None = None
     gtin: str = ""
     mpn: str = ""
     catalog_status: str = "demo"
@@ -96,6 +97,23 @@ class Product:
 
     def sizes_for_colour(self, colour: str) -> list[str]:
         return sorted({v.size for v in self.variants if v.colour == colour and v.in_stock})
+
+    @property
+    def display_price_gbp(self) -> float:
+        if self.is_on_sale and self.sale_price_gbp is not None:
+            return self.sale_price_gbp
+        return self.min_price
+
+    @property
+    def product_url(self) -> str:
+        return f"/product/{self.slug}"
+
+    @property
+    def absolute_product_url(self) -> str:
+        from app.config import get_settings
+
+        base = get_settings().public_site_url.rstrip("/")
+        return f"{base}/product/{self.slug}"
 
 
 @dataclass(frozen=True)

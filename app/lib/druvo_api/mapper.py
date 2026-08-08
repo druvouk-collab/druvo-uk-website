@@ -78,6 +78,8 @@ def map_product(payload: dict) -> Product:
 
         sale_price_gbp=payload.get("sale_price_gbp"),
 
+        compare_at_price_gbp=payload.get("compare_at_price_gbp"),
+
         gtin=(payload.get("gtin") or payload.get("barcode") or "").strip(),
 
         mpn=(payload.get("mpn") or "").strip(),

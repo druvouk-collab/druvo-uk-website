@@ -112,6 +112,19 @@ class DruvoApiClient:
         response.raise_for_status()
         return response.json()
 
+    async def list_promotions(self, active_only: bool = True) -> list[dict]:
+        response = await self._request(
+            "GET",
+            "/api/v1/promotions",
+            params={"active_only": str(active_only).lower()},
+        )
+        if response.status_code in (401, 403):
+            raise CatalogApiError("DRUVO API rejected credentials.", cause=f"http_{response.status_code}")
+        if response.status_code == 404:
+            return []
+        response.raise_for_status()
+        return response.json().get("promotions", [])
+
     async def ping(self) -> bool:
         """Return True when DRUVO API health responds (no catalog auth required)."""
         if not self.base_url:

@@ -1,6 +1,9 @@
-/** DRUVO Chat — floating customer assistant widget. */
+/** DRUVO Chat — floating customer assistant with live catalogue + basket awareness. */
+
+import { addToCart, formatGBP, getCart } from "./cart.js";
 
 const STORAGE_KEY = "druvo_chat_history_v1";
+const SLUGS_KEY = "druvo_chat_last_slugs_v1";
 const MOBILE_MQL = window.matchMedia("(max-width: 640px)");
 
 const root = document.getElementById("druvo-chat-root");
@@ -16,6 +19,7 @@ if (!root) {
   const sendBtn = document.getElementById("druvo-chat-send");
 
   let history = loadHistory();
+  let lastProductSlugs = loadSlugs();
   let welcomeShown = false;
   let sending = false;
 
@@ -28,11 +32,28 @@ if (!root) {
     }
   }
 
+  function loadSlugs() {
+    try {
+      const raw = sessionStorage.getItem(SLUGS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
   function saveHistory() {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-16)));
     } catch {
-      /* ignore quota errors */
+      /* ignore */
+    }
+  }
+
+  function saveSlugs() {
+    try {
+      sessionStorage.setItem(SLUGS_KEY, JSON.stringify(lastProductSlugs.slice(-5)));
+    } catch {
+      /* ignore */
     }
   }
 
@@ -51,10 +72,58 @@ if (!root) {
       .replace(/\n/g, "<br>");
   }
 
-  function appendMessage(role, content) {
+  function renderProductCards(products, bubble) {
+    if (!products || !products.length) return;
+    products.forEach((product) => {
+      const card = document.createElement("article");
+      card.className = "druvo-chat-product-card";
+      card.dataset.slug = product.slug || "";
+      const price = formatGBP(Number(product.price_gbp || 0));
+      const was =
+        product.is_on_sale && product.compare_at_price_gbp
+          ? `<span class="druvo-chat-card-was">${formatGBP(Number(product.compare_at_price_gbp))}</span>`
+          : "";
+      const sizes = (product.sizes || []).slice(0, 6).join(", ");
+      const colours = (product.colours || []).slice(0, 6).join(", ");
+      const stock = product.in_stock ? "In stock" : "Out of stock";
+      card.innerHTML = `
+        <img src="${escapeHtml(product.image || "")}" alt="" loading="lazy" />
+        <div class="druvo-chat-product-body">
+          <h3>${escapeHtml(product.name || "")}</h3>
+          <p class="druvo-chat-product-price">${price} ${was}</p>
+          <p class="druvo-chat-product-meta">${escapeHtml(stock)}${sizes ? ` · Sizes: ${escapeHtml(sizes)}` : ""}${colours ? ` · ${escapeHtml(colours)}` : ""}</p>
+          <div class="druvo-chat-product-actions">
+            <a class="btn btn-secondary btn-sm" href="${escapeHtml(product.url || `/product/${product.slug}`)}" target="_blank" rel="noopener">View Product</a>
+            ${product.in_stock ? `<button type="button" class="btn btn-primary btn-sm druvo-chat-add-cart">Add to Basket</button>` : ""}
+          </div>
+        </div>`;
+      const addBtn = card.querySelector(".druvo-chat-add-cart");
+      if (addBtn) {
+        addBtn.addEventListener("click", () => {
+          addToCart({
+            slug: product.slug,
+            sku: product.sku || "",
+            variant_id: product.variant_id ?? null,
+            name: product.name,
+            size: (product.sizes && product.sizes[0]) || "",
+            colour: (product.colours && product.colours[0]) || "",
+            price_gbp: Number(product.price_gbp || 0),
+            quantity: 1,
+          });
+          appendMessage("assistant", `Added **${product.name}** to your basket.`);
+        });
+      }
+      bubble.appendChild(card);
+    });
+  }
+
+  function appendMessage(role, content, products = []) {
     const bubble = document.createElement("div");
     bubble.className = `druvo-chat-bubble druvo-chat-bubble--${role}`;
     bubble.innerHTML = formatReply(content);
+    if (role === "assistant" && products.length) {
+      renderProductCards(products, bubble);
+    }
     messagesEl.appendChild(bubble);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -62,7 +131,7 @@ if (!root) {
   function renderHistory() {
     messagesEl.innerHTML = "";
     for (const item of history) {
-      appendMessage(item.role === "user" ? "user" : "assistant", item.content);
+      appendMessage(item.role === "user" ? "user" : "assistant", item.content, item.products || []);
     }
   }
 
@@ -101,8 +170,21 @@ if (!root) {
     }
     appendMessage(
       "assistant",
-      "Hello! I'm DRUVO Chat. Ask me about products, delivery, returns, or your orders."
+      "Hello! I'm DRUVO Chat. Ask me about products, delivery, returns, or current offers."
     );
+  }
+
+  function cartPayload() {
+    return getCart().map((item) => ({
+      slug: item.slug,
+      sku: item.sku || "",
+      name: item.name || "",
+      size: item.size || "",
+      colour: item.colour || "",
+      price_gbp: Number(item.price_gbp || 0),
+      quantity: Number(item.quantity || 1),
+      variant_id: item.variant_id ?? null,
+    }));
   }
 
   async function sendMessage(text) {
@@ -131,6 +213,8 @@ if (!root) {
         body: JSON.stringify({
           message: trimmed,
           history: history.slice(0, -1).slice(-8),
+          cart: cartPayload(),
+          last_product_slugs: lastProductSlugs,
         }),
       });
 
@@ -154,8 +238,13 @@ if (!root) {
 
       const data = await res.json();
       const reply = data.reply || "I'm not sure about that. Please contact us at druvo.uk@gmail.com.";
-      appendMessage("assistant", reply);
-      history.push({ role: "assistant", content: reply });
+      const products = data.products || [];
+      if (data.context_product_slugs && data.context_product_slugs.length) {
+        lastProductSlugs = data.context_product_slugs;
+        saveSlugs();
+      }
+      appendMessage("assistant", reply, products);
+      history.push({ role: "assistant", content: reply, products });
       saveHistory();
     } catch {
       typing.remove();
