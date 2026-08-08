@@ -1,6 +1,7 @@
 /** DRUVO Chat — floating customer assistant widget. */
 
 const STORAGE_KEY = "druvo_chat_history_v1";
+const MOBILE_MQL = window.matchMedia("(max-width: 640px)");
 
 const root = document.getElementById("druvo-chat-root");
 if (!root) {
@@ -65,10 +66,15 @@ if (!root) {
     }
   }
 
+  function isMobileViewport() {
+    return MOBILE_MQL.matches;
+  }
+
   function setOpen(open) {
     panel.hidden = !open;
     root.classList.toggle("druvo-chat-open", open);
     launcher.setAttribute("aria-expanded", open ? "true" : "false");
+    document.body.classList.toggle("druvo-chat-mobile-open", open && isMobileViewport());
     if (open) {
       if (!welcomeShown && history.length === 0) {
         showWelcome();
@@ -76,6 +82,8 @@ if (!root) {
         renderHistory();
       }
       input.focus();
+    } else {
+      input.blur();
     }
   }
 
@@ -182,6 +190,15 @@ if (!root) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       sendMessage(input.value);
+    }
+  });
+
+  // Closed by default on every page load — history persists, open state does not.
+  setOpen(false);
+
+  MOBILE_MQL.addEventListener("change", () => {
+    if (!panel.hidden && !isMobileViewport()) {
+      document.body.classList.remove("druvo-chat-mobile-open");
     }
   });
 }

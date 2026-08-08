@@ -146,6 +146,24 @@ async def test_chat_widget_on_homepage(client):
 
 
 @pytest.mark.asyncio
+async def test_chat_widget_closed_by_default(client):
+    response = await client.get("/")
+    assert response.status_code == 200
+    assert 'id="druvo-chat-panel" hidden' in response.text.replace("\n", " ") or 'id="druvo-chat-panel"  hidden' in response.text
+    assert 'aria-expanded="false"' in response.text
+
+
+@pytest.mark.asyncio
+async def test_chat_mobile_css_hides_closed_panel(client):
+    response = await client.get("/static/css/druvo.css")
+    css = response.text
+    assert ".druvo-chat-panel[hidden]" in css
+    assert "display: none !important" in css
+    assert '.druvo-chat-panel:not([hidden])' in css
+    assert "left: auto" in css
+
+
+@pytest.mark.asyncio
 async def test_chat_mobile_styles_present(client):
     response = await client.get("/static/css/druvo.css")
     assert response.status_code == 200
