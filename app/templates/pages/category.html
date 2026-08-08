@@ -1,14 +1,23 @@
 {% extends "base.html" %}
 {% from "components/macros.html" import product_card, filters_form %}
-{% block meta_description %}Shop {{ category.name }} at DRUVO UK{% if category.description %} — {{ category.description[:120] }}{% endif %}.{% endblock %}
+{% block meta_description %}{{ seo_description }}{% endblock %}
+{% block og_description %}{{ seo_description }}{% endblock %}
+{% block twitter_description %}{{ seo_description }}{% endblock %}
+{% block structured_data %}
+{% if item_list_json_ld %}<script type="application/ld+json">{{ item_list_json_ld | safe }}</script>{% endif %}
+{% endblock %}
 {% block content %}
 <div class="container page-header">
   <h1>{{ category.name }}</h1>
-  <p class="product-meta">{{ category.description }}</p>
+  {% if category.description %}
+    <p class="product-meta">{{ category.description }}</p>
+  {% else %}
+    <p class="product-meta">Shop {{ category.name | lower }} online at DRUVO UK with live UK stock.</p>
+  {% endif %}
 </div>
 <div class="container shop-layout">
   {{ filters_form(filters, action='/categories/' ~ category.slug) }}
-  <section>
+  <section aria-label="{{ category.name }} products">
     <div class="product-grid">
       {% for product in products %}{{ product_card(product) }}{% endfor %}
     </div>

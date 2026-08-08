@@ -1,18 +1,27 @@
-{% extends "base.html" %}
-{% from "components/macros.html" import product_card, filters_form %}
-{% block meta_description %}Browse the full DRUVO UK shop — premium pre-loved and new resale clothing, footwear and accessories with live stock.{% endblock %}
-{% block content %}
-<div class="container page-header"><h1>{{ heading }}</h1></div>
-<div class="container shop-layout">
-  {{ filters_form(filters) }}
-  <section>
-    {% if products %}
-      <div class="product-grid">
-        {% for product in products %}{{ product_card(product) }}{% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state"><p>No products match your filters.</p><a class="btn btn-secondary" href="/shop">Clear filters</a></div>
-    {% endif %}
-  </section>
-</div>
-{% endblock %}
+{% extends "base.html" %}
+{% from "components/macros.html" import product_card, filters_form %}
+{% block meta_description %}{{ seo_description }}{% endblock %}
+{% block og_description %}{{ seo_description }}{% endblock %}
+{% block twitter_description %}{{ seo_description }}{% endblock %}
+{% block structured_data %}
+{% if item_list_json_ld %}<script type="application/ld+json">{{ item_list_json_ld | safe }}</script>{% endif %}
+{% endblock %}
+{% block content %}
+<div class="container page-header">
+  <h1>{{ heading }}</h1>
+  <p class="product-meta">Browse premium pre-loved and new-with-tags fashion, footwear and accessories — shop online in the UK with live stock.</p>
+</div>
+<div class="container shop-layout">
+  {{ filters_form(filters) }}
+  <section aria-label="Product results">
+    {% if products %}
+      <div class="product-grid">
+        {% for product in products %}{{ product_card(product) }}{% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state"><p>No products match your filters.</p><a class="btn btn-secondary" href="/shop">Clear filters</a></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+

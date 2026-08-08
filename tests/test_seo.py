@@ -88,7 +88,8 @@ async def test_shop_page_seo(client):
     assert response.status_code == 200
     assert 'rel="canonical" href="https://druvo.uk/shop"' in response.text
     assert 'name="robots" content="index, follow"' in response.text
-    assert "Browse the full DRUVO UK shop" in response.text
+    assert "shop online" in response.text.lower()
+    assert "ItemList" in response.text or "application/ld+json" in response.text
 
 
 @pytest.mark.asyncio
@@ -97,7 +98,7 @@ async def test_categories_page_seo(client):
     assert response.status_code == 200
     assert 'rel="canonical" href="https://druvo.uk/categories"' in response.text
     assert 'name="robots" content="index, follow"' in response.text
-    assert "Browse DRUVO UK categories" in response.text
+    assert "Shop by category" in response.text
 
 
 @pytest.mark.asyncio
@@ -108,7 +109,9 @@ async def test_product_page_seo(client):
     assert 'name="description"' in response.text
     assert 'property="og:type" content="product"' in response.text
     assert '"@type": "Product"' in response.text
-    assert "shop Navy Wool Blazer at DRUVO UK" in response.text
+    assert "BreadcrumbList" in response.text
+    assert "Reiss" in response.text
+    assert 'alt="Navy Wool Blazer' in response.text
 
 
 @pytest.mark.asyncio
@@ -169,9 +172,11 @@ def test_structured_data_json_valid():
 
     assert org["@type"] == "Organization"
     assert org["url"] == "https://druvo.uk"
+    assert org["areaServed"]["name"] == "United Kingdom"
     assert site["@type"] == "WebSite"
     assert site["potentialAction"]["@type"] == "SearchAction"
     assert site["potentialAction"]["target"]["@type"] == "EntryPoint"
     assert prod["@type"] == "Product"
     assert prod["url"].startswith("https://druvo.uk/product/")
+    assert prod["itemCondition"].startswith("https://schema.org/")
     assert prod["offers"]["@type"] in {"Offer", "AggregateOffer"}

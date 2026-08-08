@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.config import get_settings
 from app.services.seo_service import canonical_site_url, canonical_url_for
+from app.services.seo_metadata import product_image_alt
 
 
 def format_gbp(amount: float) -> str:
@@ -26,6 +27,7 @@ def template_globals() -> dict:
         "google_site_verification_token": google_site_verification_token,
         "chat_enabled": settings.chat_enabled,
         "format_gbp": format_gbp,
+        "product_image_alt": product_image_alt,
         "current_year": 2026,
         "placeholder_product": "/static/images/placeholder-product.svg",
         "placeholder_category": "/static/images/placeholder-category.svg",

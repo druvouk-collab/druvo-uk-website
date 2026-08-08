@@ -1,15 +1,21 @@
-{% extends "base.html" %}
-{% block meta_description %}Browse DRUVO UK categories — shop premium pre-loved and new resale clothing, footwear and accessories by category.{% endblock %}
-{% block content %}
-<div class="container page-header"><h1>Categories</h1></div>
-<section class="container section">
-  <div class="category-grid">
-    {% for category in categories %}
-      <a class="category-card" href="/categories/{{ category.slug }}">
-        <img class="druvo-img" src="{{ category.image }}" alt="{{ category.name }}" loading="lazy" data-placeholder="{{ placeholder_category }}">
-        <span>{{ category.name }}</span>
-      </a>
-    {% endfor %}
-  </div>
-</section>
-{% endblock %}
+{% extends "base.html" %}
+{% block meta_description %}{{ seo_description }}{% endblock %}
+{% block og_description %}{{ seo_description }}{% endblock %}
+{% block twitter_description %}{{ seo_description }}{% endblock %}
+{% block content %}
+<div class="container page-header">
+  <h1>Shop by category</h1>
+  <p class="product-meta">Explore DRUVO UK collections — clothing, footwear and accessories available to shop online in the UK.</p>
+</div>
+<section class="container section">
+  <div class="category-grid">
+    {% for category in categories %}
+      <a class="category-card" href="/categories/{{ category.slug }}">
+        <img class="druvo-img" src="{{ category.image }}" alt="{{ category.name }} — shop online at DRUVO UK" loading="lazy" data-placeholder="{{ placeholder_category }}">
+        <span>{{ category.name }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+

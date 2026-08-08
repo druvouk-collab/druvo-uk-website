@@ -147,9 +147,13 @@ def organization_json_ld(settings: Settings | None = None) -> str:
         "url": base,
         "email": cfg.contact_email,
         "description": (
-            "Premium UK resale for clothing, footwear, and accessories. "
-            "Powered by DRUVO AI Enterprise for inventory management."
+            "DRUVO UK is a premium UK resale store for pre-loved and new-with-tags "
+            "clothing, footwear and accessories."
         ),
+        "areaServed": {
+            "@type": "Country",
+            "name": "United Kingdom",
+        },
     }
     return json.dumps(payload, ensure_ascii=False)
 
@@ -174,6 +178,13 @@ def website_json_ld(settings: Settings | None = None) -> str:
     return json.dumps(payload, ensure_ascii=False)
 
 
+def _product_item_condition(condition: str) -> str:
+    lowered = (condition or "").lower()
+    if any(word in lowered for word in ("new", "tags", "unworn", "bnwt")):
+        return "https://schema.org/NewCondition"
+    return "https://schema.org/UsedCondition"
+
+
 def product_json_ld(product: Product, settings: Settings | None = None) -> str:
     cfg = settings or get_settings()
     base = canonical_site_url(cfg)
@@ -196,6 +207,8 @@ def product_json_ld(product: Product, settings: Settings | None = None) -> str:
         )
 
     product_url = f"{base}/product/{product.slug}"
+    colours = sorted({v.colour for v in product.variants if v.colour})
+    sizes = sorted({v.size for v in product.variants if v.size})
     payload: dict = {
         "@context": "https://schema.org",
         "@type": "Product",
@@ -203,8 +216,18 @@ def product_json_ld(product: Product, settings: Settings | None = None) -> str:
         "description": meta_description(product.description or product.name, 500),
         "image": image,
         "url": product_url,
-        "brand": {"@type": "Brand", "name": product.brand or cfg.site_name},
+        "sku": product.variants[0].sku if product.variants else product.slug,
+        "itemCondition": _product_item_condition(product.condition),
     }
+    if product.category_name and product.category_name.lower() not in {"uncategorised", "uncategorized"}:
+        payload["category"] = product.category_name
+    brand = (product.brand or "").strip()
+    if brand:
+        payload["brand"] = {"@type": "Brand", "name": brand}
+    if colours:
+        payload["color"] = colours if len(colours) > 1 else colours[0]
+    if sizes:
+        payload["size"] = sizes if len(sizes) > 1 else sizes[0]
     if len(offers) > 1:
         prices = [variant.price_gbp for variant in product.variants]
         payload["offers"] = {

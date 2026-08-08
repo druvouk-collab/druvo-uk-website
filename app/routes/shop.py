@@ -10,6 +10,22 @@ from fastapi.responses import HTMLResponse
 
 from app.config import get_settings
 from app.services.seo_service import organization_json_ld, product_json_ld, website_json_ld
+from app.services.seo_metadata import (
+    breadcrumb_json_ld,
+    catalog_brands,
+    categories_document_title,
+    categories_meta_description,
+    category_document_title,
+    category_meta_description,
+    home_document_title,
+    home_meta_description,
+    item_list_json_ld,
+    product_breadcrumbs,
+    product_document_title,
+    product_meta_description,
+    shop_document_title,
+    shop_meta_description,
+)
 from app.templating import templates
 from app.services.catalog_service import CatalogFilters, CatalogService
 
@@ -70,6 +86,9 @@ async def home(request: Request):
         "pages/home.html",
         {
             "page_title": "Premium UK Resale",
+            "document_title": home_document_title(products),
+            "seo_description": home_meta_description(products),
+            "catalog_brands": catalog_brands(products),
             "categories": categories,
             "new_arrivals": new_arrivals,
             "sale_items": sale_items,
@@ -78,6 +97,7 @@ async def home(request: Request):
             "catalog_notice": snapshot.notice,
             "organization_json_ld": organization_json_ld(),
             "website_json_ld": website_json_ld(),
+            "item_list_json_ld": item_list_json_ld(products[:12], "Featured products", "/"),
         },
     )
 
@@ -96,6 +116,9 @@ async def shop_page(
 ):
     filters = _filter_params(q, category, size, colour, min_price, max_price, in_stock, sort)
     ctx = await _shop_context(request, filters, "Shop", "Shop All")
+    ctx["document_title"] = shop_document_title(ctx["products"])
+    ctx["seo_description"] = shop_meta_description(ctx["products"])
+    ctx["item_list_json_ld"] = item_list_json_ld(ctx["products"][:12], "Shop all products", "/shop")
     return templates.TemplateResponse(request, "pages/shop.html", ctx)
 
 
@@ -103,6 +126,9 @@ async def shop_page(
 async def new_arrivals(request: Request, sort: str = "featured"):
     filters = CatalogFilters(new_arrivals_only=True, sort=sort)
     ctx = await _shop_context(request, filters, "New Arrivals", "New Arrivals")
+    ctx["document_title"] = f"New Arrivals | Shop Online UK | DRUVO UK"
+    ctx["seo_description"] = shop_meta_description(ctx["products"])
+    ctx["item_list_json_ld"] = item_list_json_ld(ctx["products"][:12], "New arrivals", "/new-arrivals")
     return templates.TemplateResponse(request, "pages/shop.html", ctx)
 
 
@@ -110,16 +136,25 @@ async def new_arrivals(request: Request, sort: str = "featured"):
 async def sale(request: Request, sort: str = "price-asc"):
     filters = CatalogFilters(on_sale_only=True, sort=sort)
     ctx = await _shop_context(request, filters, "Sale", "Offers & Sale")
+    ctx["document_title"] = f"Sale Offers | Shop Online UK | DRUVO UK"
+    ctx["seo_description"] = shop_meta_description(ctx["products"])
+    ctx["item_list_json_ld"] = item_list_json_ld(ctx["products"][:12], "Sale offers", "/sale")
     return templates.TemplateResponse(request, "pages/shop.html", ctx)
 
 
 @router.get("/categories", response_class=HTMLResponse)
 async def categories_page(request: Request):
     categories = await catalog.list_categories()
+    products = await catalog.list_products()
     return templates.TemplateResponse(
         request,
         "pages/categories.html",
-        {"page_title": "Categories", "categories": categories},
+        {
+            "page_title": "Categories",
+            "document_title": categories_document_title(),
+            "seo_description": categories_meta_description(products),
+            "categories": categories,
+        },
     )
 
 
@@ -139,6 +174,11 @@ async def category_detail(
     filters = _filter_params(q, slug, size, colour, None, None, in_stock, sort)
     ctx = await _shop_context(request, filters, category.name, category.name)
     ctx["category"] = category
+    ctx["document_title"] = category_document_title(category)
+    ctx["seo_description"] = category_meta_description(category, ctx["products"])
+    ctx["item_list_json_ld"] = item_list_json_ld(
+        ctx["products"][:12], f"{category.name} products", f"/categories/{slug}"
+    )
     return templates.TemplateResponse(request, "pages/category.html", ctx)
 
 
@@ -156,17 +196,22 @@ async def product_detail(request: Request, slug: str):
     image = product.images[0] if product.images else "/static/images/placeholder-product.svg"
     og_image_url = image if image.startswith("http") else f"{base}{image}"
 
+    breadcrumbs = product_breadcrumbs(product)
     return templates.TemplateResponse(
         request,
         "pages/product.html",
         {
             "page_title": product.name,
+            "document_title": product_document_title(product),
+            "seo_description": product_meta_description(product),
             "product": product,
             "related": related,
+            "breadcrumbs": breadcrumbs,
             "variants_json": json.dumps([asdict(v) for v in product.variants]),
             "default_size": default_variant.size if default_variant else "",
             "default_colour": default_variant.colour if default_variant else "",
             "product_json_ld": product_json_ld(product),
+            "breadcrumb_json_ld": breadcrumb_json_ld(breadcrumbs),
             "og_image_url": og_image_url,
         },
     )

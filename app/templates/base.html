@@ -8,7 +8,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>{% block title %}{{ page_title }} · {{ site_name }}{% endblock %}</title>
+  <title>{% block title %}{% if document_title %}{{ document_title }}{% else %}{{ page_title }} · {{ site_name }}{% endif %}{% endblock %}</title>
 
   <meta name="description" content="{% block meta_description %}DRUVO UK — premium pre-loved and new resale fashion, footwear, and accessories. Shop curated UK resale with live stock from DRUVO AI Enterprise.{% endblock %}">
 
@@ -25,7 +25,7 @@
 
   <meta property="og:site_name" content="{{ site_name }}">
 
-  <meta property="og:title" content="{% block og_title %}{{ page_title }} · {{ site_name }}{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{% if document_title %}{{ document_title }}{% else %}{{ page_title }} · {{ site_name }}{% endif %}{% endblock %}">
 
   <meta property="og:description" content="{% block og_description %}DRUVO UK — premium pre-loved and new resale fashion, footwear, and accessories.{% endblock %}">
 
@@ -41,7 +41,7 @@
 
   <meta name="twitter:card" content="summary_large_image">
 
-  <meta name="twitter:title" content="{% block twitter_title %}{{ page_title }} · {{ site_name }}{% endblock %}">
+  <meta name="twitter:title" content="{% block twitter_title %}{% if document_title %}{{ document_title }}{% else %}{{ page_title }} · {{ site_name }}{% endif %}{% endblock %}">
 
   <meta name="twitter:description" content="{% block twitter_description %}Premium UK resale fashion, footwear and accessories from DRUVO UK.{% endblock %}">
 

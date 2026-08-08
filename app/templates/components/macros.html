@@ -2,7 +2,7 @@
 <article class="product-card">
   <a href="/product/{{ product.slug }}" aria-label="{{ product.name }}">
     <div class="product-card-image">
-      <img class="druvo-img" src="{{ product.images[0] }}" alt="{{ product.name }}" loading="lazy" width="400" height="500" data-placeholder="{{ placeholder_product }}">
+      <img class="druvo-img" src="{{ product.images[0] }}" alt="{{ product_image_alt(product) }}" loading="lazy" width="400" height="500" data-placeholder="{{ placeholder_product }}">
       <div class="card-badges">
         {% if product.is_new_arrival %}<span class="badge badge-new">New</span>{% endif %}
         {% if product.is_on_sale %}<span class="badge badge-sale">Sale</span>{% endif %}
