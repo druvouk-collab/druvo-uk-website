@@ -35,6 +35,8 @@ class Product:
     is_new_arrival: bool = False
     is_on_sale: bool = False
     sale_price_gbp: float | None = None
+    gtin: str = ""
+    mpn: str = ""
 
     @property
     def min_price(self) -> float:

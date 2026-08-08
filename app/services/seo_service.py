@@ -114,9 +114,17 @@ async def build_sitemap_urls() -> list[dict[str, str]]:
 
     products = await catalog.list_products()
     for product in products:
+        if _should_exclude_from_public_index(product):
+            continue
         add(f"/product/{product.slug}", priority="0.8", changefreq="daily")
 
     return entries
+
+
+def _should_exclude_from_public_index(product: Product) -> bool:
+    from app.services.merchant_service import is_demo_or_test_product
+
+    return is_demo_or_test_product(product)
 
 
 def sitemap_xml(urls: list[dict[str, str]]) -> str:
@@ -281,6 +289,12 @@ def product_json_ld(product: Product, settings: Settings | None = None) -> str:
     brand = (product.brand or "").strip()
     if brand:
         payload["brand"] = {"@type": "Brand", "name": brand}
+    gtin = (product.gtin or "").strip()
+    mpn = (product.mpn or "").strip()
+    if gtin:
+        payload["gtin"] = gtin
+    if mpn:
+        payload["mpn"] = mpn
     if colours:
         payload["color"] = colours if len(colours) > 1 else colours[0]
     if sizes:
