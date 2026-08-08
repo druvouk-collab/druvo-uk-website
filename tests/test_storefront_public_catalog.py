@@ -147,6 +147,14 @@ async def test_homepage_has_broader_fashion_copy(client):
 
 
 @pytest.mark.asyncio
+async def test_homepage_footer_excludes_internal_enterprise_copy(client):
+    response = await client.get("/")
+    assert response.status_code == 200
+    assert "Powered by DRUVO AI Enterprise" not in response.text
+    assert "Premium UK resale for clothing" not in response.text
+
+
+@pytest.mark.asyncio
 async def test_chat_excludes_demo_from_purchasable_results(client):
     response = await client.post(
         "/api/chat/message",

@@ -249,7 +249,7 @@ def about_document_title() -> str:
 def about_meta_description() -> str:
     return meta_description(
         "Learn about DRUVO UK — premium pre-loved and new-with-tags fashion, footwear and accessories. "
-        "Curated UK resale powered by DRUVO AI Enterprise."
+        "Curated UK fashion and lifestyle products for modern wardrobes."
     )
 
 
