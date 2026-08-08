@@ -164,6 +164,14 @@ async def test_chat_mobile_css_hides_closed_panel(client):
 
 
 @pytest.mark.asyncio
+async def test_homepage_static_assets_are_cache_busted(client):
+    response = await client.get("/")
+    assert response.status_code == 200
+    assert "/static/css/druvo.css?v=" in response.text
+    assert "/static/js/chat.js?v=" in response.text
+
+
+@pytest.mark.asyncio
 async def test_chat_mobile_styles_present(client):
     response = await client.get("/static/css/druvo.css")
     assert response.status_code == 200

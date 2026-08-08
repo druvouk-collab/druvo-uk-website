@@ -49,11 +49,11 @@
 
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-  <link rel="preload" href="/static/css/druvo.css" as="style">
+  <link rel="preload" href="/static/css/druvo.css?v={{ static_asset_version() }}" as="style">
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/static/css/druvo.css">
+  <link rel="stylesheet" href="/static/css/druvo.css?v={{ static_asset_version() }}">
 
   {% block head_extra %}{% endblock %}
 
@@ -79,11 +79,11 @@
 
   {% if chat_enabled %}{% include "components/chat_widget.html" %}{% endif %}
 
-  <script type="module" src="/static/js/cart.js"></script>
+  <script type="module" src="/static/js/cart.js?v={{ static_asset_version() }}"></script>
 
-  <script type="module" src="/static/js/images.js"></script>
+  <script type="module" src="/static/js/images.js?v={{ static_asset_version() }}"></script>
 
-  {% if chat_enabled %}<script type="module" src="/static/js/chat.js"></script>{% endif %}
+  {% if chat_enabled %}<script type="module" src="/static/js/chat.js?v={{ static_asset_version() }}"></script>{% endif %}
 
   {% block scripts %}{% endblock %}
 
