@@ -45,6 +45,8 @@ async def test_mobile_drawer_css_rules(client):
     assert ".druvo-chat-backdrop[hidden]" in css
     assert "safe-area-inset-bottom" in css
     assert ".druvo-chat-root.druvo-chat-open .druvo-chat-launcher" in css
+    assert ".druvo-chat-panel.druvo-chat-lang-open .druvo-chat-messages" in css
+    assert ".druvo-chat-panel.druvo-chat-lang-open .druvo-chat-lang-screen" in css
 
 
 @pytest.mark.asyncio

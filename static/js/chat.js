@@ -210,6 +210,7 @@ if (!root) {
 
   function showLanguageScreen(show) {
     langScreen.hidden = !show;
+    panel.classList.toggle("druvo-chat-lang-open", show);
     if (show) {
       langSearchWrap.hidden = true;
       langSearch.value = "";
