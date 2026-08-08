@@ -22,14 +22,54 @@ _MAX_HISTORY = 8
 _OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 _CONTACT_FALLBACK = (
-    "I'm not able to confirm that from our live systems right now. "
-    "Please email us at {email} and we'll help you personally."
+    "I'm not sure about that one. Try browsing /shop, or email us at {email} "
+    "and our team will be happy to help."
+)
+
+_CATALOG_UNAVAILABLE = (
+    "Our live product catalogue is temporarily unavailable, so I can't check stock or prices right now. "
+    "Please try again shortly, or email us at {email}."
 )
 
 _WELCOME = (
-    "Hello! I'm DRUVO Chat, your DRUVO UK assistant. "
-    "Ask me about products, sizes, colours, availability, delivery, returns, or how to find your orders."
+    "Hello! Welcome to DRUVO UK 👋 How can I help you today?"
 )
+
+
+def _conversational_reply(message: str) -> str | None:
+    """Friendly replies for greetings and small talk — never catalogue fallbacks."""
+    lower = message.lower().strip()
+
+    if re.search(r"\bgood evening\b", lower):
+        return "Good evening! Welcome to DRUVO UK 👋 How can I help you today?"
+    if re.search(r"\bgood morning\b", lower):
+        return "Good morning! Welcome to DRUVO UK 👋 How can I help you today?"
+    if re.search(r"\bgood afternoon\b", lower):
+        return "Good afternoon! Welcome to DRUVO UK 👋 How can I help you today?"
+    if re.match(r"^(hi|hello|hey|hiya|howdy|yo)( there| druvo| uk)?[!.?\s]*$", lower):
+        return _WELCOME
+    if re.search(r"\b(thank you|thanks|cheers|much appreciated)\b", lower):
+        return "You're welcome! Is there anything else I can help you with?"
+    if re.match(r"^(bye|goodbye|good bye|see you|take care)[!.?\s]*$", lower) or re.search(
+        r"\b(bye for now|goodbye)\b", lower
+    ):
+        return "Goodbye! Thanks for visiting DRUVO UK — we'd love to see you again soon."
+    if re.search(r"\bhow are you\b", lower):
+        return (
+            "I'm doing well, thank you! I'm here to help with DRUVO UK products, delivery, "
+            "returns and orders. What can I help you with?"
+        )
+    if re.search(r"\b(who are you|what are you)\b", lower):
+        return (
+            "I'm DRUVO Chat, the DRUVO UK shopping assistant. I can help with products, sizes, "
+            "stock, delivery, returns and finding your orders."
+        )
+    if re.search(r"\b(what can you help|what do you do|how can you help|what can i ask)\b", lower):
+        return (
+            "I can help with product availability, sizes, colours, prices, UK delivery, returns, "
+            "and how to find your orders. Just ask!"
+        )
+    return None
 
 
 @dataclass(frozen=True)
@@ -64,6 +104,10 @@ class ChatService:
         snapshot = await self._catalog.load_snapshot()
         products = snapshot.products
         context = self._build_context(products, snapshot.degraded)
+
+        conversational = _conversational_reply(cleaned)
+        if conversational:
+            return ChatReply(reply=conversational, source="rules")
 
         if self._settings.openai_api_key:
             try:
@@ -179,9 +223,6 @@ LIVE CATALOG DATA:
         free_threshold = self._settings.shipping_free_threshold_gbp
         standard = self._settings.shipping_standard_gbp
 
-        if any(w in lower for w in ("hello", "hi", "hey", "good morning", "good afternoon")):
-            return _WELCOME
-
         if any(w in lower for w in ("delivery", "shipping", "postage", "dispatch", "ship")):
             return (
                 f"Standard UK delivery is £{standard:.2f}. Orders over £{free_threshold:.2f} qualify for free delivery. "
@@ -209,7 +250,7 @@ LIVE CATALOG DATA:
             )
 
         if degraded:
-            return _CONTACT_FALLBACK.format(email=email)
+            return _CATALOG_UNAVAILABLE.format(email=email)
 
         matched = self._match_products(message, products)
         if matched:
@@ -251,13 +292,18 @@ LIVE CATALOG DATA:
         in_stock_colours = sorted({v.colour for v in product.variants if v.stock_quantity > 0})
         price = product.min_price
         stock_text = "In stock" if product.in_stock else "Out of stock"
-        lines = [
-            f"**{product.name}** — from £{price:.2f} ({stock_text}).",
-            f"Brand: {product.brand}. Category: {product.category_name}.",
-        ]
-        if in_stock_sizes:
-            lines.append(f"Sizes with stock: {', '.join(in_stock_sizes)}.")
-        if in_stock_colours:
-            lines.append(f"Colours with stock: {', '.join(in_stock_colours)}.")
+        lines = [f"**{product.name}** — from £{price:.2f} ({stock_text})."]
+        if not is_live_catalog_product(product):
+            lines.append(
+                "Note: this is a development sample on the website — not currently available to purchase."
+            )
+        else:
+            if product.brand:
+                lines.append(f"Brand: {product.brand}.")
+            lines.append(f"Category: {product.category_name}.")
+            if in_stock_sizes:
+                lines.append(f"Sizes with stock: {', '.join(in_stock_sizes)}.")
+            if in_stock_colours:
+                lines.append(f"Colours with stock: {', '.join(in_stock_colours)}.")
         lines.append(f"View: /product/{product.slug}")
         return "\n".join(lines)

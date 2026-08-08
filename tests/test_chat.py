@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.services.chat_rate_limit import get_chat_rate_limiter
+from app.services.chat_service import ChatService, _conversational_reply
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +22,52 @@ async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+
+
+@pytest.mark.parametrize(
+    "message,expected_fragment",
+    [
+        ("good evening", "Good evening"),
+        ("Good Evening!", "Good evening"),
+        ("good morning", "Good morning"),
+        ("good afternoon", "Good afternoon"),
+        ("hi", "Welcome to DRUVO UK"),
+        ("Hello", "Welcome to DRUVO UK"),
+        ("Hey there", "Welcome to DRUVO UK"),
+        ("how are you?", "doing well"),
+        ("thank you", "welcome"),
+        ("thanks!", "welcome"),
+        ("bye", "Goodbye"),
+        ("goodbye", "Goodbye"),
+        ("who are you", "DRUVO Chat"),
+        ("what can you help me with", "product availability"),
+    ],
+)
+def test_conversational_replies(message, expected_fragment):
+    reply = _conversational_reply(message)
+    assert reply is not None
+    assert expected_fragment.lower() in reply.lower()
+    assert "unable to confirm" not in reply.lower()
+    assert "live systems" not in reply.lower()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "message",
+    ["good evening", "Hello", "how are you?", "thanks", "who are you?"],
+)
+async def test_chat_greetings_via_api(client, message):
+    response = await client.post(
+        "/api/chat/message",
+        json={"message": message, "history": []},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "rules"
+    reply = data["reply"].lower()
+    assert "unable to confirm" not in reply
+    assert "live systems" not in reply
+    assert "live product catalogue is temporarily unavailable" not in reply
 
 
 @pytest.mark.asyncio
@@ -67,11 +114,44 @@ async def test_chat_order_refusal(client):
 
 
 @pytest.mark.asyncio
+async def test_chat_unknown_question_uses_soft_fallback(client):
+    response = await client.post(
+        "/api/chat/message",
+        json={"message": "xyzzy plugh quantum flarn", "history": []},
+    )
+    assert response.status_code == 200
+    reply = response.json()["reply"].lower()
+    assert "unable to confirm" not in reply
+    assert "live systems" not in reply
+    assert "druvo.uk@gmail.com" in reply or "/shop" in reply
+
+
+@pytest.mark.asyncio
+async def test_chat_demo_product_note(client):
+    response = await client.post(
+        "/api/chat/message",
+        json={"message": "Tell me about the navy wool blazer", "history": []},
+    )
+    assert response.status_code == 200
+    reply = response.json()["reply"].lower()
+    assert "navy wool blazer" in reply or "blazer" in reply
+
+
+@pytest.mark.asyncio
 async def test_chat_widget_on_homepage(client):
     response = await client.get("/")
     assert response.status_code == 200
     assert "druvo-chat-root" in response.text
     assert "DRUVO Chat" in response.text
+
+
+@pytest.mark.asyncio
+async def test_chat_mobile_styles_present(client):
+    response = await client.get("/static/css/druvo.css")
+    assert response.status_code == 200
+    css = response.text
+    assert ".druvo-chat-root" in css
+    assert "@media" in css
 
 
 @pytest.mark.asyncio
