@@ -4,18 +4,41 @@
 
 from __future__ import annotations
 
-
-
+from app.lib.druvo_api.image_proxy import to_website_proxy_path, to_website_proxy_url
 from app.types.commerce import Category, Order, OrderLine, Product, ProductVariant
-
-
 
 _PLACEHOLDER_PRODUCT = "/static/images/placeholder-product.svg"
 
 _PLACEHOLDER_CATEGORY = "/static/images/placeholder-category.svg"
 
 
+def _map_product_images(payload: dict) -> list[str]:
+    """Prefer structured gallery paths so product folders are preserved."""
+    images: list[str] = []
+    seen: set[str] = set()
 
+    gallery = payload.get("gallery") or []
+    if gallery:
+        for entry in sorted(
+            gallery,
+            key=lambda row: (not row.get("is_main"), row.get("sort_order", 0)),
+        ):
+            path = str(entry.get("path") or "").strip()
+            if path:
+                proxy = to_website_proxy_path(path)
+            else:
+                proxy = to_website_proxy_url(str(entry.get("url") or "").strip())
+            if proxy and proxy not in seen:
+                images.append(proxy)
+                seen.add(proxy)
+
+    for url in payload.get("images") or []:
+        proxy = to_website_proxy_url(str(url).strip())
+        if proxy and proxy not in seen and "placeholder-product" not in proxy:
+            images.append(proxy)
+            seen.add(proxy)
+
+    return images or [_PLACEHOLDER_PRODUCT]
 
 
 def map_product(payload: dict) -> Product:
@@ -42,11 +65,7 @@ def map_product(payload: dict) -> Product:
 
     ]
 
-    images = [img for img in (payload.get("images") or []) if img]
-
-    if not images:
-
-        images = [_PLACEHOLDER_PRODUCT]
+    images = _map_product_images(payload)
 
     return Product(
 

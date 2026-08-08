@@ -9,7 +9,7 @@ from app.config import Settings, get_settings
 from app.data import mock_catalog
 from app.lib.druvo_api.client import DruvoApiClient
 from app.lib.druvo_api.errors import CatalogApiError
-from app.lib.druvo_api.image_proxy import to_website_proxy_url
+from app.lib.druvo_api.image_proxy import to_website_proxy_path, to_website_proxy_url
 from app.services.catalog_snapshot import CatalogSnapshot
 from app.types.commerce import Category, Product
 
@@ -163,6 +163,11 @@ class CatalogService:
         images = [to_website_proxy_url(image) for image in product.images if image]
         if not images:
             images = ["/static/images/placeholder-product.svg"]
+        # map_product already emits proxy paths for gallery-aware payloads; avoid double-rewriting.
+        if all(image.startswith("/api/catalog/images/") or image.startswith("/static/") for image in images):
+            if images == product.images:
+                return product
+            return replace(product, images=images)
         if images == product.images:
             return product
         return replace(product, images=images)

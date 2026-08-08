@@ -29,6 +29,55 @@ def test_map_product_payload():
     assert product.in_stock is True
 
 
+def test_map_product_prefers_gallery_paths():
+    product = map_product(
+        {
+            "id": "8",
+            "slug": "druvo-0001-l-cream",
+            "name": "Tracksuit",
+            "description": "",
+            "category_slug": "mens-tracksuits",
+            "category_name": "Men's Tracksuits",
+            "brand": "",
+            "condition": "Pre-loved",
+            "images": [
+                "https://api.druvo.uk/api/v1/images/img_9.png",
+                "https://api.druvo.uk/api/v1/images/img_10.png",
+            ],
+            "gallery": [
+                {
+                    "path": "product_8/img_9.png",
+                    "url": "https://api.druvo.uk/api/v1/images/product_8/img_9.png",
+                    "sort_order": 0,
+                    "is_main": True,
+                },
+                {
+                    "path": "product_8/img_11.jpg",
+                    "url": "https://api.druvo.uk/api/v1/images/product_8/img_11.jpg",
+                    "sort_order": 1,
+                    "is_main": False,
+                },
+            ],
+            "variants": [
+                {
+                    "sku": "DRUVO-001",
+                    "size": "L",
+                    "colour": "Cream",
+                    "stock_quantity": 1,
+                    "price_gbp": 20.0,
+                }
+            ],
+            "tags": [],
+            "is_new_arrival": False,
+            "is_on_sale": False,
+            "sale_price_gbp": None,
+            "catalog_status": "live",
+        }
+    )
+    assert product.images[0] == "/api/catalog/images/product_8/img_9.png"
+    assert "/api/catalog/images/product_8/img_11.jpg" in product.images
+
+
 def test_map_order_payload():
     order = map_order(
         {
