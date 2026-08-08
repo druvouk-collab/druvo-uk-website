@@ -194,7 +194,9 @@ class ChatCommerceService:
             return self._cheapest_answer(normalized, snapshot, hist, last)
 
         if price_cap := self._extract_max_price(lower):
-            category_context = self._build_category_context(normalized, hist, last, snapshot)
+            category_context = self._build_category_context("", hist, last, snapshot)
+            if not self._category_tokens(category_context):
+                category_context = self._build_category_context(normalized, hist, last, snapshot)
             return self._under_price_answer(price_cap, snapshot, category_context)
 
         matched = self._match_products(normalized, snapshot.live_products)
@@ -696,7 +698,10 @@ class ChatCommerceService:
     @staticmethod
     def _category_tokens(message: str) -> list[str]:
         lower = message.lower()
-        for word in ("cheapest", "cheap", "lowest", "price", "which", "what"):
+        for word in (
+            "cheapest", "cheap", "lowest", "price", "which", "what", "show", "something",
+            "anything", "under", "below", "around", "about", "have", "any", "me", "buy",
+        ):
             lower = lower.replace(word, "")
         return [t for t in re.findall(r"[a-z]+", lower) if len(t) > 3]
 
