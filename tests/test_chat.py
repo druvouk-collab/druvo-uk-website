@@ -127,15 +127,27 @@ async def test_chat_product_lookup(client):
     assert "cashmere" in reply.lower() or "druvo.uk@gmail.com" in reply
 
 
+@pytest.fixture
+def live_account_env(monkeypatch):
+    monkeypatch.setenv("CATALOG_SOURCE", "druvo_api")
+    monkeypatch.setenv("DRUVO_API_BASE_URL", "http://127.0.0.1:8790")
+    monkeypatch.setenv("DRUVO_API_KEY", "d" * 43)
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 @pytest.mark.asyncio
-async def test_chat_order_refusal(client):
+async def test_chat_order_tracking_starts_flow(client, live_account_env):
     response = await client.post(
         "/api/chat/message",
         json={"message": "Where is my order DRU-12345?", "history": []},
     )
     assert response.status_code == 200
     reply = response.json()["reply"].lower()
-    assert "account" in reply or "email" in reply
+    assert "order number" in reply or "order reference" in reply
 
 
 @pytest.mark.asyncio

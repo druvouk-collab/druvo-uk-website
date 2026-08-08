@@ -12,6 +12,7 @@ import httpx
 from app.config import Settings, get_settings
 from app.services.chat_commerce_service import ChatCommerceReply, ChatCommerceService, ChatProductCard
 from app.services.chat_i18n import ChatPresentationService, is_english, normalize_locale
+from app.services.chat_order_tracking_service import ChatOrderTrackingService
 from app.services.website_knowledge_service import WebsiteKnowledgeService
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,10 @@ class ChatService:
             openai_api_key=self._settings.openai_api_key,
             chat_model=self._settings.chat_model,
         )
+        self._order_tracking = ChatOrderTrackingService(
+            settings=self._settings,
+            presentation=self._presentation,
+        )
 
     async def welcome_message(self, locale: str | None = None) -> str:
         text = _WELCOME
@@ -126,6 +131,10 @@ class ChatService:
                 reply=await self._present(conversational, active_locale),
                 source="rules",
             )
+
+        order_tracking = await self._order_tracking.handle(cleaned, history or [], active_locale)
+        if order_tracking:
+            return ChatReply(reply=order_tracking.reply, source="rules")
 
         commerce = await self._commerce.answer(
             cleaned,

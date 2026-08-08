@@ -146,6 +146,10 @@ class Order:
     subtotal_gbp: float
     shipping_gbp: float
     total_gbp: float
+    status_code: str = ""
+    shipped_at: str | None = None
+    delivered_at: str | None = None
+    status_updated_at: str | None = None
 
     @property
     def has_tracking(self) -> bool:

@@ -165,6 +165,8 @@ def map_order(payload: dict) -> Order:
 
     shipping_gbp = float(payload.get("shipping_gbp") or 0)
 
+    raw_status = str(payload.get("status") or "received").strip().lower()
+
     return Order(
 
         id=str(payload.get("external_order_id") or payload.get("order_id")),
@@ -184,6 +186,14 @@ def map_order(payload: dict) -> Order:
         shipping_gbp=shipping_gbp,
 
         total_gbp=float(payload.get("total_amount", subtotal + shipping_gbp)),
+
+        status_code=raw_status,
+
+        shipped_at=payload.get("shipped_at") or None,
+
+        delivered_at=payload.get("delivered_at") or None,
+
+        status_updated_at=payload.get("status_updated_at") or None,
 
     )
 

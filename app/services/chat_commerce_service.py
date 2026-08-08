@@ -129,14 +129,6 @@ class ChatCommerceService:
         if any(w in lower for w in ("contact", "email", "support", "human")):
             return ChatCommerceReply(text=f"You can reach DRUVO UK at {email}.")
 
-        if any(w in lower for w in ("order", "tracking", "where is my")):
-            return ChatCommerceReply(
-                text=(
-                    "I can't look up individual orders in chat. Visit /account/login with your checkout email, "
-                    f"or contact us at {email}."
-                )
-            )
-
         if snapshot.degraded:
             return ChatCommerceReply(
                 text=(
