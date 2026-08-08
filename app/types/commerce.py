@@ -37,6 +37,17 @@ class Product:
     sale_price_gbp: float | None = None
     gtin: str = ""
     mpn: str = ""
+    catalog_status: str = "demo"
+
+    @property
+    def is_live(self) -> bool:
+        from app.services.catalog_visibility import is_live_catalog_product
+
+        return is_live_catalog_product(self)
+
+    @property
+    def is_demo(self) -> bool:
+        return not self.is_live
 
     @property
     def min_price(self) -> float:

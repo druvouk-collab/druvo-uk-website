@@ -10,17 +10,22 @@
 
 {% block og_type %}product{% endblock %}
 
+{% block robots %}{% if robots_noindex %}noindex, nofollow{% else %}index, follow{% endif %}{% endblock %}
+
 {% block og_image %}<meta property="og:image" content="{{ og_image_url }}">{% endblock %}
 
 {% block structured_data %}
-
-<script type="application/ld+json">{{ product_json_ld | safe }}</script>
-
-<script type="application/ld+json">{{ breadcrumb_json_ld | safe }}</script>
-
+{% if product_json_ld %}<script type="application/ld+json">{{ product_json_ld | safe }}</script>{% endif %}
+{% if breadcrumb_json_ld %}<script type="application/ld+json">{{ breadcrumb_json_ld | safe }}</script>{% endif %}
 {% endblock %}
 
 {% block content %}
+
+{% if is_demo_product %}
+<div class="container notice catalog-notice" role="status">
+  Development sample — not live inventory. This product is excluded from Google Shopping, sitemap indexing and checkout until marked live in DRUVO AI.
+</div>
+{% endif %}
 
 {% include "components/breadcrumbs.html" %}
 
@@ -170,7 +175,7 @@
 
 
 
-    <button class="btn btn-primary" type="button" data-add-to-cart>Add to basket</button>
+    <button class="btn btn-primary" type="button" data-add-to-cart {% if is_demo_product %}disabled aria-disabled="true"{% endif %}>{% if is_demo_product %}Development sample — not for sale{% else %}Add to basket{% endif %}</button>
 
   </div>
 

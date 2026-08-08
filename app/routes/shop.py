@@ -30,6 +30,7 @@ from app.services.seo_metadata import (
 )
 from app.templating import templates
 from app.services.catalog_service import CatalogFilters, CatalogService
+from app.services.catalog_visibility import filter_live_products, is_live_catalog_product
 
 router = APIRouter()
 catalog = CatalogService()
@@ -79,6 +80,7 @@ async def _shop_context(request: Request, filters: CatalogFilters, page_title: s
 async def home(request: Request):
     snapshot = await catalog.load_snapshot()
     products = snapshot.products
+    live_products = filter_live_products(products)
     categories = snapshot.categories
     new_arrivals = [p for p in products if p.is_new_arrival][:4]
     sale_items = [p for p in products if p.is_on_sale][:4]
@@ -88,9 +90,9 @@ async def home(request: Request):
         "pages/home.html",
         {
             "page_title": "Premium UK Resale",
-            "document_title": home_document_title(products),
-            "seo_description": home_meta_description(products),
-            "catalog_brands": catalog_brands(products),
+            "document_title": home_document_title(live_products or products),
+            "seo_description": home_meta_description(live_products or products),
+            "catalog_brands": catalog_brands(live_products or products),
             "categories": categories,
             "new_arrivals": new_arrivals,
             "sale_items": sale_items,
@@ -99,7 +101,9 @@ async def home(request: Request):
             "catalog_notice": snapshot.notice,
             "organization_json_ld": organization_json_ld(),
             "website_json_ld": website_json_ld(),
-            "item_list_json_ld": item_list_json_ld(products[:12], "Featured products", "/"),
+            "item_list_json_ld": item_list_json_ld(live_products[:12], "Featured products", "/")
+            if live_products
+            else None,
         },
     )
 
@@ -118,9 +122,12 @@ async def shop_page(
 ):
     filters = _filter_params(q, category, size, colour, min_price, max_price, in_stock, sort)
     ctx = await _shop_context(request, filters, "Shop", "Shop All")
-    ctx["document_title"] = shop_document_title(ctx["products"])
-    ctx["seo_description"] = shop_meta_description(ctx["products"])
-    ctx["item_list_json_ld"] = item_list_json_ld(ctx["products"][:12], "Shop all products", "/shop")
+    live = filter_live_products(ctx["products"])
+    ctx["document_title"] = shop_document_title(live or ctx["products"])
+    ctx["seo_description"] = shop_meta_description(live or ctx["products"])
+    ctx["item_list_json_ld"] = (
+        item_list_json_ld(live[:12], "Shop all products", "/shop") if live else None
+    )
     return templates.TemplateResponse(request, "pages/shop.html", ctx)
 
 
@@ -199,6 +206,7 @@ async def product_detail(request: Request, slug: str):
     og_image_url = image if image.startswith("http") else f"{base}{image}"
 
     breadcrumbs = product_breadcrumbs(product)
+    is_live = is_live_catalog_product(product)
     return templates.TemplateResponse(
         request,
         "pages/product.html",
@@ -207,13 +215,15 @@ async def product_detail(request: Request, slug: str):
             "document_title": product_document_title(product),
             "seo_description": product_meta_description(product),
             "product": product,
+            "is_demo_product": not is_live,
+            "robots_noindex": not is_live,
             "related": related,
             "breadcrumbs": breadcrumbs,
             "variants_json": json.dumps([asdict(v) for v in product.variants]),
             "default_size": default_variant.size if default_variant else "",
             "default_colour": default_variant.colour if default_variant else "",
-            "product_json_ld": product_json_ld(product),
-            "breadcrumb_json_ld": breadcrumb_json_ld(breadcrumbs),
+            "product_json_ld": product_json_ld(product) if is_live else None,
+            "breadcrumb_json_ld": breadcrumb_json_ld(breadcrumbs) if is_live else None,
             "og_image_url": og_image_url,
         },
     )

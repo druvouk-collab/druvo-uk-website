@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from app.types.commerce import Category, Product, ProductVariant
 
 # Self-hosted catalog images (Render-safe — no external hotlink dependency)
@@ -189,12 +191,16 @@ _PRODUCTS: list[Product] = [
 ]
 
 
+def _as_live_catalog(product: Product) -> Product:
+    return replace(product, catalog_status="live")
+
+
 def all_categories() -> list[Category]:
     return list(_CATEGORIES)
 
 
 def all_products() -> list[Product]:
-    return list(_PRODUCTS)
+    return [_as_live_catalog(p) for p in _PRODUCTS]
 
 
 def get_category(slug: str) -> Category | None:
@@ -202,4 +208,5 @@ def get_category(slug: str) -> Category | None:
 
 
 def get_product(slug: str) -> Product | None:
-    return next((p for p in _PRODUCTS if p.slug == slug), None)
+    product = next((p for p in _PRODUCTS if p.slug == slug), None)
+    return _as_live_catalog(product) if product else None

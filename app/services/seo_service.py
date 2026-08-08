@@ -114,17 +114,13 @@ async def build_sitemap_urls() -> list[dict[str, str]]:
 
     products = await catalog.list_products()
     for product in products:
-        if _should_exclude_from_public_index(product):
+        from app.services.catalog_visibility import is_public_indexable_product
+
+        if not is_public_indexable_product(product):
             continue
         add(f"/product/{product.slug}", priority="0.8", changefreq="daily")
 
     return entries
-
-
-def _should_exclude_from_public_index(product: Product) -> bool:
-    from app.services.merchant_service import is_demo_or_test_product
-
-    return is_demo_or_test_product(product)
 
 
 def sitemap_xml(urls: list[dict[str, str]]) -> str:

@@ -11,6 +11,7 @@ import httpx
 
 from app.config import Settings, get_settings
 from app.services.catalog_service import CatalogService
+from app.services.catalog_visibility import is_live_catalog_product
 from app.services.shipping_service import calculate_shipping
 from app.types.commerce import Product
 
@@ -96,7 +97,11 @@ class ChatService:
         if degraded:
             lines.append("CATALOG STATUS: live catalog temporarily unavailable — do not quote product stock or prices.")
         else:
-            lines.append(f"CATALOG STATUS: live ({len(products)} products). Use ONLY this data for products:")
+            live_count = sum(1 for p in products if is_live_catalog_product(p))
+            lines.append(
+                f"CATALOG STATUS: connected ({len(products)} products total, {live_count} live for sale). "
+                "Use ONLY this data for products:"
+            )
             for product in products[:40]:
                 lines.append(self._product_summary(product))
 
@@ -116,8 +121,9 @@ class ChatService:
             variants.append(f"{v.size}/{v.colour}: £{v.price_gbp:.2f}, qty {v.stock_quantity} ({stock})")
         variant_text = "; ".join(variants) if variants else "no variants listed"
         sale = f", sale price £{product.sale_price_gbp:.2f}" if product.is_on_sale and product.sale_price_gbp else ""
+        status = "LIVE FOR SALE" if is_live_catalog_product(product) else "DEMO/DEVELOPMENT — NOT FOR SALE"
         return (
-            f"- {product.name} (slug: {product.slug}, brand: {product.brand}, "
+            f"- {product.name} [{status}] (slug: {product.slug}, brand: {product.brand}, "
             f"category: {product.category_name}{sale}). Variants: {variant_text}. "
             f"URL: /product/{product.slug}"
         )

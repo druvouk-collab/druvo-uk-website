@@ -82,6 +82,8 @@ def map_product(payload: dict) -> Product:
 
         mpn=(payload.get("mpn") or "").strip(),
 
+        catalog_status=(payload.get("catalog_status") or "demo").strip().lower(),
+
     )
 
 
