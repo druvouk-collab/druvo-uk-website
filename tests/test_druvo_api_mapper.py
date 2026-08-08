@@ -78,6 +78,30 @@ def test_map_product_prefers_gallery_paths():
     assert "/api/catalog/images/product_8/img_11.jpg" in product.images
 
 
+def test_map_product_empty_condition_default():
+    product = map_product(
+        {
+            "id": "1",
+            "slug": "sample",
+            "name": "Sample",
+            "description": "",
+            "category_slug": "other",
+            "category_name": "Other",
+            "brand": "",
+            "images": [],
+            "variants": [
+                {"sku": "S-1", "size": "M", "colour": "Black", "stock_quantity": 1, "price_gbp": 10.0}
+            ],
+            "tags": [],
+            "is_new_arrival": False,
+            "is_on_sale": False,
+            "sale_price_gbp": None,
+            "catalog_status": "live",
+        }
+    )
+    assert product.condition == ""
+
+
 def test_map_order_payload():
     order = map_order(
         {

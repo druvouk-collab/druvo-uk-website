@@ -83,7 +83,7 @@ def map_product(payload: dict) -> Product:
 
         brand=payload.get("brand", ""),
 
-        condition=payload.get("condition", "Pre-loved"),
+        condition=payload.get("condition") or "",
 
         images=images,
 

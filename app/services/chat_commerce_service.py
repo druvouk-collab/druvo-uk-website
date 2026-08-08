@@ -569,7 +569,10 @@ class ChatCommerceService:
         lines = [f"{price_line} ({stock})."]
         if product.brand:
             lines.append(f"Brand: {product.brand}.")
-        lines.append(f"Category: {product.category_name}. Condition: {product.condition}.")
+        category_line = f"Category: {product.category_name}."
+        if (product.condition or "").strip():
+            category_line = f"{category_line[:-1]} Condition: {product.condition.strip()}."
+        lines.append(category_line)
         sizes = sorted({v.size for v in product.variants if v.stock_quantity > 0})
         colours = sorted({v.colour for v in product.variants if v.stock_quantity > 0})
         if sizes:
