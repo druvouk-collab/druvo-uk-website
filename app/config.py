@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     druvo_api_base_url: str = ""
     druvo_api_key: str = ""
     druvo_api_timeout_seconds: int = 30
+    druvo_api_image_timeout_seconds: int = 60
     session_secret: str = "dev-only-change-in-production"
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""
