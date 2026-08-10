@@ -72,6 +72,8 @@ async def chat_status(locale: str = "en-GB") -> JSONResponse:
             "enabled": settings.chat_enabled,
             "ai_enabled": ai["ai_enabled"],
             "ai_mode": ai["ai_mode"],
+            "openai_key_status": ai["openai_key_status"],
+            "env_var": ai["env_var"],
             "model": ai["model"],
             "welcome": await service.welcome_message(locale),
             "locale": normalize_locale(locale),

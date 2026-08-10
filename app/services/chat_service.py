@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 import httpx
 
 from app.config import Settings, get_settings
+from app.services.ai_config import chat_ai_public_status, openai_http_timeout_seconds, openai_key_status
 from app.services.chat_commerce_service import ChatCommerceReply, ChatCommerceService, ChatProductCard
 from app.services.chat_i18n import ChatPresentationService, is_english, normalize_locale
 from app.services.chat_order_tracking_service import ChatOrderTrackingService
@@ -102,11 +103,10 @@ class ChatService:
         )
 
     def ai_status(self) -> dict[str, str | bool]:
-        if not self._settings.chat_enabled:
-            return {"ai_enabled": False, "ai_mode": "disabled", "model": self._settings.chat_model}
-        if self._settings.openai_api_key:
-            return {"ai_enabled": True, "ai_mode": "openai_tools", "model": self._settings.chat_model}
-        return {"ai_enabled": False, "ai_mode": "rules_fallback", "model": self._settings.chat_model}
+        return chat_ai_public_status(
+            chat_enabled=self._settings.chat_enabled,
+            chat_model=self._settings.chat_model,
+        )
 
     async def welcome_message(self, locale: str | None = None) -> str:
         text = _WELCOME
@@ -168,7 +168,7 @@ class ChatService:
             base = self._commerce_to_reply(commerce, source="rules")
             return await self._finalize_reply(base, active_locale)
 
-        if self._settings.openai_api_key:
+        if openai_key_status(self._settings.openai_api_key) == "configured":
             try:
                 ai_reply = await self._ask_openai_with_tools(
                     cleaned,
@@ -310,7 +310,7 @@ STORE CONTEXT:
         all_products: list[ChatProductCard] = []
         all_slugs: list[str] = list(last_product_slugs or [])
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=openai_http_timeout_seconds()) as client:
             for _ in range(_MAX_TOOL_ROUNDS):
                 response = await client.post(
                     _OPENAI_URL,
