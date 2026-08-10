@@ -349,10 +349,10 @@ button, input, select, textarea { font: inherit; }
 .druvo-chat-panel {
   display: none;
   position: absolute; right: 0; bottom: calc(100% + 0.75rem);
-  width: min(380px, calc(100vw - 2rem)); height: min(520px, calc(100vh - 6rem));
+  width: min(340px, calc(100vw - 2rem)); height: min(420px, calc(100vh - 8rem));
   flex-direction: column;
   background: var(--bg-elevated); border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 2px); box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+  border-radius: calc(var(--radius) + 2px); box-shadow: 0 16px 40px rgba(0,0,0,0.4);
   overflow: hidden;
 }
 .druvo-chat-panel:not([hidden]) {
@@ -362,20 +362,7 @@ button, input, select, textarea { font: inherit; }
   display: none !important;
 }
 .druvo-chat-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 1199;
-  background: rgba(8, 10, 18, 0.45);
-  backdrop-filter: blur(2px);
-  opacity: 0;
-  transition: opacity 0.28s ease;
-}
-.druvo-chat-backdrop:not([hidden]) {
-  display: block;
-}
-.druvo-chat-root.druvo-chat-open .druvo-chat-backdrop:not([hidden]) {
-  opacity: 1;
+  display: none !important;
 }
 .druvo-chat-backdrop[hidden] {
   display: none !important;
@@ -384,8 +371,8 @@ button, input, select, textarea { font: inherit; }
   display: none;
 }
 .druvo-chat-header {
-  display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;
-  padding: 0.85rem 1rem 0.75rem; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;
+  padding: 0.55rem 0.75rem 0.5rem; border-bottom: 1px solid var(--border);
   background: rgba(124, 92, 255, 0.08);
   flex-shrink: 0;
 }
@@ -489,9 +476,9 @@ button, input, select, textarea { font: inherit; }
   background: rgba(124, 92, 255, 0.12);
   outline: none;
 }
-.druvo-chat-header h2 { margin: 0; font-size: 1rem; }
-.druvo-chat-subtitle { margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
-.druvo-chat-close { color: var(--text-muted); }
+.druvo-chat-header h2 { margin: 0; font-size: 0.9rem; }
+.druvo-chat-subtitle { margin: 0.15rem 0 0; font-size: 0.72rem; color: var(--text-muted); }
+.druvo-chat-lang-btn { font-size: 0.85rem; line-height: 1; padding: 0.25rem 0.35rem; }
 .druvo-chat-messages {
   flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.65rem;
   min-height: 0;
@@ -514,12 +501,29 @@ button, input, select, textarea { font: inherit; }
   flex-shrink: 0;
 }
 .druvo-chat-form textarea {
-  resize: none; min-height: 42px; max-height: 120px;
-  padding: 0.65rem 0.75rem; border-radius: 10px;
+  resize: none; min-height: 36px; max-height: 100px;
+  padding: 0.5rem 0.65rem; border-radius: 10px;
   border: 1px solid var(--border); background: var(--bg-input); color: var(--text);
-  font-family: inherit; font-size: 0.9rem;
+  font-family: inherit; font-size: 0.85rem;
 }
-.druvo-chat-send { padding: 0.65rem 1rem; white-space: nowrap; }
+.druvo-chat-send { padding: 0.5rem 0.75rem; white-space: nowrap; font-size: 0.85rem; }
+.druvo-chat-request-form {
+  margin-top: 0.5rem; padding: 0.5rem; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--bg-card); font-size: 0.78rem;
+}
+.druvo-chat-request-form label { display: block; margin: 0.35rem 0 0.15rem; color: var(--text-muted); }
+.druvo-chat-request-form input[type="text"],
+.druvo-chat-request-form input[type="email"],
+.druvo-chat-request-form input[type="tel"],
+.druvo-chat-request-form input[type="number"] {
+  width: 100%; padding: 0.4rem 0.5rem; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg-input); color: var(--text);
+}
+.druvo-chat-request-form .druvo-chat-request-consent {
+  display: flex; gap: 0.4rem; align-items: flex-start; margin-top: 0.45rem;
+}
+.druvo-chat-request-form .druvo-chat-request-consent input { margin-top: 0.15rem; }
+.druvo-chat-request-form button { margin-top: 0.45rem; width: 100%; }
 .druvo-chat-product-card {
   display: grid; grid-template-columns: 72px 1fr; gap: 0.65rem;
   margin-top: 0.65rem; padding: 0.65rem; border-radius: 10px;
@@ -565,9 +569,9 @@ button, input, select, textarea { font: inherit; }
     bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
     top: auto;
     width: calc(100vw - 24px);
-    max-width: 380px;
-    height: min(60dvh, 560px);
-    max-height: min(60dvh, 560px);
+    max-width: 340px;
+    height: min(52dvh, 420px);
+    max-height: min(52dvh, 420px);
     border-radius: calc(var(--radius) + 2px);
     z-index: 1202;
     transform: none;
@@ -582,8 +586,7 @@ button, input, select, textarea { font: inherit; }
     display: none;
   }
   .druvo-chat-backdrop:not([hidden]) {
-    background: rgba(8, 10, 18, 0.2);
-    backdrop-filter: blur(1px);
+    display: none !important;
   }
   .druvo-chat-root.druvo-chat-open .druvo-chat-launcher {
     opacity: 1;

@@ -10,8 +10,22 @@ from app.config import get_settings
 from app.services.chat_i18n import QUICK_LANGUAGES, is_rtl, language_catalog, normalize_locale
 from app.services.chat_rate_limit import get_chat_rate_limiter
 from app.services.chat_service import ChatMessage, ChatService
+from app.services.product_request_service import ProductRequestService
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+class ProductRequestPayload(BaseModel):
+    requested_item: str = Field(..., min_length=2, max_length=300)
+    customer_name: str = Field(default="", max_length=120)
+    brand: str = Field(default="", max_length=120)
+    size: str = Field(default="", max_length=40)
+    colour: str = Field(default="", max_length=40)
+    budget_gbp: float | None = Field(default=None, ge=0)
+    email: str = Field(default="", max_length=200)
+    phone: str = Field(default="", max_length=40)
+    notes: str = Field(default="", max_length=1000)
+    consent_given: bool = False
 
 
 class HistoryItem(BaseModel):
@@ -52,10 +66,13 @@ def _client_ip(request: Request) -> str:
 async def chat_status(locale: str = "en-GB") -> JSONResponse:
     settings = get_settings()
     service = ChatService(settings)
+    ai = service.ai_status()
     return JSONResponse(
         {
             "enabled": settings.chat_enabled,
-            "ai_enabled": bool(settings.openai_api_key),
+            "ai_enabled": ai["ai_enabled"],
+            "ai_mode": ai["ai_mode"],
+            "model": ai["model"],
             "welcome": await service.welcome_message(locale),
             "locale": normalize_locale(locale),
             "rtl": is_rtl(locale),
@@ -117,7 +134,22 @@ async def chat_message(request: Request, body: ChatRequest) -> JSONResponse:
             "products": result.products,
             "context_product_slugs": result.context_product_slugs,
             "add_to_cart": result.add_to_cart,
+            "product_request": result.product_request,
             "locale": locale,
             "rtl": is_rtl(locale),
         }
     )
+
+
+@router.post("/product-request")
+async def chat_product_request(body: ProductRequestPayload) -> JSONResponse:
+    if not body.consent_given:
+        return JSONResponse({"detail": "Consent is required."}, status_code=400)
+    if not body.email.strip() and not body.phone.strip():
+        return JSONResponse({"detail": "Email or phone required."}, status_code=400)
+    service = ProductRequestService()
+    try:
+        result = await service.submit(body.model_dump())
+    except RuntimeError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=503)
+    return JSONResponse({"ok": True, **result})

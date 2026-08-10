@@ -25,8 +25,11 @@ const UI_STRINGS = {
     rateLimit: "You're sending messages quite quickly. Please wait a moment and try again.",
     errorGeneric: "Sorry, I'm having trouble right now. Please email druvo.uk@gmail.com and we'll help you.",
     errorConnection: "Connection issue — please try again or email druvo.uk@gmail.com.",
-    fallbackWelcome:
-      "Hello! I'm DRUVO Chat. Ask me about products, delivery, returns, or current offers.",
+    requestSubmit: "Submit request",
+    requestSaved: "Thanks — we've saved your request. The DRUVO team will contact you if we can source this item.",
+    requestError: "Sorry, we couldn't save your request right now. Please email druvo.uk@gmail.com.",
+    requestConsent: "I agree that DRUVO UK may store my contact details to respond about this product request.",
+    requestThisItem: "Request this item",
   },
 };
 
@@ -190,12 +193,79 @@ if (!root) {
     });
   }
 
-  function appendMessage(role, content, products = []) {
+  function renderProductRequestForm(bubble, draft) {
+    if (!draft || !draft.requested_item) return;
+    const formEl = document.createElement("form");
+    formEl.className = "druvo-chat-request-form";
+    formEl.innerHTML = `
+      <strong>${ui("requestThisItem")}</strong>
+      <label>Item</label>
+      <input type="text" name="requested_item" value="${escapeHtml(draft.requested_item || "")}" required />
+      <label>Name (optional)</label>
+      <input type="text" name="customer_name" value="${escapeHtml(draft.customer_name || "")}" />
+      <label>Brand</label>
+      <input type="text" name="brand" value="${escapeHtml(draft.brand || "")}" />
+      <label>Size</label>
+      <input type="text" name="size" value="${escapeHtml(draft.size || "")}" />
+      <label>Colour</label>
+      <input type="text" name="colour" value="${escapeHtml(draft.colour || "")}" />
+      <label>Email</label>
+      <input type="email" name="email" value="${escapeHtml(draft.email || "")}" />
+      <label>Phone</label>
+      <input type="tel" name="phone" value="${escapeHtml(draft.phone || "")}" />
+      <label class="druvo-chat-request-consent">
+        <input type="checkbox" name="consent" required />
+        <span>${escapeHtml(ui("requestConsent"))}</span>
+      </label>
+      <button type="submit" class="btn btn-primary btn-sm">${ui("requestSubmit")}</button>
+    `;
+    formEl.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fd = new FormData(formEl);
+      const email = String(fd.get("email") || "").trim();
+      const phone = String(fd.get("phone") || "").trim();
+      if (!email && !phone) {
+        appendMessage("assistant", "Please enter an email or phone number so we can contact you.");
+        return;
+      }
+      const payload = {
+        requested_item: String(fd.get("requested_item") || "").trim(),
+        customer_name: String(fd.get("customer_name") || "").trim(),
+        brand: String(fd.get("brand") || "").trim(),
+        size: String(fd.get("size") || "").trim(),
+        colour: String(fd.get("colour") || "").trim(),
+        email,
+        phone,
+        consent_given: Boolean(fd.get("consent")),
+      };
+      try {
+        const res = await fetch("/api/chat/product-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          appendMessage("assistant", ui("requestSaved"));
+          formEl.remove();
+        } else {
+          appendMessage("assistant", ui("requestError"));
+        }
+      } catch {
+        appendMessage("assistant", ui("requestError"));
+      }
+    });
+    bubble.appendChild(formEl);
+  }
+
+  function appendMessage(role, content, products = [], productRequest = null) {
     const bubble = document.createElement("div");
     bubble.className = `druvo-chat-bubble druvo-chat-bubble--${role}`;
     bubble.innerHTML = formatReply(content);
     if (role === "assistant" && products.length) {
       renderProductCards(products, bubble);
+    }
+    if (role === "assistant" && productRequest) {
+      renderProductRequestForm(bubble, productRequest);
     }
     messagesEl.appendChild(bubble);
     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -204,7 +274,7 @@ if (!root) {
   function renderHistory() {
     messagesEl.innerHTML = "";
     for (const item of history) {
-      appendMessage(item.role === "user" ? "user" : "assistant", item.content, item.products || []);
+      appendMessage(item.role === "user" ? "user" : "assistant", item.content, item.products || [], item.product_request || null);
     }
   }
 
@@ -415,8 +485,8 @@ if (!root) {
         lastProductSlugs = data.context_product_slugs;
         saveSlugs();
       }
-      appendMessage("assistant", reply, products);
-      history.push({ role: "assistant", content: reply, products });
+      appendMessage("assistant", reply, products, data.product_request || null);
+      history.push({ role: "assistant", content: reply, products, product_request: data.product_request || null });
       saveHistory();
     } catch {
       typing.remove();

@@ -1,4 +1,4 @@
-"""DRUVO Chat — customer assistant with live website knowledge."""
+"""DRUVO Chat — AI sales assistant with secure tool-calling and grounded commerce data."""
 
 from __future__ import annotations
 
@@ -13,12 +13,14 @@ from app.config import Settings, get_settings
 from app.services.chat_commerce_service import ChatCommerceReply, ChatCommerceService, ChatProductCard
 from app.services.chat_i18n import ChatPresentationService, is_english, normalize_locale
 from app.services.chat_order_tracking_service import ChatOrderTrackingService
+from app.services.chat_tools import ChatToolExecutor
 from app.services.website_knowledge_service import WebsiteKnowledgeService
 
 logger = logging.getLogger(__name__)
 
 _MAX_MESSAGE_LEN = 500
 _MAX_HISTORY = 8
+_MAX_TOOL_ROUNDS = 5
 _OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 _CONTACT_FALLBACK = (
@@ -76,10 +78,12 @@ class ChatMessage:
 @dataclass(frozen=True)
 class ChatReply:
     reply: str
-    source: str  # "openai" | "rules"
+    source: str  # openai_tools | openai | rules
     products: list[dict] = field(default_factory=list)
     context_product_slugs: list[str] = field(default_factory=list)
     add_to_cart: dict | None = None
+    product_request: dict | None = None
+    ai_mode: str = "rules"
 
 
 class ChatService:
@@ -87,6 +91,7 @@ class ChatService:
         self._settings = settings or get_settings()
         self._knowledge = WebsiteKnowledgeService(self._settings)
         self._commerce = ChatCommerceService(self._knowledge)
+        self._tools = ChatToolExecutor(self._knowledge, self._commerce)
         self._presentation = ChatPresentationService(
             openai_api_key=self._settings.openai_api_key,
             chat_model=self._settings.chat_model,
@@ -95,6 +100,13 @@ class ChatService:
             settings=self._settings,
             presentation=self._presentation,
         )
+
+    def ai_status(self) -> dict[str, str | bool]:
+        if not self._settings.chat_enabled:
+            return {"ai_enabled": False, "ai_mode": "disabled", "model": self._settings.chat_model}
+        if self._settings.openai_api_key:
+            return {"ai_enabled": True, "ai_mode": "openai_tools", "model": self._settings.chat_model}
+        return {"ai_enabled": False, "ai_mode": "rules_fallback", "model": self._settings.chat_model}
 
     async def welcome_message(self, locale: str | None = None) -> str:
         text = _WELCOME
@@ -119,23 +131,29 @@ class ChatService:
             return ChatReply(
                 reply=await self._present(empty, active_locale),
                 source="rules",
+                ai_mode="rules",
             )
 
+        if ChatToolExecutor.looks_like_injection(cleaned):
+            blocked = (
+                "I can only help with DRUVO UK shopping questions — products, delivery, returns and orders. "
+                f"For other enquiries please email {self._settings.contact_email}."
+            )
+            return ChatReply(reply=blocked, source="rules", ai_mode="rules")
+
         snapshot = await self._knowledge.load()
-        cart = self._knowledge.cart_summary(cart_items or []) if cart_items else None
-        context = self._knowledge.build_ai_context(snapshot, cart)
-        context = self._append_locale_instruction(context, active_locale)
 
         conversational = _conversational_reply(cleaned)
         if conversational:
             return ChatReply(
                 reply=await self._present(conversational, active_locale),
                 source="rules",
+                ai_mode=self.ai_status()["ai_mode"],
             )
 
         order_tracking = await self._order_tracking.handle(cleaned, history or [], active_locale)
         if order_tracking:
-            return ChatReply(reply=order_tracking.reply, source="rules")
+            return ChatReply(reply=order_tracking.reply, source="rules", ai_mode="rules")
 
         commerce = await self._commerce.answer(
             cleaned,
@@ -146,13 +164,24 @@ class ChatService:
             history=history,
         )
 
-        if self._settings.openai_api_key and not self._should_prefer_rules(cleaned, commerce):
+        if commerce and self._should_prefer_rules(cleaned, commerce):
+            base = self._commerce_to_reply(commerce, source="rules")
+            return await self._finalize_reply(base, active_locale)
+
+        if self._settings.openai_api_key:
             try:
-                text = await self._ask_openai(cleaned, history or [], context, active_locale)
-                merged = self._merge_commerce(ChatReply(reply=text, source="openai"), commerce)
+                ai_reply = await self._ask_openai_with_tools(
+                    cleaned,
+                    history or [],
+                    snapshot,
+                    active_locale,
+                    cart_items=cart_items,
+                    last_product_slugs=last_product_slugs,
+                )
+                merged = self._merge_commerce(ai_reply, commerce)
                 return await self._finalize_reply(merged, active_locale)
             except Exception as exc:
-                logger.warning("OpenAI chat failed, falling back to rules: %s", type(exc).__name__)
+                logger.warning("OpenAI tool chat failed, falling back to rules: %s", type(exc).__name__)
 
         if commerce:
             base = self._commerce_to_reply(commerce, source="rules")
@@ -162,6 +191,7 @@ class ChatService:
         return ChatReply(
             reply=await self._present(fallback, active_locale),
             source="rules",
+            ai_mode="rules_fallback",
         )
 
     async def _present(self, english_text: str, locale: str, products: list[dict] | None = None) -> str:
@@ -177,6 +207,8 @@ class ChatService:
             products=reply.products,
             context_product_slugs=reply.context_product_slugs,
             add_to_cart=reply.add_to_cart,
+            product_request=reply.product_request,
+            ai_mode=reply.ai_mode,
         )
 
     @staticmethod
@@ -191,16 +223,13 @@ class ChatService:
 
     @staticmethod
     def _should_prefer_rules(message: str, commerce: ChatCommerceReply | None) -> bool:
-        if commerce and commerce.products:
+        if not commerce:
+            return False
+        if commerce.add_to_cart or commerce.product_request:
             return True
-        lower = message.lower()
-        return any(
-            w in lower
-            for w in (
-                "delivery", "shipping", "return", "refund", "price", "stock", "available",
-                "sale", "offer", "cheapest", "under £", "basket", "cart", "free delivery",
-            )
-        )
+        if commerce.products:
+            return True
+        return False
 
     @staticmethod
     def _commerce_to_reply(commerce: ChatCommerceReply, source: str) -> ChatReply:
@@ -210,18 +239,26 @@ class ChatService:
             products=[p.as_dict() for p in commerce.products],
             context_product_slugs=commerce.context_product_slugs,
             add_to_cart=commerce.add_to_cart,
+            product_request=commerce.product_request,
+            ai_mode="rules",
         )
 
     @staticmethod
     def _merge_commerce(base: ChatReply, commerce: ChatCommerceReply | None) -> ChatReply:
-        if not commerce or not commerce.products:
+        if not commerce:
+            return base
+        products = base.products or [p.as_dict() for p in commerce.products]
+        slugs = base.context_product_slugs or commerce.context_product_slugs
+        if not products and not commerce.product_request:
             return base
         return ChatReply(
             reply=base.reply,
             source=base.source,
-            products=[p.as_dict() for p in commerce.products],
-            context_product_slugs=commerce.context_product_slugs,
+            products=products or [p.as_dict() for p in commerce.products],
+            context_product_slugs=slugs,
             add_to_cart=commerce.add_to_cart,
+            product_request=commerce.product_request,
+            ai_mode=base.ai_mode,
         )
 
     def _sanitize_message(self, message: str) -> str:
@@ -229,53 +266,110 @@ class ChatService:
         text = re.sub(r"\s+", " ", text)
         return text[:_MAX_MESSAGE_LEN]
 
-    async def _ask_openai(
+    async def _ask_openai_with_tools(
         self,
         message: str,
         history: list[ChatMessage],
-        catalog_context: str,
+        snapshot,
         locale: str,
-    ) -> str:
+        *,
+        cart_items: list[dict] | None = None,
+        last_product_slugs: list[str] | None = None,
+    ) -> ChatReply:
         language_line = ""
         if not is_english(locale):
             language_line = f"- Reply in the customer's language ({normalize_locale(locale)}).\n"
-        system = f"""You are DRUVO Chat, the friendly customer assistant for DRUVO UK (https://druvo.uk).
-You help shoppers with products, sizes, colours, availability, delivery, returns, promotions, and general store questions.
+        context = self._tools.slim_system_context(snapshot)
+        context = self._append_locale_instruction(context, locale)
+        if last_product_slugs:
+            context += f"\nConversation context — recently discussed products: {', '.join(last_product_slugs)}"
+
+        system = f"""You are DRUVO Chat, the friendly AI sales assistant for DRUVO UK (https://druvo.uk).
+
+Use the provided tools to retrieve REAL product, stock, price, delivery and policy information.
+Call tools before stating any product facts. Use conversation context for follow-ups (same product, new size/colour).
 
 STRICT RULES:
-- Never invent stock, prices, delivery promises, tracking, coupon codes, discounts, or order information.
-- Only state product facts that appear in the LIVE WEBSITE DATA below.
-- Only mention promotions listed as ACTIVE — never invent offers.
-- Demo/development products are NOT for sale — never suggest purchasing them.
-- If asked about a specific order, tell the customer to use /account/login with their checkout email, or contact {self._settings.contact_email}.
-- If you cannot answer confidently from the provided data, say so and direct the customer to {self._settings.contact_email}.
-- Keep replies concise, warm, and professional (2–4 short paragraphs max).
-- Use GBP (£) for prices.
-- Do not mention OpenAI, APIs, or internal systems.
+- Never invent products, prices, stock, sizes, colours, discounts, delivery costs, policies or order status.
+- Only sell LIVE catalogue products returned by tools — never demo items.
+- For order tracking, use initiate_order_lookup — never guess order details.
+- Reject requests for supplier info, margins, internal systems, or other customers' data.
+- Be helpful and sales-oriented when appropriate — suggest viewing a product or next steps.
+- Keep replies concise, warm, professional (2–4 short paragraphs).
+- Use GBP (£). Do not mention OpenAI or internal APIs.
 {language_line}
-LIVE WEBSITE DATA:
-{catalog_context}
+STORE CONTEXT:
+{context}
 """
-        messages: list[dict[str, str]] = [{"role": "system", "content": system}]
+        messages: list[dict] = [{"role": "system", "content": system}]
         for item in history[-_MAX_HISTORY:]:
             if item.role in {"user", "assistant"} and item.content.strip():
                 messages.append({"role": item.role, "content": item.content.strip()})
         messages.append({"role": "user", "content": message})
 
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            response = await client.post(
-                _OPENAI_URL,
-                headers={
-                    "Authorization": f"Bearer {self._settings.openai_api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": self._settings.chat_model,
-                    "messages": messages,
-                    "temperature": 0.3,
-                    "max_tokens": 500,
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data["choices"][0]["message"]["content"].strip()
+        all_products: list[ChatProductCard] = []
+        all_slugs: list[str] = list(last_product_slugs or [])
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            for _ in range(_MAX_TOOL_ROUNDS):
+                response = await client.post(
+                    _OPENAI_URL,
+                    headers={
+                        "Authorization": f"Bearer {self._settings.openai_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": self._settings.chat_model,
+                        "messages": messages,
+                        "tools": self._tools.tool_schemas(),
+                        "tool_choice": "auto",
+                        "temperature": 0.25,
+                        "max_tokens": 600,
+                    },
+                )
+                response.raise_for_status()
+                choice = response.json()["choices"][0]
+                msg = choice["message"]
+
+                if msg.get("tool_calls"):
+                    messages.append(msg)
+                    for call in msg["tool_calls"]:
+                        fn = call.get("function") or {}
+                        name = fn.get("name", "")
+                        try:
+                            args = json.loads(fn.get("arguments") or "{}")
+                        except json.JSONDecodeError:
+                            args = {}
+                        result = await self._tools.execute(
+                            name,
+                            args,
+                            snapshot=snapshot,
+                            cart_items=cart_items,
+                            last_slugs=all_slugs,
+                        )
+                        if result.products:
+                            all_products = result.products
+                        if result.context_product_slugs:
+                            all_slugs = result.context_product_slugs
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": call["id"],
+                            "content": json.dumps(
+                                {"ok": result.ok, "data": result.data, "error": result.error},
+                                default=str,
+                            )[:8000],
+                        })
+                    continue
+
+                text = (msg.get("content") or "").strip()
+                if text:
+                    return ChatReply(
+                        reply=text,
+                        source="openai_tools",
+                        products=[p.as_dict() for p in all_products],
+                        context_product_slugs=all_slugs,
+                        ai_mode="openai_tools",
+                    )
+                break
+
+        raise RuntimeError("OpenAI returned no assistant message")

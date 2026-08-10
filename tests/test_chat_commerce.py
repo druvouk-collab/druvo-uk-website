@@ -304,3 +304,29 @@ async def test_what_do_you_sell(client):
     reply = response.json()["reply"].lower()
     assert "catalogue" in reply or "sell" in reply or "shop" in reply
 
+
+@pytest.mark.asyncio
+async def test_unavailable_specific_product_offers_request(client):
+    response = await client.post(
+        "/api/chat/message",
+        json={"message": "Nike Air Max size 9 black", "history": []},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "don't currently have" in data["reply"].lower() or "not currently" in data["reply"].lower()
+    assert data.get("product_request")
+    assert "nike" in data["product_request"].get("requested_item", "").lower() or data["product_request"].get("brand", "").lower() == "nike"
+
+
+@pytest.mark.asyncio
+async def test_product_request_endpoint_requires_consent(client):
+    response = await client.post(
+        "/api/chat/product-request",
+        json={
+            "requested_item": "Nike Air Max size 9",
+            "email": "buyer@example.com",
+            "consent_given": False,
+        },
+    )
+    assert response.status_code == 400
+

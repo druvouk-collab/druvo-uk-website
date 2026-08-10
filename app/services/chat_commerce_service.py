@@ -53,6 +53,7 @@ class ChatCommerceReply:
     products: list[ChatProductCard] = field(default_factory=list)
     context_product_slugs: list[str] = field(default_factory=list)
     add_to_cart: dict | None = None
+    product_request: dict | None = None
 
 
 class ChatCommerceService:
@@ -167,6 +168,14 @@ class ChatCommerceService:
         if any(w in lower for w in ("return", "refund", "exchange")):
             return ChatCommerceReply(text=snapshot.policies.returns_summary)
 
+        if re.search(r"\b(collect|collection|pick\s*up|pickup|click and collect)\b", lower):
+            return ChatCommerceReply(
+                text=(
+                    "We don't offer in-person collection — DRUVO UK is online-only with UK delivery. "
+                    f"{snapshot.policies.delivery_summary}"
+                )
+            )
+
         if any(w in lower for w in ("payment", "stripe", "checkout", "pay", "card")):
             return ChatCommerceReply(text=snapshot.policies.payment_methods)
 
@@ -198,6 +207,20 @@ class ChatCommerceService:
             if not self._category_tokens(category_context):
                 category_context = self._build_category_context(normalized, hist, last, snapshot)
             return self._under_price_answer(price_cap, snapshot, category_context)
+
+        if self._looks_like_specific_product_request(normalized):
+            strict = self._strict_match_products(normalized, snapshot.live_products)
+            if strict:
+                return self._products_answer(message, strict, snapshot)
+            parsed = self._parse_product_request(normalized)
+            return ChatCommerceReply(
+                text=(
+                    "We don't currently have that item in our live catalogue. "
+                    "I can pass your request to the DRUVO team — they may be able to source it for you. "
+                    "Tap **Request this item** below and leave an email or phone number (with your consent)."
+                ),
+                product_request=parsed,
+            )
 
         matched = self._match_products(normalized, snapshot.live_products)
         if matched:
@@ -664,6 +687,39 @@ class ChatCommerceService:
         scored.sort(key=lambda x: (-x[0], x[1].name.lower()))
         return [p for _, p in scored[:5]]
 
+    def _strict_match_products(self, message: str, products: list[Product]) -> list[Product]:
+        """Require brand/type/size/colour constraints for specific sourcing-style queries."""
+        lower = message.lower()
+        brand = next((b for b in ("nike", "adidas", "puma", "reebok", "jordan", "north face") if b in lower), "")
+        types = [t for t in ("air max", "trainer", "sneaker", "tracksuit", "hoodie", "jogger", "jacket") if t in lower]
+        size = self._extract_size(message).lower()
+        colour = self._extract_colour(message, None).lower()
+        matches: list[Product] = []
+        for product in products:
+            hay = " ".join([product.name, product.brand, product.description]).lower()
+            if brand and brand not in hay and brand not in product.brand.lower():
+                continue
+            if types and not any(t in hay for t in types):
+                continue
+            if size:
+                in_stock_sizes = {
+                    v.size.lower()
+                    for v in product.variants
+                    if v.in_stock
+                }
+                if size not in in_stock_sizes and size.replace("uk ", "") not in in_stock_sizes:
+                    continue
+            if colour:
+                in_stock_colours = {
+                    v.colour.lower()
+                    for v in product.variants
+                    if v.in_stock
+                }
+                if colour not in in_stock_colours:
+                    continue
+            matches.append(product)
+        return matches[:5]
+
     @staticmethod
     def _extract_max_price(lower: str) -> float | None:
         match = re.search(r"(?:under|below|around|about)\s*£?\s*(\d+(?:\.\d+)?)", lower)
@@ -723,3 +779,27 @@ class ChatCommerceService:
     @staticmethod
     def _is_free_delivery_gap_question(lower: str) -> bool:
         return "free delivery" in lower and any(w in lower for w in ("away", "how much more", "need to spend", "basket", "cart"))
+
+    @staticmethod
+    def _looks_like_specific_product_request(message: str) -> bool:
+        lower = message.lower()
+        if any(w in lower for w in ("delivery", "return", "refund", "order", "track")):
+            return False
+        brands = ("nike", "adidas", "puma", "reebok", "north face", "jordan")
+        product_types = ("trainer", "sneaker", "tracksuit", "hoodie", "jogger", "jacket", "air max")
+        has_brand = any(b in lower for b in brands)
+        has_type = any(t in lower for t in product_types)
+        has_size = bool(re.search(r"\b(size|uk\s*\d{1,2}|\d{1,2})\b", lower))
+        return (has_brand and (has_type or has_size)) or (has_type and has_size)
+
+    def _parse_product_request(self, message: str) -> dict:
+        lower = message.lower()
+        brand = next((b.title() for b in ("Nike", "Adidas", "Puma", "Reebok", "Jordan") if b.lower() in lower), "")
+        size = self._extract_size(message)
+        colour = self._extract_colour(message, None)
+        return {
+            "requested_item": message.strip(),
+            "brand": brand,
+            "size": size,
+            "colour": colour,
+        }
