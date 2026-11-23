@@ -6,6 +6,7 @@ import json
 import re
 from typing import Iterable
 
+from app.config import get_settings
 from app.services.seo_service import canonical_url_for, meta_description
 from app.types.commerce import Category, Product
 
@@ -108,13 +109,19 @@ def shop_document_title(products: list[Product]) -> str:
     return f"Shop All Clothing, Footwear & Accessories | {_SITE}"
 
 
+def _availability_phrase() -> str:
+    if get_settings().email_orders_enabled:
+        return "Availability confirmed by email."
+    return "Live UK stock."
+
+
 def shop_meta_description(products: list[Product]) -> str:
     brands = catalog_brands(products, limit=4)
     types = sorted({tag for p in products for tag in p.tags if tag})[:3]
     type_hint = f" including {', '.join(types)}" if types else ""
     return meta_description(
         f"Browse the full DRUVO UK shop — pre-loved and new-with-tags pieces from {_brand_phrase(brands)}{type_hint}. "
-        f"Shop online with live UK stock."
+        f"Shop online in the UK. {_availability_phrase()}"
     )
 
 
@@ -124,7 +131,7 @@ def new_arrivals_meta_description(products: list[Product]) -> str:
     listing = f"{count} new listings" if count else "latest listings"
     return meta_description(
         f"Discover new arrivals at DRUVO UK — fresh pre-loved and new-with-tags pieces from {_brand_phrase(brands)}. "
-        f"Browse {listing} with live UK stock."
+        f"Browse {listing}. {_availability_phrase()}"
     )
 
 
@@ -147,7 +154,7 @@ def categories_meta_description(products: list[Product]) -> str:
     if categories:
         cat_text = ", ".join(categories[:4])
         return meta_description(
-            f"Browse DRUVO UK categories — shop {cat_text} and more. Premium resale fashion with live stock, available to shop online in the UK."
+            f"Browse DRUVO UK categories — shop {cat_text} and more. Premium resale fashion to shop online in the UK. {_availability_phrase()}"
         )
     return meta_description(
         "Browse DRUVO UK categories — premium pre-loved and new-with-tags clothing, footwear and accessories. Shop online in the UK."
@@ -163,7 +170,7 @@ def category_meta_description(category: Category, products: list[Product]) -> st
     brand_text = _brand_phrase(brands) if brands else "quality brands"
     desc = _clean(category.description)
     intro = desc if desc else f"Shop {category.name.lower()} at DRUVO UK."
-    return meta_description(f"{intro} Browse {brand_text} with live UK stock — shop online today.")
+    return meta_description(f"{intro} Browse {brand_text} and shop online today. {_availability_phrase()}")
 
 
 def product_document_title(product: Product) -> str:

@@ -26,7 +26,7 @@
 
     <h1>Curated fashion and lifestyle products for modern wardrobes.</h1>
 
-    <p>Discover new, new-with-tags and pre-loved pieces across clothing, footwear, and accessories{% if catalog_brands %} — including {{ catalog_brands | join(', ') }}{% endif %}. Shop online in the UK with live stock.</p>
+    <p>Discover new, new-with-tags and pre-loved pieces across clothing, footwear, and accessories{% if catalog_brands %} — including {{ catalog_brands | join(', ') }}{% endif %}. Shop online in the UK. {% if email_orders %}Availability confirmed by email.{% else %}Live stock.{% endif %}</p>
 
     <div class="hero-actions">
 

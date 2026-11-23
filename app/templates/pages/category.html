@@ -12,7 +12,7 @@
   {% if category.description %}
     <p class="product-meta">{{ category.description }}</p>
   {% else %}
-    <p class="product-meta">Shop {{ category.name | lower }} online at DRUVO UK with live UK stock.</p>
+    <p class="product-meta">Shop {{ category.name | lower }} online at DRUVO UK. {% if email_orders %}Availability confirmed by email.{% else %}Live UK stock.{% endif %}</p>
   {% endif %}
 </div>
 <div class="container shop-layout">

@@ -128,3 +128,14 @@ async def test_faq_and_delivery_describe_email_ordering(static_mode, client):
     delivery = (await client.get("/delivery")).text
     assert "account order history" not in delivery
     assert "tracking number" in delivery
+
+
+@pytest.mark.asyncio
+async def test_no_live_stock_claims_in_email_mode(static_mode, client):
+    for path in ("/", "/shop", "/categories", "/categories/mens-clothing", "/new-arrivals"):
+        html = (await client.get(path)).text
+        assert "live stock" not in html.lower(), path
+        assert "live uk stock" not in html.lower(), path
+    home = (await client.get("/")).text
+    assert home.count("Availability confirmed by email.") >= 2  # hero + footer
+    assert "Availability confirmed by email." in (await client.get("/shop")).text
