@@ -671,10 +671,10 @@ button, input, select, textarea { font: inherit; }
 .druvo-chat-bubble ul, .druvo-chat-bubble ol { margin: 0.35rem 0 0; padding-left: 1.15rem; display: grid; gap: 0.3rem; }
 .druvo-chat-bubble--assistant { border-bottom-left-radius: 4px; }
 .druvo-chat-bubble--user { border-bottom-right-radius: 4px; }
-.druvo-chat-bubble--assistant a { color: #a78bfa; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.druvo-chat-bubble--assistant a:not(.btn) { color: #a78bfa; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
 .druvo-chat-bubble--user a { color: #fff; }
 .druvo-chat-quick {
-  display: flex; gap: 0.4rem; padding: 0.55rem 0.75rem 0; overflow-x: auto; flex-shrink: 0;
+  display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.55rem 0.75rem 0; flex-shrink: 0;
   scrollbar-width: none; background: var(--bg-card); border-top: 1px solid var(--border);
 }
 .druvo-chat-quick::-webkit-scrollbar { display: none; }
