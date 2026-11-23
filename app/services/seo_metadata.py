@@ -270,8 +270,8 @@ def faq_document_title() -> str:
 
 def faq_meta_description() -> str:
     return meta_description(
-        "DRUVO UK FAQ — answers about authenticity, UK delivery times, returns, live stock "
-        "and how we grade pre-loved and new-with-tags fashion."
+        "DRUVO UK FAQ — answers about authenticity, UK delivery times, returns, stock, "
+        "how to order and how we grade pre-loved and new-with-tags fashion."
     )
 
 

@@ -10,6 +10,10 @@
     <li><strong>Standard UK delivery:</strong> 2–4 working days — £3.99 (free on orders over £75)</li>
     <li><strong>Express UK delivery:</strong> 1–2 working days — £6.99</li>
   </ul>
+  {% if email_orders %}
+  <p>We confirm the delivery cost by email before you pay. Once your order has been dispatched, we'll email you a tracking number. If you have a question about your order, reply to your order email or contact <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+  {% else %}
   <p>You will receive a tracking number by email once your order has been dispatched. Tracking links will appear in your account order history when live checkout is enabled.</p>
+  {% endif %}
 </article>
 {% endblock %}

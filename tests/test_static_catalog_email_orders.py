@@ -118,3 +118,13 @@ async def test_chat_payment_answer_in_email_mode(static_mode, client):
     reply = response.json()["reply"]
     assert "email" in reply.lower()
     assert "Stripe" not in reply
+
+
+@pytest.mark.asyncio
+async def test_faq_and_delivery_describe_email_ordering(static_mode, client):
+    faq = (await client.get("/faq")).text
+    assert "How do I order?" in faq
+    assert "live inventory system" not in faq
+    delivery = (await client.get("/delivery")).text
+    assert "account order history" not in delivery
+    assert "tracking number" in delivery
