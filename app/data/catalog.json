@@ -26,5 +26,38 @@
       "image": "/static/images/catalog/categories/accessories.jpg"
     }
   ],
-  "products": []
+  "products": [
+    {
+      "id": "druvo-8",
+      "slug": "balance-cream-2-piece-sweatshirt-jogger-tracksuit-set-l",
+      "name": "Men's Cream 2-Piece Sweatshirt & Jogger Tracksuit Set",
+      "description": "Brand new men's 2-piece matching sweatshirt and jogger tracksuit set in cream/ivory. Modern black BALANCE detailing, ribbed cuffs and hem, and elasticated jogger waistband. Comfortable casual set ideal for everyday wear, travelling and leisure. Size UK 40 / Labelled L. Chest approx. 39.4–41.4 inches. Waist approx. 33.9–35.9 inches. Please check measurements before purchasing.",
+      "category_slug": "mens-clothing",
+      "brand": "BALANCE",
+      "condition": "New",
+      "images": [
+        "/static/images/catalog/live/balance-cream-tracksuit-l-1.jpg",
+        "/static/images/catalog/live/balance-cream-tracksuit-l-2.jpg",
+        "/static/images/catalog/live/balance-cream-tracksuit-l-3.jpg",
+        "/static/images/catalog/live/balance-cream-tracksuit-l-4.jpg"
+      ],
+      "variants": [
+        {
+          "sku": "DRUVO-0001-L-CREAM",
+          "size": "L",
+          "colour": "Cream",
+          "stock_quantity": 1,
+          "price_gbp": 20.0
+        }
+      ],
+      "tags": [
+        "tracksuit",
+        "cream",
+        "loungewear",
+        "mens"
+      ],
+      "is_new_arrival": true,
+      "catalog_status": "live"
+    }
+  ]
 }
