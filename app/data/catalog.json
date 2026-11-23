@@ -1,0 +1,30 @@
+{
+  "_readme": "Verified DRUVO UK stock for CATALOG_SOURCE=static. Only products with catalog_status 'live' appear on the site. Put product photos in static/images/catalog/live/ and reference them as /static/images/catalog/live/<file>. Prices are in GBP.",
+  "categories": [
+    {
+      "slug": "mens-clothing",
+      "name": "Men's Clothing",
+      "description": "Streetwear, tracksuits and everyday essentials.",
+      "image": "/static/images/catalog/categories/mens-clothing.jpg"
+    },
+    {
+      "slug": "womens-clothing",
+      "name": "Women's Clothing",
+      "description": "New and pre-loved womenswear.",
+      "image": "/static/images/catalog/categories/womens-clothing.jpg"
+    },
+    {
+      "slug": "footwear",
+      "name": "Footwear",
+      "description": "Trainers, boots and seasonal shoes.",
+      "image": "/static/images/catalog/categories/footwear.jpg"
+    },
+    {
+      "slug": "accessories",
+      "name": "Accessories",
+      "description": "Bags, belts, jewellery and more.",
+      "image": "/static/images/catalog/categories/accessories.jpg"
+    }
+  ],
+  "products": []
+}

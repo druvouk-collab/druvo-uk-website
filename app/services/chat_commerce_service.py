@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from app.config import get_settings
 from app.services.catalog_visibility import is_live_catalog_product
 from app.services.chat_message_normalizer import normalize_customer_message
 from app.services.website_knowledge_service import CartSummary, WebsiteKnowledgeService, WebsiteKnowledgeSnapshot
@@ -147,6 +148,8 @@ class ChatCommerceService:
             )
 
         if "secure" in lower and any(w in lower for w in ("checkout", "payment", "pay")):
+            if get_settings().email_orders_enabled:
+                return ChatCommerceReply(text=snapshot.policies.payment_methods)
             return ChatCommerceReply(
                 text=(
                     "Yes — checkout on druvo.uk is secure. "

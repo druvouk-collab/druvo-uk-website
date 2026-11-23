@@ -55,6 +55,11 @@ class Settings(BaseSettings):
         return "missing"
 
     @property
+    def email_orders_enabled(self) -> bool:
+        """Free-hosting mode: customers order by email, no online payment."""
+        return self.catalog_source == "static"
+
+    @property
     def email_configured(self) -> bool:
         return bool(self.smtp_host and self.smtp_from)
 

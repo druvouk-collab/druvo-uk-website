@@ -40,7 +40,12 @@ def build_website_policies(settings: Settings) -> WebsitePolicies:
             f"Contact {email} with your order number to start a return. "
             "Refunds processed within 5–10 working days after inspection. See /returns."
         ),
-        payment_methods="Secure card payments via Stripe at checkout.",
+        payment_methods=(
+            f"We take orders by email at {email}. We'll reply to confirm stock, the delivery cost "
+            "and how to pay before we accept your order. No payment is taken on this website."
+            if settings.email_orders_enabled
+            else "Secure card payments via Stripe at checkout."
+        ),
         contact_email=email,
         faq_url="/faq",
         delivery_url="/delivery",

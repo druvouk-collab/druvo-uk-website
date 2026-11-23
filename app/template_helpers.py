@@ -51,6 +51,7 @@ def template_globals() -> dict:
         "canonical_base": canonical_site_url(settings),
         "canonical_url_for": canonical_url_for,
         "contact_email": settings.contact_email,
+        "email_orders": settings.email_orders_enabled,
         "google_site_verification_token": google_site_verification_token,
         "chat_enabled": settings.chat_enabled,
         "format_gbp": format_gbp,

@@ -1,6 +1,31 @@
 {% extends "base.html" %}
 {% block robots %}noindex, nofollow{% endblock %}
 {% block content %}
+{% if email_orders %}
+<div class="container page-header"><h1>Order by email</h1></div>
+<div class="container checkout-layout">
+  <section class="content-card" id="email-order-panel" data-contact-email="{{ contact_email }}">
+    <div class="notice">
+      We take orders by email. No payment is taken on this website.
+    </div>
+    <ol class="email-order-steps">
+      <li>Press <strong>Order by email</strong>. Your email app opens with your basket already filled in.</li>
+      <li>Add your name and delivery postcode, then send it to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</li>
+      <li>We'll reply to confirm stock, the delivery cost and how to pay. Your order is only accepted once we've confirmed it with you.</li>
+    </ol>
+    <p id="checkout-status" class="product-meta" role="status" aria-live="polite"></p>
+    <a id="email-order-link" class="btn btn-primary" href="mailto:{{ contact_email }}" style="margin-top:1rem;">Order by email</a>
+    <p class="product-meta" style="margin-top:1rem;">If the button doesn't open your email app, email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> with the items listed in your order summary.</p>
+  </section>
+  <aside class="summary-card">
+    <h2>Order summary</h2>
+    <div id="checkout-summary" data-email-orders="true" data-checkout-ready="false" data-payments-enabled="false">
+      <p class="product-meta">Loading basket…</p>
+    </div>
+    <p class="product-meta">Delivery cost is confirmed by email before you pay.</p>
+  </aside>
+</div>
+{% else %}
 <div class="container page-header"><h1>Checkout</h1></div>
 <div class="container checkout-layout">
   <section class="content-card">
@@ -40,6 +65,7 @@
     </div>
   </aside>
 </div>
+{% endif %}
 {% endblock %}
 {% block scripts %}
 <script type="module" src="/static/js/checkout.js"></script>

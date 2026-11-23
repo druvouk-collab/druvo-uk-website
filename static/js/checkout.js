@@ -1,12 +1,82 @@
 import { formatGBP, getCart, calculateShipping, loadShippingConfig } from "./cart.js";
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
+}
+
+function variantLabel(item) {
+  return [item.colour, item.size].filter(Boolean).join(" / ");
+}
+
+export function buildOrderEmail(cart, contactEmail) {
+  const lines = cart.map((item, index) => {
+    const variant = variantLabel(item);
+    const parts = [`${index + 1}. ${item.name}`];
+    if (variant) parts.push(`(${variant})`);
+    parts.push(`x ${item.quantity}`);
+    parts.push(`- ${formatGBP(item.price_gbp)} each`);
+    if (item.sku) parts.push(`[SKU ${item.sku}]`);
+    return parts.join(" ");
+  });
+  const subtotal = cart.reduce((sum, item) => sum + item.price_gbp * item.quantity, 0);
+  const body = [
+    "Hello DRUVO UK,",
+    "",
+    "I'd like to order:",
+    ...lines,
+    "",
+    `Items subtotal: ${formatGBP(subtotal)} (delivery to be confirmed)`,
+    "",
+    "Name:",
+    "Delivery postcode:",
+    "Phone (optional):",
+    "",
+    "Please confirm stock, the delivery cost and how to pay.",
+  ].join("\n");
+  const subject = `Order request - ${cart.length} item${cart.length === 1 ? "" : "s"}`;
+  return `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function renderEmailOrder(cart) {
+  const panel = document.getElementById("email-order-panel");
+  const link = document.getElementById("email-order-link");
+  if (!panel || !link) return;
+  const contactEmail = panel.dataset.contactEmail;
+  if (!cart.length) {
+    link.setAttribute("aria-disabled", "true");
+    link.classList.add("disabled");
+    link.href = "/shop";
+    link.textContent = "Browse the shop";
+    return;
+  }
+  link.removeAttribute("aria-disabled");
+  link.classList.remove("disabled");
+  link.href = buildOrderEmail(cart, contactEmail);
+  link.textContent = "Order by email";
+}
+
 async function renderSummary() {
   const summary = document.getElementById("checkout-summary");
   if (!summary) return;
   const cart = getCart();
+  const emailOrders = summary.dataset.emailOrders === "true";
+  if (emailOrders) renderEmailOrder(cart);
   if (!cart.length) {
     summary.innerHTML = `<p class="product-meta">Your basket is empty. <a href="/shop">Continue shopping</a>.</p>`;
     document.getElementById("place-order")?.setAttribute("disabled", "disabled");
+    return;
+  }
+  if (emailOrders) {
+    const rows = cart
+      .map((item) => {
+        const variant = variantLabel(item);
+        return `<div class="summary-row"><span>${escapeHtml(item.name)}${variant ? ` · ${escapeHtml(variant)}` : ""} × ${item.quantity}</span><span>${formatGBP(item.price_gbp * item.quantity)}</span></div>`;
+      })
+      .join("");
+    const subtotal = cart.reduce((sum, item) => sum + item.price_gbp * item.quantity, 0);
+    summary.innerHTML = `
+      ${rows}
+      <div class="summary-row total"><span>Items subtotal</span><span>${formatGBP(subtotal)}</span></div>`;
     return;
   }
   await loadShippingConfig();

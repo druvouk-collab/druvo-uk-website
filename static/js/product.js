@@ -397,6 +397,12 @@ async function renderCartPage() {
 
   const quote = calculateShipping(subtotal);
 
+  if (document.body.dataset.emailOrders === "true") {
+    summary.innerHTML = `
+    <div class="summary-row total"><span>Items subtotal</span><span>${formatGBP(subtotal)}</span></div>
+    <p class="product-meta">Delivery cost is confirmed by email before you pay.</p>
+    <a class="btn btn-primary" href="/checkout" style="width:100%;margin-top:1rem;">Continue to order by email</a>`;
+  } else {
   summary.innerHTML = `
 
     <div class="summary-row"><span>Subtotal</span><span>${formatGBP(quote.subtotal)}</span></div>
@@ -406,6 +412,7 @@ async function renderCartPage() {
     <div class="summary-row total"><span>Total</span><span>${formatGBP(quote.total)}</span></div>
 
     <a class="btn btn-primary" href="/checkout" style="width:100%;margin-top:1rem;">Proceed to checkout</a>`;
+  }
 
 
 

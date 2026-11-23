@@ -266,6 +266,7 @@ async def checkout_page(request: Request):
             "page_title": "Checkout",
             "checkout_ready": checkout_ready,
             "payments_enabled": payments_enabled,
+            "email_orders": settings.email_orders_enabled,
             "stripe_publishable_key": settings.stripe_publishable_key if payments_enabled else "",
         },
     )

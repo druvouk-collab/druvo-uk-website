@@ -176,6 +176,9 @@
 
 
     <button class="btn btn-primary" type="button" data-add-to-cart {% if is_demo_product %}disabled aria-disabled="true"{% endif %}>{% if is_demo_product %}Development sample — not for sale{% else %}Add to basket{% endif %}</button>
+    {% if email_orders and not is_demo_product %}
+    <p class="product-meta" style="margin-top:0.75rem;">We take orders by email — add this to your basket, then choose <strong>Order by email</strong>. We'll confirm stock, delivery and how to pay before accepting your order.</p>
+    {% endif %}
 
   </div>
 

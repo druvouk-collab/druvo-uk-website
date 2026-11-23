@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass, replace
 
 from app.config import Settings, get_settings
-from app.data import mock_catalog
+from app.data import mock_catalog, static_catalog
 from app.lib.druvo_api.client import DruvoApiClient
 from app.lib.druvo_api.errors import CatalogApiError
 from app.lib.druvo_api.image_proxy import to_website_proxy_path, to_website_proxy_url
@@ -49,13 +49,20 @@ class CatalogService:
     def uses_live_api(self) -> bool:
         return self._settings.catalog_source == "druvo_api"
 
+    @property
+    def _local_catalog(self):
+        if self._settings.catalog_source == "static":
+            return static_catalog
+        return mock_catalog
+
     async def load_snapshot(self, filters: CatalogFilters | None = None) -> CatalogSnapshot:
         filters = filters or CatalogFilters()
         if not self.uses_live_api:
-            products = self._apply_filters(mock_catalog.all_products(), filters)
+            source = self._local_catalog
+            products = self._apply_filters(source.all_products(), filters)
             return CatalogSnapshot(
                 products=products,
-                categories=mock_catalog.all_categories(),
+                categories=source.all_categories(),
             )
 
         client = DruvoApiClient.from_settings(self._settings)
@@ -83,7 +90,7 @@ class CatalogService:
 
     async def get_product(self, slug: str) -> Product | None:
         if not self.uses_live_api:
-            return mock_catalog.get_product(slug)
+            return self._local_catalog.get_product(slug)
 
         client = DruvoApiClient.from_settings(self._settings)
         try:

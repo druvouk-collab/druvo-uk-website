@@ -636,3 +636,5 @@ button, input, select, textarea { font: inherit; }
 .breadcrumbs a:hover { text-decoration: underline; }
 .variant-heading { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 0.5rem; font-weight: 600; }
 
+
+.email-order-steps { margin: 1rem 0 0; padding-left: 1.25rem; display: grid; gap: 0.5rem; }
