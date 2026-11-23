@@ -305,7 +305,11 @@ if (!root) {
       renderProductRequestForm(bubble, productRequest);
     }
     messagesEl.appendChild(bubble);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    if (role === "assistant" && bubble.offsetHeight > messagesEl.clientHeight * 0.7) {
+      messagesEl.scrollTop = Math.max(0, bubble.offsetTop - messagesEl.offsetTop - 8);
+    } else {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
   }
 
   function renderHistory() {
