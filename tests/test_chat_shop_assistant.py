@@ -139,3 +139,9 @@ async def test_widget_has_quick_buttons(client):
     html = (await client.get("/")).text
     for label in ("Find a product", "Delivery &amp; returns", "How to order", "Contact us"):
         assert label in html
+
+
+@pytest.mark.asyncio
+async def test_unrelated_words_do_not_match_inside_other_words(client):
+    data = await ask(client, "Can you knit me a scarf for my cat?")
+    assert "don't have any scarves" in data["reply"]

@@ -22,6 +22,21 @@ _PRODUCT_TYPES = (
 )
 
 
+def _plural(word: str) -> str:
+    if word in ("jeans", "jewellery"):
+        return word
+    if word.endswith("f"):
+        return word[:-1] + "ves"
+    if word.endswith(("s", "sh", "ch", "x")):
+        return word + "es"
+    return word + "s"
+
+
+def _word_in(token: str, haystack: str) -> bool:
+    """Match whole words (or word starts), so 'cat' doesn't match 'elasticated'."""
+    return bool(re.search(rf"\b{re.escape(token)}", haystack))
+
+
 def _singular(token: str) -> str:
     if len(token) > 4 and token.endswith("es") and token[-3] in "sxz":
         return token[:-2]
@@ -263,7 +278,7 @@ class ChatCommerceService:
         if wanted_type:
             in_stock = [p for p in snapshot.live_products if p.in_stock]
             reply = (
-                f"Sorry, we don't have any {wanted_type}s in stock right now. If you're looking for something "
+                f"Sorry, we don't have any {_plural(wanted_type)} in stock right now. If you're looking for something "
                 f"specific, email {email} and the team will see if they can find it."
             )
             if in_stock:
@@ -888,7 +903,7 @@ class ChatCommerceService:
             hay = " ".join(
                 [product.name, product.brand, product.description, product.category_name, *product.tags]
             ).lower()
-            score = sum(1 for token in tokens if token in hay or _singular(token) in hay)
+            score = sum(1 for token in tokens if _word_in(token, hay) or _word_in(_singular(token), hay))
             if score:
                 scored.append((score, product))
         scored.sort(key=lambda x: (-x[0], x[1].name.lower()))
