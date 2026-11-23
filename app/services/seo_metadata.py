@@ -95,7 +95,7 @@ def home_meta_description(products: list[Product]) -> str:
     brands = catalog_brands(products, limit=4)
     brand_text = _brand_phrase(brands)
     count = len(products)
-    listing = f"{count} live listings" if count else "curated listings"
+    listing = f"{count} listing{'' if count == 1 else 's'}" if count else "curated listings"
     return meta_description(
         f"Shop online at DRUVO UK for premium pre-loved and new-with-tags fashion, footwear and accessories. "
         f"Browse {brand_text} with {listing} and UK delivery."
@@ -121,14 +121,14 @@ def shop_meta_description(products: list[Product]) -> str:
     type_hint = f" including {', '.join(types)}" if types else ""
     return meta_description(
         f"Browse the full DRUVO UK shop — pre-loved and new-with-tags pieces from {_brand_phrase(brands)}{type_hint}. "
-        f"Shop online in the UK. {_availability_phrase()}"
+        f"{_availability_phrase()}"
     )
 
 
 def new_arrivals_meta_description(products: list[Product]) -> str:
     brands = catalog_brands(products, limit=3)
     count = len(products)
-    listing = f"{count} new listings" if count else "latest listings"
+    listing = f"{count} new listing{'' if count == 1 else 's'}" if count else "latest listings"
     return meta_description(
         f"Discover new arrivals at DRUVO UK — fresh pre-loved and new-with-tags pieces from {_brand_phrase(brands)}. "
         f"Browse {listing}. {_availability_phrase()}"
