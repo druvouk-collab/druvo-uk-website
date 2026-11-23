@@ -11,9 +11,10 @@ const CLOSE_ANIM_MS = 280;
 const UI_STRINGS = {
   "en-GB": {
     subtitle: "Online shopping assistant",
-    placeholder: "Ask about products, sizes, delivery…",
+    placeholder: "Ask about a product, size or delivery…",
     send: "Send",
-    typing: "DRUVO Chat is typing…",
+    typing: "Assistant is typing…",
+    fallbackWelcome: "Hello! Welcome to DRUVO UK 👋 I can help you find a product, check sizes, prices and stock, explain delivery and returns, or show you how to order. How can I help you today?",
     chooseLanguage: "Choose your language 🌐",
     moreLanguages: "More languages 🌐",
     searchLanguages: "Search languages…",
@@ -21,7 +22,7 @@ const UI_STRINGS = {
     outOfStock: "Out of stock",
     viewProduct: "View Product",
     addToBasket: "Add to Basket",
-    addedToBasket: "Added **{name}** to your basket.",
+    addedToBasket: "Added **{name}** to your basket. When you're ready, open your basket (/cart) and choose **Continue to order by email**.",
     rateLimit: "You're sending messages quite quickly. Please wait a moment and try again.",
     errorGeneric: "Sorry, I'm having trouble right now. Please email druvo.uk@gmail.com and we'll help you.",
     errorConnection: "Connection issue — please try again or email druvo.uk@gmail.com.",
@@ -53,6 +54,9 @@ if (!root) {
   const form = document.getElementById("druvo-chat-form");
   const input = document.getElementById("druvo-chat-input");
   const sendBtn = document.getElementById("druvo-chat-send");
+  const quickEl = document.getElementById("druvo-chat-quick");
+  const emailOrders = document.body.dataset.emailOrders === "true";
+  let translationAvailable = false;
 
   let history = loadHistory();
   let lastProductSlugs = loadSlugs();
@@ -127,11 +131,44 @@ if (!root) {
       .replace(/"/g, "&quot;");
   }
 
+  const SITE_PATHS = "shop|delivery|returns|checkout|cart|faq|sale|new-arrivals|categories|contact|terms|privacy|search|product";
+
+  function linkify(html) {
+    return html
+      .replace(/https?:\/\/(?:www\.)?druvo\.uk(\/[^\s<),]*)?/g, (match, path) => {
+        const href = path || "/";
+        return `<a href="${href}">${href === "/" ? "druvo.uk" : href}</a>`;
+      })
+      .replace(/([\w.+-]+@[\w-]+\.[\w.-]+[a-z])/gi, '<a href="mailto:$1">$1</a>')
+      .replace(new RegExp(`(^|[\\s(])(\\/(?:${SITE_PATHS})(?:\\/[\\w-]+)*)(?=[\\s).,!?]|$)`, "g"), '$1<a href="$2">$2</a>');
+  }
+
   function formatReply(text) {
     const safe = escapeHtml(text);
-    return safe
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\n/g, "<br>");
+    const lines = safe.split("\n");
+    const out = [];
+    let list = null;
+    for (const line of lines) {
+      const bullet = line.match(/^\s*(?:•|-)\s+(.*)$/);
+      const numbered = line.match(/^\s*(\d+)\.\s+(.*)$/);
+      if (bullet || numbered) {
+        const tag = bullet ? "ul" : "ol";
+        if (!list || list.tag !== tag) {
+          if (list) out.push(`</${list.tag}>`);
+          list = { tag };
+          out.push(`<${tag}>`);
+        }
+        out.push(`<li>${bullet ? bullet[1] : numbered[2]}</li>`);
+        continue;
+      }
+      if (list) {
+        out.push(`</${list.tag}>`);
+        list = null;
+      }
+      out.push(line ? `<p>${line}</p>` : "");
+    }
+    if (list) out.push(`</${list.tag}>`);
+    return linkify(out.join("").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"));
   }
 
   function isMobileViewport() {
@@ -163,13 +200,13 @@ if (!root) {
       const colours = (product.colours || []).slice(0, 6).join(", ");
       const stock = product.in_stock ? ui("inStock") : ui("outOfStock");
       card.innerHTML = `
-        <img src="${escapeHtml(product.image || "")}" alt="" loading="lazy" />
+        <a class="druvo-chat-product-thumb" href="${escapeHtml(`/product/${product.slug}`)}" tabindex="-1" aria-hidden="true"><img src="${escapeHtml(product.image || "")}" alt="" loading="lazy" /></a>
         <div class="druvo-chat-product-body">
           <h3>${escapeHtml(product.name || "")}</h3>
           <p class="druvo-chat-product-price">${price} ${was}</p>
           <p class="druvo-chat-product-meta">${escapeHtml(stock)}${sizes ? ` · Sizes: ${escapeHtml(sizes)}` : ""}${colours ? ` · ${escapeHtml(colours)}` : ""}</p>
           <div class="druvo-chat-product-actions">
-            <a class="btn btn-secondary btn-sm" href="${escapeHtml(product.url || `/product/${product.slug}`)}" target="_blank" rel="noopener">${ui("viewProduct")}</a>
+            <a class="btn btn-secondary btn-sm" href="${escapeHtml(`/product/${product.slug}`)}">${ui("viewProduct")}</a>
             ${product.in_stock ? `<button type="button" class="btn btn-primary btn-sm druvo-chat-add-cart">${ui("addToBasket")}</button>` : ""}
           </div>
         </div>`;
@@ -264,7 +301,7 @@ if (!root) {
     if (role === "assistant" && products.length) {
       renderProductCards(products, bubble);
     }
-    if (role === "assistant" && productRequest) {
+    if (role === "assistant" && productRequest && !emailOrders) {
       renderProductRequestForm(bubble, productRequest);
     }
     messagesEl.appendChild(bubble);
@@ -364,17 +401,17 @@ if (!root) {
       document.body.classList.remove("druvo-chat-mobile-open");
 
       ensureLanguageCatalog().then(() => {
-        if (!locale) {
-          showLanguageScreen(true);
-        } else {
-          showLanguageScreen(false);
+        showLanguageScreen(false);
+        if (translationAvailable && locale) {
           const row = languageCatalog.find((item) => item.code === locale);
           applyRtl(Boolean(row && row.rtl));
+        } else {
+          applyRtl(false);
         }
-        if (!welcomeShown && history.length === 0 && locale) {
-          showWelcome();
-        } else if (history.length) {
+        if (history.length) {
           renderHistory();
+        } else if (!welcomeShown) {
+          showWelcome();
         }
       });
 
@@ -396,12 +433,12 @@ if (!root) {
 
   async function showWelcome() {
     welcomeShown = true;
-    const loc = locale || "en-GB";
+    const loc = (translationAvailable && locale) || "en-GB";
     try {
       const res = await fetch(`/api/chat/status?locale=${encodeURIComponent(loc)}`);
       if (res.ok) {
         const data = await res.json();
-        applyRtl(Boolean(data.rtl));
+        applyRtl(translationAvailable && Boolean(data.rtl));
         appendMessage("assistant", data.welcome || ui("fallbackWelcome"));
         return;
       }
@@ -444,7 +481,8 @@ if (!root) {
 
     const typing = document.createElement("div");
     typing.className = "druvo-chat-bubble druvo-chat-bubble--assistant druvo-chat-typing";
-    typing.textContent = ui("typing");
+    typing.setAttribute("role", "status");
+    typing.innerHTML = `<span class="sr-only">${ui("typing")}</span><span class="druvo-chat-dot"></span><span class="druvo-chat-dot"></span><span class="druvo-chat-dot"></span>`;
     messagesEl.appendChild(typing);
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
@@ -458,7 +496,7 @@ if (!root) {
           cart: cartPayload(),
           last_product_slugs: lastProductSlugs,
           page_product_slug: pageProductSlug(),
-          locale: locale || "",
+          locale: translationAvailable ? locale || "" : "en-GB",
         }),
       });
 
@@ -475,10 +513,10 @@ if (!root) {
       }
 
       const data = await res.json();
-      if (data.locale && !locale) {
+      if (translationAvailable && data.locale && !locale) {
         saveLocale(data.locale);
       }
-      applyRtl(Boolean(data.rtl));
+      applyRtl(translationAvailable && Boolean(data.rtl));
       const reply = data.reply || ui("errorGeneric");
       const products = data.products || [];
       if (data.context_product_slugs && data.context_product_slugs.length) {
@@ -555,6 +593,29 @@ if (!root) {
       document.body.classList.remove("druvo-chat-mobile-open");
     }
   });
+
+  if (quickEl) {
+    quickEl.addEventListener("click", (event) => {
+      const chip = event.target.closest("[data-chat-prompt]");
+      if (!chip || sending) return;
+      sendMessage(chip.dataset.chatPrompt || chip.textContent || "");
+    });
+  }
+
+  messagesEl.addEventListener("click", (event) => {
+    const link = event.target.closest("a[href^='/']");
+    if (link && isMobileViewport()) setOpen(false);
+  });
+
+  fetch("/api/chat/status")
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) => {
+      translationAvailable = Boolean(data && data.ai_enabled);
+      langBtn.hidden = !translationAvailable;
+    })
+    .catch(() => {
+      translationAvailable = false;
+    });
 
   ensureLanguageCatalog();
 }

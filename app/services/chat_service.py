@@ -25,12 +25,13 @@ _MAX_TOOL_ROUNDS = 5
 _OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 _CONTACT_FALLBACK = (
-    "I'm not sure about that one. Try browsing /shop, or email us at {email} "
-    "and our team will be happy to help."
+    "Sorry, I don't have the answer to that. Please email {email} and the DRUVO UK team "
+    "will get back to you. I can help with products, sizes, prices, delivery, returns and how to order."
 )
 
 _WELCOME = (
-    "Hello! Welcome to DRUVO UK 👋 How can I help you today?"
+    "Hello! Welcome to DRUVO UK 👋 I can help you find a product, check sizes, prices and stock, "
+    "explain delivery and returns, or show you how to order. How can I help you today?"
 )
 
 
@@ -64,8 +65,8 @@ def _conversational_reply(message: str) -> str | None:
         )
     if re.search(r"\b(what can you help|what do you do|how can you help|what can i ask)\b", lower):
         return (
-            "I can help with product availability, sizes, colours, prices, UK delivery, returns, "
-            "current offers, and how to find your orders. Just ask!"
+            "I can help you find products, check product availability, sizes, colours and prices, "
+            "explain UK delivery and returns, and show you how to order. Just ask!"
         )
     return None
 

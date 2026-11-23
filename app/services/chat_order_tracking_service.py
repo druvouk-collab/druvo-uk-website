@@ -104,6 +104,13 @@ class ChatOrderTrackingService:
         return None
 
     async def _start_flow(self, locale: str) -> ChatOrderTrackingResult:
+        if self._settings.email_orders_enabled:
+            text = (
+                "Orders are arranged by email, so please reply to your order email or email "
+                f"{self._settings.contact_email} with your name and the item you ordered. "
+                "We email a tracking number once your order has been dispatched."
+            )
+            return ChatOrderTrackingResult(reply=await self._present(text, locale))
         if not self._orders.live_orders_enabled:
             text = NOT_ENABLED.format(email=self._settings.contact_email)
             return ChatOrderTrackingResult(reply=await self._present(text, locale))

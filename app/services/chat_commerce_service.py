@@ -12,6 +12,24 @@ from app.services.website_knowledge_service import CartSummary, WebsiteKnowledge
 from app.types.commerce import Product, ProductVariant
 
 
+_ORDER_HINT = "To order, add it to your basket and choose **Order by email** — we'll confirm stock, delivery and payment with you by email."
+
+
+_PRODUCT_TYPES = (
+    "hoodie", "jacket", "coat", "jumper", "sweater", "cardigan", "t-shirt", "tshirt", "shirt", "top",
+    "dress", "skirt", "jeans", "trouser", "short", "legging", "jogger", "tracksuit", "trainer", "sneaker",
+    "shoe", "boot", "sandal", "bag", "belt", "hat", "cap", "scarf", "watch", "sunglass", "wallet", "jewellery",
+)
+
+
+def _singular(token: str) -> str:
+    if len(token) > 4 and token.endswith("es") and token[-3] in "sxz":
+        return token[:-2]
+    if len(token) > 3 and token.endswith("s") and not token.endswith("ss"):
+        return token[:-1]
+    return token
+
+
 @dataclass(frozen=True)
 class ChatProductCard:
     slug: str
@@ -125,6 +143,10 @@ class ChatCommerceService:
                 context_product_slugs=[context_product.slug],
             )
 
+        assistant = self._shop_assistant_answer(lower, snapshot, cart)
+        if assistant:
+            return assistant
+
         page_product = self._resolve_page_product(
             message, normalized, snapshot, page_product_slug, last
         )
@@ -135,7 +157,7 @@ class ChatCommerceService:
             return ChatCommerceReply(text=self._basket_summary(cart, snapshot))
 
         if self._is_catalog_overview(lower):
-            return ChatCommerceReply(text=self._catalog_overview(snapshot))
+            return self._catalog_overview_reply(snapshot)
 
         if self._is_recommendation(lower):
             return self._recommendation_answer(lower, snapshot)
@@ -216,6 +238,14 @@ class ChatCommerceService:
             if strict:
                 return self._products_answer(message, strict, snapshot)
             parsed = self._parse_product_request(normalized)
+            if get_settings().email_orders_enabled:
+                return ChatCommerceReply(
+                    text=(
+                        "Sorry, we don't have that in our catalogue right now. "
+                        f"Email {email} with the item, size and colour you're after and "
+                        "the team will let you know if they can find it for you."
+                    )
+                )
             return ChatCommerceReply(
                 text=(
                     "We don't currently have that item in our live catalogue. "
@@ -229,13 +259,38 @@ class ChatCommerceService:
         if matched:
             return self._products_answer(message, matched, snapshot)
 
+        wanted_type = next((t for t in _PRODUCT_TYPES if re.search(rf"\b{t}s?\b", lower)), "")
+        if wanted_type:
+            in_stock = [p for p in snapshot.live_products if p.in_stock]
+            reply = (
+                f"Sorry, we don't have any {wanted_type}s in stock right now. If you're looking for something "
+                f"specific, email {email} and the team will see if they can find it."
+            )
+            if in_stock:
+                reply += "\n\nHere's what we do have:"
+            return ChatCommerceReply(
+                text=reply,
+                products=[self.product_card(p, snapshot.site_url) for p in in_stock[:2]],
+                context_product_slugs=[p.slug for p in in_stock[:2]],
+            )
+
+        if re.search(r"\b(it|this|that|this one|that one)\b", lower) and (
+            self._extract_size(message) or re.search(r"\b(size|colour|color|price|cost|stock|left)\b", lower)
+        ):
+            return ChatCommerceReply(
+                text=(
+                    "Which item do you mean? Tell me the product name, or open the product page and ask me "
+                    "there — I'll check the size, price and stock for you."
+                )
+            )
+
         if any(w in lower for w in ("product", "stock", "available", "size", "colour", "color", "price", "left")):
             if snapshot.live_products:
                 names = ", ".join(p.name for p in snapshot.live_products[:5])
                 return ChatCommerceReply(
                     text=(
-                        f"I couldn't find an exact match in our live catalogue. Browse /shop or try a product name. "
-                        f"Live items include: {names}. For help, email {email}."
+                        f"I couldn't find an exact match in our catalogue. Browse /shop or try a product name. "
+                        f"Items available now include: {names}. For anything else, email {email}."
                     )
                 )
 
@@ -243,8 +298,13 @@ class ChatCommerceService:
 
     def _delivery_answer(self, snapshot: WebsiteKnowledgeSnapshot, cart: CartSummary | None) -> str:
         base = snapshot.policies.delivery_summary
+        if get_settings().email_orders_enabled:
+            base += (
+                " Orders are usually dispatched within 1–2 working days once payment is confirmed, "
+                "and we confirm the exact delivery cost by email before you pay."
+            )
         promo = self._knowledge.active_free_delivery_promotion(snapshot)
-        if promo and promo.description and promo.description not in base:
+        if promo and promo.description and promo.description not in base and "free on orders over" not in base:
             base = f"{base} {promo.description}"
         if cart and cart.amount_to_free_delivery_gbp is not None and cart.amount_to_free_delivery_gbp > 0:
             base += (
@@ -371,7 +431,15 @@ class ChatCommerceService:
 
     @staticmethod
     def _is_catalog_overview(lower: str) -> bool:
-        return bool(re.search(r"what do you sell|what can i buy|what products do you", lower))
+        return bool(
+            re.search(
+                r"what do you sell|what can i buy|what products do you|what do you have|what have you got|"
+                r"show me everything|show me what you have|show me (all|your|the) (products|items|range|stock)|"
+                r"all (your )?(products|items)|what'?s in stock|what is in stock|in stock right now|"
+                r"find a product|browse",
+                lower,
+            )
+        )
 
     def _catalog_overview(self, snapshot: WebsiteKnowledgeSnapshot) -> str:
         if not snapshot.live_products:
@@ -387,6 +455,132 @@ class ChatCommerceService:
             parts.append(f"• **{cat}**: {', '.join(names)}")
         parts.append(f"Browse the full range at {snapshot.site_url}/shop")
         return "\n".join(parts)
+
+    def _catalog_overview_reply(self, snapshot: WebsiteKnowledgeSnapshot) -> ChatCommerceReply:
+        in_stock = [p for p in snapshot.live_products if p.in_stock]
+        email = snapshot.policies.contact_email
+        if not in_stock:
+            return ChatCommerceReply(
+                text=(
+                    "We don't have any items in stock on the website right now. "
+                    f"Email {email} if you're looking for something specific."
+                )
+            )
+        picks = in_stock[:4]
+        count = len(in_stock)
+        intro = (
+            f"Here's what we have in stock right now ({count} item{'' if count == 1 else 's'}):"
+            if count <= 4
+            else f"We have {count} items in stock. Here are a few — browse them all at /shop:"
+        )
+        text = intro
+        if get_settings().email_orders_enabled:
+            text += f"\n\n{_ORDER_HINT}"
+        text += "\n\nLooking for a particular size, colour or type? Just ask."
+        return ChatCommerceReply(
+            text=text,
+            products=[self.product_card(p, snapshot.site_url) for p in picks],
+            context_product_slugs=[p.slug for p in picks],
+        )
+
+    def _shop_assistant_answer(
+        self,
+        lower: str,
+        snapshot: WebsiteKnowledgeSnapshot,
+        cart: CartSummary | None,
+    ) -> ChatCommerceReply | None:
+        """Ordering, delivery/returns and shop-policy answers taken from published pages."""
+        email = snapshot.policies.contact_email
+        email_orders = get_settings().email_orders_enabled
+        policies = snapshot.policies
+
+        if email_orders and re.search(
+            r"how (do|can|would) i (order|buy|purchase|place an order|checkout|check out)|"
+            r"how to (order|buy|purchase)|place (an|my) order|ordering process|how does ordering work|"
+            r"can i order|want to (order|buy)|ready to (order|buy)|^how to order",
+            lower,
+        ):
+            return ChatCommerceReply(text=self._how_to_order_text(email, cart))
+
+        delivery_words = ("delivery", "deliver", "shipping", "postage", "ship")
+        returns_words = ("return", "refund", "exchange")
+        if any(w in lower for w in delivery_words) and any(w in lower for w in returns_words):
+            return ChatCommerceReply(
+                text=(
+                    f"**Delivery**\n{self._delivery_answer(snapshot, cart)}\n\n"
+                    f"**Returns**\n{policies.returns_summary}"
+                )
+            )
+
+        if re.search(
+            r"\b(ireland|europe|eu|usa|america|abroad|overseas|international(ly)?|worldwide|outside (the )?uk|"
+            r"other countr(y|ies)|france|germany|spain|canada|australia)\b",
+            lower,
+        ) and any(w in lower for w in delivery_words + ("send", "post")):
+            return ChatCommerceReply(
+                text=(
+                    "Our published delivery service covers UK addresses only. "
+                    f"If you're outside the UK, email {email} and the team will let you know if they can help."
+                )
+            )
+
+        if re.search(r"\b(authentic|genuine|real|fake|legit|original)\b", lower):
+            return ChatCommerceReply(
+                text=(
+                    "Every product page shows the brand, condition and clear photos, and designer pieces are "
+                    "authenticated and condition-graded before listing. If you'd like more photos or details "
+                    f"about an item, email {email}."
+                )
+            )
+
+        if re.search(r"\b(contact|speak to|talk to|human|real person|phone number|call you|customer service|get in touch)\b", lower):
+            return ChatCommerceReply(
+                text=f"You can email the DRUVO UK team at {email} — they'll get back to you as soon as they can."
+            )
+        return None
+
+    @staticmethod
+    def _how_to_order_text(email: str, cart: CartSummary | None) -> str:
+        steps = [
+            "Ordering is simple — no payment is taken on the website:",
+            "1. Open the item and press **Add to basket**.",
+            "2. Go to your basket (/cart) and choose **Continue to order by email**.",
+            f"3. Press **Order by email** — your email app opens with your basket filled in. "
+            f"Add your name and delivery postcode and send it to {email}.",
+            "4. We reply to confirm stock, the delivery cost and how to pay. Your order is only accepted "
+            "once we've confirmed it with you.",
+        ]
+        if cart and cart.item_count:
+            steps.append(
+                f"\nYou have {cart.item_count} item{'' if cart.item_count == 1 else 's'} in your basket — "
+                "you can go straight to /checkout."
+            )
+        return "\n".join(steps)
+
+    @staticmethod
+    def _is_measurement_question(lower: str) -> bool:
+        return bool(
+            re.search(
+                r"measure|measurement|dimension|size guide|sizing|what size|fit\b|fits|chest|waist|length|how big|true to size",
+                lower,
+            )
+        )
+
+    @staticmethod
+    def _measurement_answer(product: Product, email: str) -> str:
+        sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z])", product.description or "")
+        sizing = [
+            s.strip()
+            for s in sentences
+            if re.search(r"\b(size|chest|waist|length|inch|inches|cm|measure|labelled|fit)\b", s, re.I)
+        ]
+        sizes = ", ".join(product.sizes) or "not listed"
+        if not sizing:
+            return (
+                f"**{product.name}** is listed in size {sizes}. Detailed measurements aren't listed for this item — "
+                f"email {email} and we'll measure it for you."
+            )
+        return f"**{product.name}** — sizing from the listing:\n" + "\n".join(f"• {s}" for s in sizing)
 
     @staticmethod
     def _is_recommendation(lower: str) -> bool:
@@ -544,6 +738,12 @@ class ChatCommerceService:
                     products=[self.product_card(product, snapshot.site_url)],
                     context_product_slugs=[product.slug],
                 )
+            if self._is_measurement_question(msg_lower):
+                return ChatCommerceReply(
+                    text=self._measurement_answer(product, snapshot.policies.contact_email),
+                    products=[self.product_card(product, snapshot.site_url)],
+                    context_product_slugs=[product.slug],
+                )
             if any(w in msg_lower for w in ("brand", "who makes")):
                 brand = product.brand or "Brand information isn't listed for this item."
                 return ChatCommerceReply(
@@ -579,6 +779,8 @@ class ChatCommerceService:
         cards = [self.product_card(p, snapshot.site_url) for p in target]
         parts = [self._format_product_detail(p, snapshot.site_url) for p in target]
         suffix = "" if len(live_matched) <= 3 else f"\n\n({len(live_matched) - 3} more matches — try /search)"
+        if get_settings().email_orders_enabled and any(p.in_stock for p in target):
+            suffix += f"\n\n{_ORDER_HINT}"
         return ChatCommerceReply(
             text="\n\n".join(parts) + suffix,
             products=cards,
@@ -587,7 +789,6 @@ class ChatCommerceService:
 
     @staticmethod
     def _format_product_detail(product: Product, site_url: str) -> str:
-        card_url = f"{site_url}/product/{product.slug}"
         price_line = f"**{product.name}** — £{product.display_price_gbp:.2f}"
         if product.is_on_sale and product.compare_at_price_gbp:
             price_line += f" (was £{product.compare_at_price_gbp:.2f})"
@@ -597,7 +798,7 @@ class ChatCommerceService:
             lines.append(f"Brand: {product.brand}.")
         category_line = f"Category: {product.category_name}."
         if (product.condition or "").strip():
-            category_line = f"{category_line[:-1]} Condition: {product.condition.strip()}."
+            category_line = f"Category: {product.category_name} · Condition: {product.condition.strip()}."
         lines.append(category_line)
         sizes = sorted({v.size for v in product.variants if v.stock_quantity > 0})
         colours = sorted({v.colour for v in product.variants if v.stock_quantity > 0})
@@ -605,7 +806,6 @@ class ChatCommerceService:
             lines.append(f"Sizes in stock: {', '.join(sizes)}.")
         if colours:
             lines.append(f"Colours in stock: {', '.join(colours)}.")
-        lines.append(f"View product: {card_url}")
         return "\n".join(lines)
 
     @staticmethod
@@ -675,7 +875,11 @@ class ChatCommerceService:
     @staticmethod
     def _match_products(message: str, products: list[Product]) -> list[Product]:
         tokens = [t for t in re.findall(r"[a-z0-9]+", message.lower()) if len(t) > 2]
-        stop = {"have", "much", "what", "does", "this", "that", "with", "your", "about", "show", "tell", "the", "you", "are"}
+        stop = {
+            "have", "much", "what", "does", "this", "that", "with", "your", "about", "show", "tell",
+            "the", "you", "are", "any", "got", "sell", "stock", "please", "looking", "for", "need",
+            "want", "find", "can", "item", "items", "product", "products", "available",
+        }
         tokens = [t for t in tokens if t not in stop]
         if not tokens:
             return []
@@ -684,7 +888,7 @@ class ChatCommerceService:
             hay = " ".join(
                 [product.name, product.brand, product.description, product.category_name, *product.tags]
             ).lower()
-            score = sum(1 for token in tokens if token in hay)
+            score = sum(1 for token in tokens if token in hay or _singular(token) in hay)
             if score:
                 scored.append((score, product))
         scored.sort(key=lambda x: (-x[0], x[1].name.lower()))

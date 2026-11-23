@@ -8,7 +8,7 @@
 
     </svg>
 
-    <span class="druvo-chat-launcher-label">DRUVO Chat</span>
+    <span class="druvo-chat-launcher-label">Chat with us</span>
 
   </button>
 
@@ -24,17 +24,17 @@
 
     <header class="druvo-chat-header">
 
-      <div class="druvo-chat-header-text">
-
-        <h2 id="druvo-chat-title">DRUVO Chat</h2>
-
-        <p class="druvo-chat-subtitle" id="druvo-chat-subtitle">Online shopping assistant</p>
-
+      <div class="druvo-chat-header-main">
+        <span class="druvo-chat-avatar" aria-hidden="true">D</span>
+        <div class="druvo-chat-header-text">
+          <h2 id="druvo-chat-title">DRUVO UK Assistant</h2>
+          <p class="druvo-chat-subtitle"><span class="druvo-chat-status-dot" aria-hidden="true"></span><span id="druvo-chat-subtitle">Online shopping assistant</span></p>
+        </div>
       </div>
 
       <div class="druvo-chat-header-actions">
 
-        <button type="button" class="druvo-chat-lang-btn icon-btn" id="druvo-chat-lang-btn" aria-label="Change language" title="Language">🌐</button>
+        <button type="button" class="druvo-chat-lang-btn icon-btn" id="druvo-chat-lang-btn" aria-label="Change language" title="Language" hidden>🌐</button>
 
         <button type="button" class="druvo-chat-close icon-btn" id="druvo-chat-close" aria-label="Close chat">✕</button>
 
@@ -68,11 +68,17 @@
 
     <div class="druvo-chat-messages" id="druvo-chat-messages"></div>
 
+    <div class="druvo-chat-quick" id="druvo-chat-quick" role="group" aria-label="Quick questions">
+      <button type="button" class="druvo-chat-chip" data-chat-prompt="What do you have in stock?">Find a product</button>
+      <button type="button" class="druvo-chat-chip" data-chat-prompt="Delivery and returns">Delivery &amp; returns</button>
+      <button type="button" class="druvo-chat-chip" data-chat-prompt="How do I order?">How to order</button>
+      <button type="button" class="druvo-chat-chip" data-chat-prompt="How can I contact you?">Contact us</button>
+    </div>
     <form class="druvo-chat-form" id="druvo-chat-form">
 
       <label class="sr-only" for="druvo-chat-input">Message DRUVO Chat</label>
 
-      <textarea id="druvo-chat-input" rows="1" maxlength="500" placeholder="Ask about products, sizes, delivery…" required></textarea>
+      <textarea id="druvo-chat-input" rows="1" maxlength="500" placeholder="Ask about a product, size or delivery…" required></textarea>
 
       <button type="submit" class="btn btn-primary druvo-chat-send" id="druvo-chat-send" aria-label="Send message">Send</button>
 
