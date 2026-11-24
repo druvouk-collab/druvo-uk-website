@@ -5,4 +5,9 @@ set -euo pipefail
 PORT="${PORT:-10000}"
 HOST="${HOST:-0.0.0.0}"
 
+# Apply database migrations when a database is configured (CATALOG_SOURCE=db).
+if [ -n "${DATABASE_URL:-}" ]; then
+  python -m alembic upgrade head
+fi
+
 exec python -m uvicorn app.main:app --host "$HOST" --port "$PORT"

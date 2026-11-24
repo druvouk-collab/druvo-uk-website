@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     site_url: str = "http://127.0.0.1:8080"
     contact_email: str = "druvo.uk@gmail.com"
     catalog_source: str = "mock"
+    database_url: str = ""
+    stock_reservation_minutes: int = 30
     druvo_api_base_url: str = ""
     druvo_api_key: str = ""
     druvo_api_timeout_seconds: int = 30
@@ -53,6 +55,10 @@ class Settings(BaseSettings):
         if self.stripe_secret_key.startswith("sk_test"):
             return "test"
         return "missing"
+
+    @property
+    def database_enabled(self) -> bool:
+        return self.catalog_source == "db" and bool(self.database_url)
 
     @property
     def email_orders_enabled(self) -> bool:

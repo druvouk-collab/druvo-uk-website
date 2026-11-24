@@ -6,3 +6,6 @@ httpx>=0.28.0
 pydantic-settings>=2.6.0
 stripe>=11.0.0
 langdetect>=1.0.9
+sqlalchemy>=2.0.30
+psycopg[binary]>=3.2
+alembic>=1.13
