@@ -164,6 +164,7 @@ class Order(TimestampMixin, Base):
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     confirmation_email_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     shop_notification_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    dispatch_email_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
     customer: Mapped[Customer | None] = relationship(lazy="joined")
@@ -244,6 +245,7 @@ class Refund(Base):
     reason: Mapped[str] = mapped_column(String(300), default="", nullable=False)
     restocked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_by: Mapped[str] = mapped_column(String(320), default="", nullable=False)
+    email_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 

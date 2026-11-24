@@ -125,8 +125,10 @@ async function placeOrder() {
     sessionStorage.setItem("druvo_checkout_order_id", externalOrderId);
   }
 
+  const dbCheckout = summary?.dataset.dbCheckout === "true";
+  const phone = document.getElementById("phone")?.value?.trim() || "";
   button.disabled = true;
-  status.textContent = "Checking stock with DRUVO AI…";
+  status.textContent = dbCheckout ? "Checking availability…" : "Checking stock with DRUVO AI…";
   try {
     const validate = await fetch("/api/checkout/validate", {
       method: "POST",
@@ -142,7 +144,7 @@ async function placeOrder() {
     }
 
     if (paymentsEnabled) {
-      status.textContent = "Redirecting to secure Stripe checkout (test mode)…";
+      status.textContent = dbCheckout ? "Holding your items and opening secure payment…" : "Redirecting to secure Stripe checkout (test mode)…";
       const response = await fetch("/api/checkout/payment-session", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -150,11 +152,13 @@ async function placeOrder() {
           customer_email: email,
           customer_name: `${first} ${last}`.trim(),
           external_order_id: externalOrderId,
+          phone,
           lines,
         }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (response.status === 409 || response.status === 400) sessionStorage.removeItem("druvo_checkout_order_id");
         throw new Error(payload.detail || "Could not start payment session.");
       }
       window.location.href = payload.checkout_url;

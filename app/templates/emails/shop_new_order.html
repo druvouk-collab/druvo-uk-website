@@ -1,0 +1,8 @@
+{% extends "_layout.html" %}{% block body %}
+<h1 style="font-size:20px;margin:0 0 12px;">New order {{ order.order_number }}</h1>
+{% if order.notes %}<p style="background:#fff3cd;padding:10px;border-radius:4px;"><strong>Attention:</strong> {{ order.notes }}</p>{% endif %}
+<p><strong>{{ order.name }}</strong> &lt;{{ order.email }}&gt;{% if order.phone %} · {{ order.phone }}{% endif %}<br>Payment: {{ order.payment_method_type or "card" }}</p>
+{% include "_items.html" %}
+{% include "_address.html" %}
+<p style="font-size:13px;color:#666;">SKUs: {% for item in items %}{{ item.sku }}×{{ item.quantity }} {% endfor %}</p>
+{% endblock %}

@@ -35,9 +35,11 @@ Add branch protection rule** for `main` → tick **Require a pull request before
 4. **Payment methods (test):** Settings → **Payment methods** → make sure **Cards**, **Apple Pay**,
    **Google Pay** and **Link** are on. Stripe-hosted Checkout handles Apple Pay/Google Pay without
    extra domain setup.
-5. **Webhook:** created later by Claude's instructions once the new checkout is on the staging site
-   (endpoint will be `https://<staging-url>/webhooks/stripe`, events `checkout.session.completed`,
-   `checkout.session.expired`, `charge.refunded`). Stripe then shows a signing secret `whsec_…`.
+5. **Webhook (test mode):** Developers → **Webhooks** → **Add endpoint** →
+   `https://<staging-url>/webhooks/stripe` → select events:
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+   `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`.
+   Stripe then shows a signing secret `whsec_…` → Render staging → `STRIPE_WEBHOOK_SECRET`.
 6. **Where the keys go:** Render dashboard → the **staging** service (not live) → **Environment** →
    `STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Never into GitHub or chat.
 7. **PayPal (later, optional):** Settings → Payment methods → **PayPal** → connect a PayPal *business*
@@ -59,8 +61,9 @@ account, ID), then swap to live keys.
 4. Back in Resend click **Verify DNS records** (can take minutes to a few hours).
 5. **API Keys → Create API key** → name `druvo-website` → permission **Sending access** → domain
    `druvo.uk`. Copy the key `re_…` once.
-6. Put it in Render → staging service → **Environment** → `RESEND_API_KEY`. Sender will be
-   `orders@druvo.uk` (or your choice); shop notifications go to `druvo.uk@gmail.com`.
+6. Put it in Render → staging service → **Environment** → `RESEND_API_KEY`. Also set
+   `EMAIL_FROM` = `DRUVO UK <orders@druvo.uk>` and `SHOP_NOTIFICATION_EMAIL` = `druvo.uk@gmail.com`.
+   Until the domain is verified, Resend only lets you send test emails to your own address.
 
 ---
 
@@ -89,3 +92,25 @@ account, ID), then swap to live keys.
 4. Make sure **free listings** (Google Shopping tab / Search) is enabled under *Growth → Manage programs*.
 5. Merchant Center requires business name/address and contact details to be visible on the site — this is
    blocked until you've verified the legal company details (see HANDOVER).
+
+---
+
+## Step 6 — Staging site for end-to-end testing ($0)
+
+Lets you place real **test-mode** orders on a private copy of the site before anything goes live.
+
+1. **Neon** (free database): https://neon.com → sign up → create project `druvo-staging`, region
+   **Europe (Frankfurt or London)** → copy the connection string (`postgresql://…`).
+2. **Render** → **New + → Web Service** → connect `druvouk-collab/druvo-uk-website` → branch
+   **`develop/online-checkout`** → name `druvo-uk-staging` → instance type **Free** → build
+   `pip install -r requirements.txt`, start `bash scripts/start.sh`.
+3. Environment variables for the staging service:
+   `CATALOG_SOURCE=db`, `DATABASE_URL=<Neon string>`, `SITE_URL=https://druvo-uk-staging.onrender.com`,
+   `PRODUCTION_MODE=false`, `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` (**test** keys),
+   `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `SHOP_NOTIFICATION_EMAIL`, `SESSION_SECRET`
+   (Render → "Generate").
+4. On first start the site creates its tables and loads the products from `catalog.json` automatically
+   (only when the database is empty).
+5. Tell Claude the staging URL. Test with Stripe test card `4242 4242 4242 4242`, any future date, any CVC.
+
+The live site (`main`, druvo.uk) is unaffected by the staging service.

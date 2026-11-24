@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     contact_email: str = "druvo.uk@gmail.com"
     catalog_source: str = "mock"
     database_url: str = ""
+    # Transactional email (Resend HTTP API — works on any host, no SMTP ports needed)
+    resend_api_key: str = ""
+    email_from: str = "DRUVO UK <orders@druvo.uk>"
+    shop_notification_email: str = ""
+    # Legal business details — leave blank until verified by the owner; shown in emails/footer when set.
+    business_legal_name: str = ""
+    business_address: str = ""
+    company_number: str = ""
     # Stripe Checkout sessions last at least 30 minutes; hold stock slightly longer.
     stock_reservation_minutes: int = 35
     druvo_api_base_url: str = ""
@@ -65,6 +73,10 @@ class Settings(BaseSettings):
     def email_orders_enabled(self) -> bool:
         """Free-hosting mode: customers order by email, no online payment."""
         return self.catalog_source == "static"
+
+    @property
+    def resend_enabled(self) -> bool:
+        return bool(self.resend_api_key)
 
     @property
     def email_configured(self) -> bool:

@@ -1,0 +1,5 @@
+{% extends "_layout.html" %}{% block body %}
+<h1 style="font-size:22px;margin:0 0 12px;">Refund issued</h1>
+<p>Hi {{ order.name or "there" }}, we've refunded <strong>{{ refund.amount_pence | money }}</strong> for order <strong>{{ order.order_number }}</strong>.{% if refund.reason %}<br>Reason: {{ refund.reason }}{% endif %}</p>
+<p>It goes back to your original payment method and usually appears within 5–10 working days, depending on your bank.</p>
+{% endblock %}

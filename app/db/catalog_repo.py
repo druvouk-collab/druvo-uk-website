@@ -186,7 +186,13 @@ def main() -> None:  # pragma: no cover - CLI
 
     parser = argparse.ArgumentParser(description="Import catalog.json into the DRUVO database")
     parser.add_argument("path", nargs="?", default=str(CATALOG_PATH))
+    parser.add_argument("--if-empty", action="store_true", help="only import when the database has no products")
     args = parser.parse_args()
+    if args.if_empty:
+        with session_scope() as session:
+            if session.scalar(select(models.Product.id).limit(1)) is not None:
+                print("Products already in database — skipping import.")
+                return
     print(import_catalog_json(Path(args.path)))
 
 

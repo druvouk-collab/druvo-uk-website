@@ -1,0 +1,5 @@
+{% for item in items %}- {{ item.product_name }}{% if item.colour or item.size %} ({{ [item.colour, item.size] | select | join(" / ") }}){% endif %} × {{ item.quantity }} — {{ (item.unit_price_pence * item.quantity) | money }}
+{% endfor %}
+Items: {{ order.subtotal_pence | money }}
+Delivery: {% if order.shipping_pence %}{{ order.shipping_pence | money }}{% else %}Free{% endif %}
+Total paid: {{ order.total_pence | money }}

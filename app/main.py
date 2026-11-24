@@ -42,6 +42,13 @@ app = FastAPI(
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
+
+@app.on_event("startup")
+async def _start_background_tasks() -> None:
+    from app.services.background import start_background_tasks
+
+    start_background_tasks(app)
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(shop.router)

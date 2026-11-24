@@ -43,6 +43,18 @@ class CheckoutOrderPayload(BaseModel):
 
 @router.post("/validate")
 async def validate_checkout_stock(payload: CheckoutOrderPayload) -> dict:
+    if get_settings().database_enabled:
+        from fastapi.concurrency import run_in_threadpool
+
+        from app.services.db_checkout import BasketLine, CheckoutError, DbCheckoutService
+
+        try:
+            return await run_in_threadpool(
+                DbCheckoutService().stock_check,
+                [BasketLine(sku=line.sku, quantity=line.quantity) for line in payload.lines],
+            )
+        except CheckoutError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not orders.orders_enabled:
         raise HTTPException(status_code=503, detail="DRUVO API not configured.")
     try:

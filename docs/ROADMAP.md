@@ -1,6 +1,6 @@
 # DRUVO — Development Roadmap
 
-Prepared 24 Nov 2026 · Lives in the website repo · Status labels: ✅ exists & verified · 🟡 exists, not yet verified
+Prepared 24 Nov 2026 · Updated 24 Nov 2026 (session 4) · Lives in the website repo · Status labels: ✅ exists & verified · 🟡 exists, not yet verified
 · 🔨 in development on `develop/online-checkout` · ⬜ not started
 
 The goal is an intelligent, automated, multichannel UK retail business run through our own **DRUVO Manager**
@@ -22,7 +22,9 @@ before buying anything. Nothing is purchased, deployed or switched to live payme
 | SEO: sitemap, robots, canonical, structured data, Merchant feed | ✅ live | improved on branch |
 | Account / order history | ✅ code | via DRUVO Manager API |
 | Cloud PostgreSQL database | 🔨 | Phase 1 done on branch (schema, migrations, import, tests) |
-| Mac-independent checkout | 🔨 | reservation + webhook design done, build in progress |
+| Mac-independent checkout (Stripe, stock holds, webhooks) | 🔨 built & tested on branch | needs staging test with real Stripe test keys |
+| Order emails (confirmation, shop alert, dispatch, refund) | 🔨 built & tested on branch | Resend; needs API key + domain DNS |
+| Dispatch/tracking and refund operations (service layer) | 🔨 built & tested on branch | admin screens still to build |
 
 ### DRUVO Manager / DRUVO AI (on the MacBook — **not yet audited**)
 What the website code proves exists: a local REST API (`/api/v1/products`, `/categories`, `/orders`,
@@ -82,14 +84,16 @@ Principles:
 | # | Work | Status |
 |---|---|---|
 | W1 | Cloud PostgreSQL schema, migrations, catalogue import | 🔨 done on branch |
-| W2 | Checkout: reuse existing Stripe service; stock reservation; idempotent webhooks; order created in DB | 🔨 |
-| W3 | Cards, Apple Pay, Google Pay, Link via Stripe Checkout (test mode) | 🔨 with W2 |
+| W2 | Checkout: stock reservation, idempotent webhooks, orders in DB, oversell test with 8 concurrent buyers | ✅ on branch |
+| W3 | Cards, Apple Pay, Google Pay, Link via Stripe Checkout (dynamic payment methods, test mode) | ✅ on branch |
 | W4 | PayPal via Stripe: prepared; enabled once the fee is confirmed | ⬜ |
-| W5 | Resend emails: order confirmation, shop alert, dispatched with tracking, refund | ⬜ |
+| W5 | Resend emails: order confirmation, shop alert, dispatched with tracking, refund | ✅ on branch |
 | W6 | Secure admin: 2FA, products, prices, stock, orders, dispatch and tracking, refunds, audit log | ⬜ |
-| W7 | Returns and refunds workflow (14-day cancellation, restock) | ⬜ |
+| W7 | Refunds (full or partial, optional restock, Stripe dashboard refunds mirrored) | ✅ service on branch; returns form ⬜ |
 | W8 | Compliance pages: verified company details, returns wording review, privacy update | ⬜ owner input |
 | W9 | Staging service on Render Free + Neon Free DB for end-to-end tests | ⬜ |
+| W11 | Business dashboard: sales, fees, expenses, net profit, stock, pending orders | ⬜ (needs Manager audit for marketplace data) |
+| W12 | Error reporting, uptime monitoring, automated DB backup export | ⬜ |
 | W10 | Go-live: Render Starter + Postgres, Stripe live keys **after approval** | ⬜ approval |
 
 ## 4. Marketplaces (priority 2 — after the audit)

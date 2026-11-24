@@ -2,7 +2,7 @@
 
 Revision ID: 0001
 Revises: 
-Create Date: 2026-11-24 00:51:25.805395
+Create Date: 2026-11-24 07:33:03.951244
 """
 from __future__ import annotations
 
@@ -114,6 +114,7 @@ def upgrade() -> None:
     sa.Column('delivered_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('confirmation_email_sent_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('shop_notification_sent_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('dispatch_email_sent_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('notes', sa.Text(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
@@ -171,6 +172,7 @@ def upgrade() -> None:
     sa.Column('reason', sa.String(length=300), nullable=False),
     sa.Column('restocked', sa.Boolean(), nullable=False),
     sa.Column('created_by', sa.String(length=320), nullable=False),
+    sa.Column('email_sent_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),

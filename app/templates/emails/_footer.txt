@@ -1,0 +1,4 @@
+—
+{{ site_name }} · {{ site_url }} · {{ contact_email }}
+{% if business_legal_name %}{{ business_legal_name }}{% if company_number %} · Company no. {{ company_number }}{% endif %}{% if business_address %} · {{ business_address }}{% endif %}
+{% endif %}

@@ -253,7 +253,7 @@ async def cart_page(request: Request):
 @router.get("/checkout", response_class=HTMLResponse)
 async def checkout_page(request: Request):
     settings = get_settings()
-    checkout_ready = (
+    checkout_ready = settings.db_payments_enabled or (
         settings.catalog_source == "druvo_api"
         and bool(settings.druvo_api_base_url)
         and bool(settings.druvo_api_key)
@@ -268,6 +268,8 @@ async def checkout_page(request: Request):
             "payments_enabled": payments_enabled,
             "email_orders": settings.email_orders_enabled,
             "stripe_publishable_key": settings.stripe_publishable_key if payments_enabled else "",
+            "db_checkout": settings.db_payments_enabled,
+            "stripe_test_mode": settings.stripe_mode != "live",
         },
     )
 
@@ -284,7 +286,21 @@ async def checkout_success(request: Request, session_id: str = ""):
         "external_order_id": "",
         "customer_email": "",
     }
-    if session_id and get_settings().stripe_enabled:
+    if session_id and get_settings().db_payments_enabled:
+        from fastapi.concurrency import run_in_threadpool
+
+        from app.services.db_checkout import DbCheckoutService
+
+        summary = await run_in_threadpool(DbCheckoutService().order_summary_for_session, session_id)
+        if summary:
+            context.update(
+                paid=summary["paid"],
+                external_order_id=summary["order_number"],
+                customer_email=summary["email"],
+                order={"order_id": summary["order_number"], "external_order_id": summary["order_number"]},
+                db_order=summary,
+            )
+    elif session_id and get_settings().stripe_enabled:
         try:
             context.update(await StripeCheckoutService().get_success_context(session_id))
         except Exception:

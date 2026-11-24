@@ -1,0 +1,20 @@
+Hi {{ order.name or "there" }},
+
+Thank you for your order. Your payment has been received.
+
+Order number: {{ order.order_number }}
+
+{% include "_items.txt" %}
+{% set a = order.shipping_address or {} %}{% if a.line1 %}
+Delivery address:
+{{ a.name }}
+{{ a.line1 }}{% if a.line2 %}, {{ a.line2 }}{% endif %}
+{{ a.city }} {{ a.postal_code }}
+{% endif %}
+We dispatch within 1–2 working days and will email you a tracking number when your order is on its way. Standard UK delivery takes 2–4 working days after dispatch.
+
+Your right to cancel: you can cancel this order for any reason within 14 days of receiving it. Email {{ contact_email }} with your order number. Full details: {{ returns_url }}
+
+Questions? Just reply to this email.
+
+{% include "_footer.txt" %}
