@@ -2,7 +2,7 @@
 
 Revision ID: 0001
 Revises: 
-Create Date: 2026-11-24 00:49:41.870256
+Create Date: 2026-11-24 00:51:25.805395
 """
 from __future__ import annotations
 
@@ -103,6 +103,8 @@ def upgrade() -> None:
     sa.Column('idempotency_key', sa.String(length=100), nullable=True),
     sa.Column('stripe_checkout_session_id', sa.String(length=255), nullable=True),
     sa.Column('stripe_payment_intent_id', sa.String(length=255), nullable=True),
+    sa.Column('stripe_checkout_url', sa.String(length=1000), nullable=False),
+    sa.Column('payment_method_type', sa.String(length=60), nullable=False),
     sa.Column('reservation_expires_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('paid_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('carrier', sa.String(length=60), nullable=False),

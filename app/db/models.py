@@ -153,6 +153,8 @@ class Order(TimestampMixin, Base):
     idempotency_key: Mapped[str | None] = mapped_column(String(100), unique=True)
     stripe_checkout_session_id: Mapped[str | None] = mapped_column(String(255), unique=True)
     stripe_payment_intent_id: Mapped[str | None] = mapped_column(String(255), unique=True)
+    stripe_checkout_url: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    payment_method_type: Mapped[str] = mapped_column(String(60), default="", nullable=False)
     reservation_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     carrier: Mapped[str] = mapped_column(String(60), default="", nullable=False)

@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     contact_email: str = "druvo.uk@gmail.com"
     catalog_source: str = "mock"
     database_url: str = ""
-    stock_reservation_minutes: int = 30
+    # Stripe Checkout sessions last at least 30 minutes; hold stock slightly longer.
+    stock_reservation_minutes: int = 35
     druvo_api_base_url: str = ""
     druvo_api_key: str = ""
     druvo_api_timeout_seconds: int = 30
@@ -74,7 +75,14 @@ class Settings(BaseSettings):
         return bool(self.stripe_secret_key and self.stripe_publishable_key)
 
     @property
+    def db_payments_enabled(self) -> bool:
+        """Mac-independent checkout: PostgreSQL stock + Stripe Checkout."""
+        return self.database_enabled and self.stripe_enabled and bool(self.stripe_webhook_secret)
+
+    @property
     def payments_enabled(self) -> bool:
+        if self.db_payments_enabled:
+            return True
         return (
             self.catalog_source == "druvo_api"
             and bool(self.druvo_api_base_url)
