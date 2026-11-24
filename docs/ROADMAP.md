@@ -1,6 +1,6 @@
 # DRUVO — Development Roadmap
 
-Prepared 24 Nov 2026 · Updated 24 Nov 2026 (session 4) · Lives in the website repo · Status labels: ✅ exists & verified · 🟡 exists, not yet verified
+Prepared 24 Nov 2026 · Updated 24 Nov 2026 (session 5) · Lives in the website repo · Status labels: ✅ exists & verified · 🟡 exists, not yet verified
 · 🔨 in development on `develop/online-checkout` · ⬜ not started
 
 The goal is an intelligent, automated, multichannel UK retail business run through our own **DRUVO Manager**
@@ -86,14 +86,17 @@ Principles:
 | W1 | Cloud PostgreSQL schema, migrations, catalogue import | 🔨 done on branch |
 | W2 | Checkout: stock reservation, idempotent webhooks, orders in DB, oversell test with 8 concurrent buyers | ✅ on branch |
 | W3 | Cards, Apple Pay, Google Pay, Link via Stripe Checkout (dynamic payment methods, test mode) | ✅ on branch |
-| W4 | PayPal via Stripe: prepared; enabled once the fee is confirmed | ⬜ |
+| W4 | PayPal via Stripe: no code needed (dynamic payment methods); enable after the fee is checked | 🟡 owner check |
 | W5 | Resend emails: order confirmation, shop alert, dispatched with tracking, refund | ✅ on branch |
-| W6 | Secure admin: 2FA, products, prices, stock, orders, dispatch and tracking, refunds, audit log | ⬜ |
+| W6 | Secure admin: 2FA + recovery codes, products/photos/prices/costs/stock, orders, dispatch/tracking, refunds, customers, discount codes, expenses, activity log | ✅ on branch |
 | W7 | Refunds (full or partial, optional restock, Stripe dashboard refunds mirrored) | ✅ service on branch; returns form ⬜ |
 | W8 | Compliance pages: verified company details, returns wording review, privacy update | ⬜ owner input |
-| W9 | Staging service on Render Free + Neon Free DB for end-to-end tests | ⬜ |
-| W11 | Business dashboard: sales, fees, expenses, net profit, stock, pending orders | ⬜ (needs Manager audit for marketplace data) |
-| W12 | Error reporting, uptime monitoring, automated DB backup export | ⬜ |
+| W9 | Staging service on Render Free + Neon Free DB for end-to-end tests | 🟡 guide ready, owner sets up |
+| W11 | Business dashboard: daily/weekly/monthly/yearly sales, Stripe fees (actual), item cost, postage, expenses, net profit, low stock, pending orders | ✅ website; marketplace orders after Manager sync |
+| W12 | Error reporting (Sentry, optional), owner alerts by email, daily digest, nightly encrypted backups (GitHub Actions) | ✅ on branch; owner adds secrets |
+| W13 | Discount codes at checkout | ✅ on branch |
+| W14 | Abandoned basket recovery (only for customers who opt in to marketing — PECR) | ⬜ |
+| W15 | DRUVO Manager sync API (pull outbox, push stock/listings/marketplace orders) | ⬜ after audit |
 | W10 | Go-live: Render Starter + Postgres, Stripe live keys **after approval** | ⬜ approval |
 
 ## 4. Marketplaces (priority 2 — after the audit)
@@ -137,6 +140,9 @@ names (e.g. Druva, Drovo), so Google may treat "druvo" as a misspelling until br
 - Google Analytics 4 with a consent banner (UK GDPR/PECR). Core Web Vitals checked with PageSpeed Insights.
 - **KPIs:** homepage indexed; ≥90% of sitemap URLs indexed; Merchant Center 0 disapprovals; mobile PSI ≥ 90.
 
+Done on branch: product photos listed in the sitemap (Google Images), shipping and returns in structured data,
+brand alternate names, Merchant feed apparel attributes, title and description guidance in the admin product editor.
+
 **Days 31–60: content and products**
 - At least 20 live products, each with a unique title (brand, item, size, colour, condition), 300+ word
   description, measurements, 3+ photos with descriptive file names and alt text.
@@ -173,6 +179,8 @@ audit log, secrets only in Render environment variables, least-privilege API key
 HTTPS everywhere, customer data minimised and never logged, backups, error logging without personal data.
 
 ## 9. What Claude needs from the owner
+
+See `docs/OWNER_ACTIONS.md` for the full, ordered checklist. Summary:
 
 1. **DRUVO Manager source code**, either:
    - a. **Preferred:** push the "Druvo AI" project to a *private* GitHub repo under `druvouk-collab` and add it to the

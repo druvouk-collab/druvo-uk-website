@@ -166,6 +166,7 @@ class DbCheckoutService:
         lines: list[BasketLine],
         idempotency_key: str = "",
         phone: str = "",
+        promo_code: str = "",
     ) -> dict[str, str]:
         email = (customer_email or "").strip().lower()
         if not _EMAIL_RE.match(email):
@@ -181,7 +182,7 @@ class DbCheckoutService:
                 return existing
 
         order_id, stripe_lines, order_number, expires_at = self._reserve_and_create_order(
-            email=email, name=name, basket=basket, key=key, phone=phone
+            email=email, name=name, basket=basket, key=key, phone=phone, promo_code=promo_code
         )
 
         try:
@@ -191,6 +192,7 @@ class DbCheckoutService:
                 stripe_lines=stripe_lines,
                 expires_at=expires_at,
                 shipping_pence=self._order_shipping(order_id),
+                discount=self._order_discount(order_id),
             )
         except Exception:
             logger.exception("Stripe session creation failed for %s — releasing stock", order_number)
@@ -230,7 +232,7 @@ class DbCheckoutService:
             order.idempotency_key = None
             return None
 
-    def _reserve_and_create_order(self, *, email, name, basket, key, phone):
+    def _reserve_and_create_order(self, *, email, name, basket, key, phone, promo_code=""):
         self.release_expired_reservations()
         expires_at = _now() + timedelta(minutes=self.settings.stock_reservation_minutes)
         with session_scope() as db:
@@ -275,6 +277,7 @@ class DbCheckoutService:
                         colour=variant.colour,
                         quantity=line.quantity,
                         unit_price_pence=price,
+                        unit_cost_pence=variant.cost_pence,
                     )
                 )
                 stripe_lines.append(
@@ -287,7 +290,10 @@ class DbCheckoutService:
                         "sku": variant.sku,
                     }
                 )
-            shipping = shipping_pence_for(subtotal, self.settings)
+            discount, applied_code = 0, ""
+            if (promo_code or "").strip():
+                discount, applied_code = apply_promotion(db, promo_code, subtotal)
+            shipping = shipping_pence_for(subtotal - discount, self.settings)
             order = models.Order(
                 order_number=_new_order_number(),
                 customer=customer,
@@ -296,8 +302,10 @@ class DbCheckoutService:
                 phone=phone or "",
                 status="pending_payment",
                 subtotal_pence=subtotal,
+                discount_pence=discount,
+                promo_code=applied_code,
                 shipping_pence=shipping,
-                total_pence=subtotal + shipping,
+                total_pence=subtotal - discount + shipping,
                 idempotency_key=key,
                 reservation_expires_at=expires_at,
                 items=items,
@@ -315,6 +323,11 @@ class DbCheckoutService:
                 )
             return order.id, stripe_lines, order.order_number, expires_at
 
+    def _order_discount(self, order_id: int) -> tuple[int, str]:
+        with session_scope() as db:
+            order = db.get(models.Order, order_id)
+            return order.discount_pence, order.promo_code
+
     def _order_shipping(self, order_id: int) -> int:
         with session_scope() as db:
             return db.get(models.Order, order_id).shipping_pence
@@ -324,8 +337,21 @@ class DbCheckoutService:
             return url
         return self.settings.public_site_url.rstrip("/") + "/" + url.lstrip("/")
 
-    def _create_stripe_session(self, *, order_number, email, stripe_lines, expires_at, shipping_pence):
+    def _create_stripe_session(self, *, order_number, email, stripe_lines, expires_at, shipping_pence, discount=(0, "")):
         self._configure_stripe()
+        extra: dict[str, Any] = {}
+        discount_pence, code = discount
+        if discount_pence > 0:
+            coupon = stripe.Coupon.create(
+                amount_off=discount_pence,
+                currency="gbp",
+                duration="once",
+                max_redemptions=1,
+                name=f"Code {code}"[:40],
+                metadata={"order_number": order_number, "promo_code": code},
+                idempotency_key=f"druvo-coupon-{order_number}",
+            )
+            extra["discounts"] = [{"coupon": _get(coupon, "id")}]
         base = self.settings.public_site_url.rstrip("/")
         line_items = []
         for line in stripe_lines:
@@ -371,6 +397,7 @@ class DbCheckoutService:
             success_url=f"{base}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{base}/checkout/cancel?external_order_id={order_number}",
             idempotency_key=f"druvo-checkout-{order_number}",
+            **extra,
         )
 
     # ------------------------------------------------------------------ webhooks
@@ -457,6 +484,10 @@ class DbCheckoutService:
 
         order.status = "paid"
         order.paid_at = _now()
+        if order.promo_code:
+            promo = db.scalar(select(models.Promotion).where(models.Promotion.code == order.promo_code))
+            if promo is not None:
+                promo.times_used += 1
         pi = _get(obj, "payment_intent")
         order.stripe_payment_intent_id = (pi if isinstance(pi, str) else _get(pi, "id")) or order.stripe_payment_intent_id
         details = _get(obj, "customer_details") or {}
@@ -493,6 +524,7 @@ class DbCheckoutService:
             "order_id": order.id,
             "stock_conflict": conflict,
             "notify": ["order_confirmation", "shop_new_order"],
+            "alert": "STOCK CONFLICT" in (order.notes or "") or "AMOUNT MISMATCH" in (order.notes or ""),
         }
 
     def _mark_expired(self, db: Session, obj: Any) -> dict[str, Any]:
@@ -507,6 +539,19 @@ class DbCheckoutService:
         return {"handled": True, "status": "expired", "order_number": order.order_number, "released": released}
 
     def _after_commit(self, result: dict[str, Any]) -> None:
+        if result.get("status") == "paid" and result.get("order_id"):
+            try:
+                record_payment_fee(result["order_id"], self.settings)
+            except Exception:
+                logger.warning("Could not fetch Stripe fee yet for order %s — will retry", result.get("order_number"))
+        if result.get("alert"):
+            from app.services.alerts import send_alert
+
+            send_alert(
+                f"order-problem-{result.get('order_number')}",
+                f"Order {result.get('order_number')} needs attention",
+                "A paid order was flagged (stock conflict or amount mismatch). Open it in the admin dashboard.",
+            )
         if not result.get("notify"):
             return
         try:
@@ -567,3 +612,71 @@ class DbCheckoutService:
                 or variants[l.sku].stock_quantity < l.quantity
             ]
             return {"ok": not problems, "unavailable": problems}
+
+
+# ---------------------------------------------------------------------- promotions & fees
+
+
+class PromoCodeError(CheckoutError):
+    pass
+
+
+def apply_promotion(db: Session, code: str, subtotal_pence: int) -> tuple[int, str]:
+    """Return (discount_pence, normalised_code) or raise PromoCodeError with a customer-friendly reason."""
+    normalised = (code or "").strip().upper()
+    promo = db.scalar(select(models.Promotion).where(models.Promotion.code == normalised))
+    now = _now()
+    if promo is None or not promo.active:
+        raise PromoCodeError("That discount code isn't valid.")
+    if promo.starts_at and now < _aware(promo.starts_at):
+        raise PromoCodeError("That discount code isn't active yet.")
+    if promo.ends_at and now > _aware(promo.ends_at):
+        raise PromoCodeError("That discount code has expired.")
+    if promo.usage_limit is not None and promo.times_used >= promo.usage_limit:
+        raise PromoCodeError("That discount code has been fully used.")
+    if subtotal_pence < promo.min_spend_pence:
+        raise PromoCodeError(f"That code needs a minimum spend of £{promo.min_spend_pence / 100:.2f}.")
+    if promo.discount_type == "percent":
+        discount = subtotal_pence * min(promo.discount_value, 90) // 100
+    else:
+        discount = min(promo.discount_value, subtotal_pence)
+    if discount <= 0:
+        raise PromoCodeError("That discount code doesn't apply to this basket.")
+    return discount, normalised
+
+
+def record_payment_fee(order_id: int, settings: Settings | None = None) -> int | None:
+    """Store Stripe's actual processing fee (from the balance transaction) for profit reports."""
+    cfg = settings or get_settings()
+    with session_scope() as db:
+        order = db.get(models.Order, order_id)
+        if order is None or order.payment_fee_pence is not None or not order.stripe_payment_intent_id:
+            return None
+        pi_id = order.stripe_payment_intent_id
+    stripe.api_key = cfg.stripe_secret_key
+    intent = stripe.PaymentIntent.retrieve(pi_id, expand=["latest_charge.balance_transaction"])
+    txn = _get(_get(intent, "latest_charge"), "balance_transaction")
+    fee = _get(txn, "fee")
+    if fee is None:
+        return None
+    with session_scope() as db:
+        db.get(models.Order, order_id).payment_fee_pence = int(fee)
+    return int(fee)
+
+
+def backfill_payment_fees(limit: int = 20) -> int:
+    with session_scope() as db:
+        ids = db.scalars(
+            select(models.Order.id)
+            .where(models.Order.paid_at.is_not(None), models.Order.payment_fee_pence.is_(None),
+                   models.Order.stripe_payment_intent_id.is_not(None))
+            .limit(limit)
+        ).all()
+    done = 0
+    for order_id in ids:
+        try:
+            if record_payment_fee(order_id) is not None:
+                done += 1
+        except Exception:
+            logger.warning("Fee lookup failed for order id %s", order_id)
+    return done

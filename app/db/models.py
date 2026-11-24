@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     JSON,
+    LargeBinary,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -85,6 +86,10 @@ class ProductImage(Base):
     url: Mapped[str] = mapped_column(String(1000), nullable=False)
     alt: Mapped[str] = mapped_column(String(300), default="", nullable=False)
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Uploaded photos are stored in PostgreSQL (persistent, backed up, no extra storage bill)
+    # and served from /media/<id>. Imported images keep their /static URL and leave these empty.
+    data: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
+    content_type: Mapped[str] = mapped_column(String(50), default="", nullable=False)
 
     product: Mapped[Product] = relationship(back_populates="images")
 
@@ -98,8 +103,11 @@ class Variant(TimestampMixin, Base):
     size: Mapped[str] = mapped_column(String(60), default="", nullable=False)
     colour: Mapped[str] = mapped_column(String(60), default="", nullable=False)
     price_pence: Mapped[int] = mapped_column(Integer, nullable=False)
+    # What we paid for this item (wholesale / sourcing cost) — used for profit reports.
+    cost_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     # Units available to sell right now. Decremented when a checkout reserves stock.
     stock_quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    low_stock_threshold: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     product: Mapped[Product] = relationship(back_populates="variants")
 
@@ -142,10 +150,19 @@ class Order(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(200), default="", nullable=False)
     status: Mapped[str] = mapped_column(String(30), default="pending_payment", nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="GBP", nullable=False)
+    channel: Mapped[str] = mapped_column(String(30), default="druvo.uk", nullable=False)
     subtotal_pence: Mapped[int] = mapped_column(Integer, nullable=False)
+    discount_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    promo_code: Mapped[str] = mapped_column(String(50), default="", nullable=False)
     shipping_pence: Mapped[int] = mapped_column(Integer, nullable=False)
     total_pence: Mapped[int] = mapped_column(Integer, nullable=False)
     refunded_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Costs for profit: Stripe fee (from balance transaction), marketplace commission (marketplace
+    # orders synced from DRUVO Manager), actual postage and packaging paid.
+    payment_fee_pence: Mapped[int | None] = mapped_column(Integer)
+    marketplace_fee_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    postage_cost_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    packaging_cost_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     shipping_method: Mapped[str] = mapped_column(String(60), default="standard", nullable=False)
     shipping_address: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     phone: Mapped[str] = mapped_column(String(50), default="", nullable=False)
@@ -179,7 +196,8 @@ class Order(TimestampMixin, Base):
         CheckConstraint(
             "status IN (" + ",".join(f"'{s}'" for s in ORDER_STATUSES) + ")", name="ck_orders_status"
         ),
-        CheckConstraint("total_pence = subtotal_pence + shipping_pence", name="ck_orders_total"),
+        CheckConstraint("total_pence = subtotal_pence - discount_pence + shipping_pence", name="ck_orders_total"),
+        CheckConstraint("discount_pence >= 0 AND discount_pence <= subtotal_pence", name="ck_orders_discount"),
         Index("ix_orders_status_created", "status", "created_at"),
         Index("ix_orders_email", "email"),
     )
@@ -198,6 +216,8 @@ class OrderItem(Base):
     colour: Mapped[str] = mapped_column(String(60), default="", nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     unit_price_pence: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Item cost captured at sale time so later cost edits don't rewrite history.
+    unit_cost_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     order: Mapped[Order] = relationship(back_populates="items")
 
@@ -260,6 +280,11 @@ class AdminUser(TimestampMixin, Base):
     failed_logins: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Bumped on password/2FA change or "log out everywhere" — invalidates all existing sessions.
+    session_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    totp_last_step: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # blocks code replay
+    recovery_codes: Mapped[list] = mapped_column(JSON, default=list, nullable=False)  # argon2 hashes
+    role: Mapped[str] = mapped_column(String(20), default="owner", nullable=False)  # owner | staff
 
 
 class AuditLog(Base):
@@ -272,6 +297,44 @@ class AuditLog(Base):
     entity_id: Mapped[str] = mapped_column(String(120), default="", nullable=False)
     details: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class Promotion(TimestampMixin, Base):
+    """Discount codes. Same shape as DRUVO Manager promotions so they can be synced either way."""
+
+    __tablename__ = "promotions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    discount_type: Mapped[str] = mapped_column(String(20), default="percent", nullable=False)  # percent | fixed
+    discount_value: Mapped[int] = mapped_column(Integer, nullable=False)  # percent (1-90) or pence
+    min_spend_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    usage_limit: Mapped[int | None] = mapped_column(Integer)
+    times_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String(120), unique=True)  # DRUVO Manager id
+
+    __table_args__ = (
+        CheckConstraint("discount_type IN ('percent','fixed')", name="ck_promotions_type"),
+        CheckConstraint("discount_value > 0", name="ck_promotions_value"),
+    )
+
+
+class Expense(TimestampMixin, Base):
+    """Business costs not tied to one order (packaging stock, subscriptions, stock purchases)."""
+
+    __tablename__ = "expenses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    spent_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    category: Mapped[str] = mapped_column(String(60), nullable=False)
+    description: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+    amount_pence: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_by: Mapped[str] = mapped_column(String(320), default="", nullable=False)
 
 
 class OutboxEvent(Base):
@@ -297,6 +360,8 @@ __all__ = [
     "Category",
     "Customer",
     "Order",
+    "Promotion",
+    "Expense",
     "OrderItem",
     "OutboxEvent",
     "Product",

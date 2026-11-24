@@ -53,6 +53,9 @@
       <div class="form-field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel"></div>
       <div class="form-field"><label for="first-name">First name</label><input id="first-name" name="first_name" autocomplete="given-name" required></div>
       <div class="form-field"><label for="last-name">Last name</label><input id="last-name" name="last_name" autocomplete="family-name" required></div>
+      {% if db_checkout %}
+      <div class="form-field" style="grid-column:1/-1;"><label for="promo-code">Discount code (optional)</label><input id="promo-code" name="promo_code" autocomplete="off" maxlength="30" style="text-transform:uppercase;"></div>
+      {% endif %}
       {% if not db_checkout %}
       <div class="form-field" style="grid-column:1/-1;"><label for="address">Address</label><input id="address" name="address" autocomplete="street-address" required></div>
       <div class="form-field"><label for="city">City</label><input id="city" name="city" autocomplete="address-level2" required></div>

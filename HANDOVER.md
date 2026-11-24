@@ -3,7 +3,7 @@
 > Read this first at the start of every working session. Update the session log and task lists at the end of
 > every session. **Never put passwords, API keys, tokens or other secrets in this file or anywhere in the repo.**
 
-Last updated: 24 Nov 2026 (session 4)
+Last updated: 24 Nov 2026 (session 5)
 
 ## 1. Business objectives
 - DRUVO UK sells new, new-with-tags and pre-loved clothing, footwear and accessories to UK customers.
@@ -49,6 +49,18 @@ Secrets live **only** in Render → Environment. `.env` is never committed.
   `app/services/order_ops.py` (dispatch, tracking, refunds), `app/services/notifications.py` + `app/templates/emails/`
   (Resend emails), `app/services/background.py` (5-minute sweep: release abandoned holds, retry emails).
   Start script runs migrations and seeds an empty database from `catalog.json`.
+- **Admin dashboard** (`/admin`, branch only, needs `CATALOG_SOURCE=db`): `app/routes/admin_panel.py`,
+  `app/admin/security.py`, templates `app/templates/admin/`, CSS `static/css/admin.css`. Argon2 passwords,
+  TOTP 2FA with replay protection and 8 one-time recovery codes, signed HttpOnly SameSite=Strict cookies,
+  CSRF on every POST, 5-failure account lockout (15 min), 10/15 min per-IP limit, strict CSP and no-store on
+  /admin. First admin created once via `/admin/setup?token=ADMIN_SETUP_TOKEN`. Product photos stored in
+  PostgreSQL (resized to 1600px, EXIF/GPS stripped) and served at `/media/<id>.jpg`.
+- Reporting: `app/services/reporting.py` (London-time buckets; profit = sales − refunds − item cost − Stripe fee −
+  marketplace fee − postage − packaging − expenses). Stripe's actual fee is fetched per order.
+- Alerts: `app/services/alerts.py` emails the shop on webhook failures, stock conflicts, maintenance failures
+  (throttled 1/hour per issue) and a daily 08:00 digest (to dispatch + low stock). Optional Sentry (`SENTRY_DSN`).
+- Backups: `.github/workflows/db-backup.yml` nightly pg_dump → AES-256 gpg → 30-day artifact.
+- Owner checklist: `docs/OWNER_ACTIONS.md`.
 - `CATALOG_SOURCE`: `static` (catalog.json, order-by-email — **live today**), `druvo_api` (DRUVO AI API on the
   Mac; only mode where Stripe test checkout works), `mock` (dev).
 - Stripe test-mode checkout exists (`app/services/stripe_service.py`, `app/routes/checkout_api.py`,
@@ -63,6 +75,11 @@ Secrets live **only** in Render → Environment. `.env` is never committed.
 - **23 Nov 2026** — Static catalogue + order-by-email mode; BALANCE cream tracksuit set (L) £20 listed; Chat as
   email-ordering assistant; FAQ/Delivery updated; "Live stock" → "Availability confirmed by email"; meta
   description and plurals fixed; desktop/mobile check; Stripe & PayPal discussed.
+- **24 Nov 2026 (session 5)** — Admin dashboard (orders, dispatch, refunds, products and photos, stock and
+  low-stock alerts, customers with GDPR export/erase, discount codes applied at checkout via Stripe coupons,
+  expenses, daily/weekly/monthly/yearly sales and profit, CSV export, activity log); 2FA security; security
+  headers site-wide; Stripe fee capture; owner alerts and daily digest; optional Sentry; nightly encrypted
+  backups; image sitemap. 318 tests passing on PostgreSQL.
 - **24 Nov 2026 (session 4)** — Mac-independent checkout built: stock reserved atomically when payment
   starts (8 simultaneous buyers for 1 item → exactly 1 succeeds, tested on PostgreSQL), Stripe Checkout with
   cards/Apple Pay/Google Pay/Link (PayPal appears once enabled in Stripe), browser prices ignored, idempotent
@@ -109,7 +126,9 @@ See `docs/SOLUTION_PROPOSAL.md` §8 for the phased plan.
 - **Repository is PUBLIC** on GitHub. No secrets are in it, but making it private is recommended
   (GitHub → repo → Settings → Danger Zone → Change visibility). Render deploys private repos fine.
 - PayPal-via-Stripe UK fee not yet confirmed (check Stripe dashboard → Settings → Payment methods → PayPal).
-- Admin screens for dispatch/refunds not built yet — service layer exists.
+- `/health/druvo` reveals whether API keys are set and their lengths — harmless but should be trimmed or
+  protected before go-live.
+- Backup artifacts are encrypted, but the repo should be private before backups are enabled.
 
 ## 6a. Running costs
 Fixed target < £15/month. Planned at go-live: Render Starter $7 + Render Postgres ~$6.30 + ICO £52/yr
@@ -137,6 +156,13 @@ marketplace fees, postage. Currently paying: £0 hosting (Render Free).
 - No secrets in the repo.
 
 ## 8. Session log
+### 24 Nov 2026 (session 5)
+Built the admin dashboard and security/reliability layer (see §4). Couldn't validate Stripe calls with stripe-mock
+(running the locally built tool was blocked in this environment), so validation happens on staging with real test
+keys. Couldn't read Stripe's PayPal pricing page (needed approval). Next: owner completes `docs/OWNER_ACTIONS.md`
+(private repo, Manager source, Stripe/Resend, staging, admin login); Claude runs the staging test plan, then
+builds the Manager sync API after the audit, and abandoned-basket recovery for opted-in customers.
+
 ### 24 Nov 2026 (session 4)
 Owner priorities: checkout, Stripe, emails, Manager audit, central stock, marketplace verification, dashboard,
 SEO, backups/monitoring, £15 budget. DRUVO Manager source still not shared → items 4–7 blocked. Built and

@@ -34,6 +34,7 @@ class PaymentSessionPayload(BaseModel):
     customer_name: str = ""
     external_order_id: str = ""
     phone: str = ""
+    promo_code: str = ""
     lines: list[CheckoutLinePayload]
 
 
@@ -47,6 +48,7 @@ async def create_payment_session(payload: PaymentSessionPayload) -> dict:
                 customer_name=payload.customer_name,
                 phone=payload.phone,
                 idempotency_key=payload.external_order_id,
+                promo_code=payload.promo_code,
                 lines=[BasketLine(sku=line.sku, quantity=line.quantity) for line in payload.lines],
             )
         except OutOfStockError as exc:
@@ -97,6 +99,14 @@ async def stripe_webhook(request: Request) -> dict:
         except LookupError as exc:
             logger.warning("Stripe webhook for unknown order: %s", exc)
             raise HTTPException(status_code=404, detail="Order not found.") from exc
+        except Exception as exc:
+            logger.exception("Stripe webhook processing failed")
+            from app.services.alerts import send_alert
+
+            send_alert("stripe-webhook-failure", "Payment webhook failed",
+                       f"Stripe event {getattr(event, 'id', None) or event.get('id')} could not be processed "
+                       f"({type(exc).__name__}). Stripe will retry automatically; check the admin dashboard.")
+            raise HTTPException(status_code=500, detail="Webhook processing failed.") from exc
     if not stripe_checkout._settings.stripe_webhook_secret:
         raise HTTPException(status_code=503, detail="Stripe webhook secret is not configured.")
     payload = await request.body()

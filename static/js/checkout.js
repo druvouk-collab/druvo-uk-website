@@ -153,6 +153,7 @@ async function placeOrder() {
           customer_name: `${first} ${last}`.trim(),
           external_order_id: externalOrderId,
           phone,
+          promo_code: document.getElementById("promo-code")?.value?.trim() || "",
           lines,
         }),
       });

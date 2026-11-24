@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}{% block title %}Sign in{% endblock %}
+{% block content %}
+<section class="a-auth">
+  <h1>DRUVO Admin</h1>
+  {% if form_error %}<div class="a-flash err" role="alert">{{ form_error }}</div>{% endif %}
+  {% if step == "password" %}
+  <form method="post" action="/admin/login" class="a-form">
+    <label>Email<input type="email" name="email" value="{{ email or '' }}" autocomplete="username" required autofocus></label>
+    <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="a-btn primary">Continue</button>
+  </form>
+  {% if setup_needed %}<p class="a-muted">No admin account yet — use the one-time setup link from the setup guide.</p>{% endif %}
+  {% else %}
+  <form method="post" action="/admin/login/2fa" class="a-form">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <label>6-digit code from your authenticator app
+      <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9A-Fa-f\- ]{6,13}" required autofocus></label>
+    <button class="a-btn primary">Sign in</button>
+  </form>
+  <p class="a-muted">Lost your phone? Enter one of your recovery codes instead (format XXXXXX-XXXXXX).</p>
+  {% endif %}
+</section>
+{% endblock %}

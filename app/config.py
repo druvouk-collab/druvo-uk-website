@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     catalog_source: str = "mock"
     database_url: str = ""
     # Transactional email (Resend HTTP API — works on any host, no SMTP ports needed)
+    # One-time token for creating the first admin at /admin/setup?token=... (remove after setup)
+    admin_setup_token: str = ""
+    # Optional error monitoring (Sentry free developer plan). Leave blank to disable.
+    sentry_dsn: str = ""
     resend_api_key: str = ""
     email_from: str = "DRUVO UK <orders@druvo.uk>"
     shop_notification_email: str = ""

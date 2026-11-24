@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Admin{% endblock %} · DRUVO UK</title>
+  <link rel="stylesheet" href="/static/css/admin.css?v={{ static_asset_version() }}">
+</head>
+<body>
+{% if admin and admin.mfa %}
+<header class="a-header">
+  <a class="a-brand" href="/admin">DRUVO <span>Admin</span></a>
+  {% if test_mode %}<span class="a-pill warn" title="Stripe is in test mode">Test mode</span>{% endif %}
+  <nav class="a-nav" aria-label="Admin">
+    {% for href, label in nav %}<a href="{{ href }}" {% if request.url.path == href or (href != '/admin' and request.url.path.startswith(href)) %}class="active"{% endif %}>{{ label }}</a>{% endfor %}
+  </nav>
+  <div class="a-user">
+    <a href="/admin/account">{{ admin.email }}</a>
+    <form method="post" action="/admin/logout"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-link">Sign out</button></form>
+  </div>
+</header>
+{% endif %}
+<main class="a-main">
+  {% if flash %}<div class="a-flash ok" role="status">{{ flash }}</div>{% endif %}
+  {% if error %}<div class="a-flash err" role="alert">{{ error }}</div>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

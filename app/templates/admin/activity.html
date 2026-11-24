@@ -1,0 +1,7 @@
+{% extends "admin/base.html" %}{% block title %}Activity{% endblock %}
+{% block content %}
+<h1>Activity log</h1>
+<div class="a-scroll"><table class="a-table">
+<thead><tr><th>When</th><th>Who</th><th>What</th><th>Item</th></tr></thead>
+<tbody>{% for e in entries %}<tr><td>{{ e.created_at.strftime('%d %b %Y %H:%M') }}</td><td>{{ e.actor }}</td><td>{{ e.action }}</td><td>{{ e.entity }} {{ e.entity_id }}</td></tr>{% else %}<tr><td colspan="4" class="a-muted">Nothing yet.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

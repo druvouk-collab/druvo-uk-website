@@ -58,3 +58,12 @@ def test_product_page_shows_delivery_next_to_price():
     assert resp.status_code == 200
     assert "standard UK delivery" in resp.text
     assert "data-delivery-price" in resp.text
+
+
+def test_sitemap_lists_product_images_for_google_images():
+    from app.services.seo_service import sitemap_xml
+
+    xml = sitemap_xml([{"loc": "https://druvo.uk/product/x", "lastmod": "2026-11-24", "changefreq": "daily",
+                        "priority": "0.8", "images": ["https://druvo.uk/media/1.jpg"]}])
+    assert 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' in xml
+    assert "<image:loc>https://druvo.uk/media/1.jpg</image:loc>" in xml

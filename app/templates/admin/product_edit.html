@@ -1,0 +1,72 @@
+{% extends "admin/base.html" %}{% block title %}{{ product.name if product else 'New product' }}{% endblock %}
+{% block content %}
+<p><a href="/admin/products">← Products</a></p>
+<div class="a-head"><h1>{{ product.name if product else 'New product' }}</h1>{% if product and product.status == 'live' %}<a class="a-btn" href="/product/{{ product.slug }}" target="_blank" rel="noopener">View on site ↗</a>{% endif %}</div>
+<form method="post" action="{{ '/admin/products/' ~ product.id if product else '/admin/products/new' }}" class="a-form">
+<input type="hidden" name="csrf" value="{{ admin.csrf }}">
+<div class="a-grid two">
+<section class="a-card">
+  <h2>Details</h2>
+  <label>Title <span class="a-muted">(brand + item + key detail + size, e.g. "BALANCE Men's Cream Tracksuit Set – Size L")</span><input name="name" required maxlength="150" value="{{ product.name if product else '' }}"></label>
+  <label>Description <span class="a-muted">(condition, measurements, material — 150+ words helps Google)</span><textarea name="description" rows="9">{{ product.description if product else '' }}</textarea></label>
+  <div class="a-row">
+    <label>Brand<input name="brand" value="{{ product.brand if product else '' }}"></label>
+    <label>Condition<select name="condition">{% for c in conditions %}<option {% if product and product.condition == c %}selected{% endif %}>{{ c }}</option>{% endfor %}{% if product and product.condition not in conditions %}<option selected>{{ product.condition }}</option>{% endif %}</select></label>
+  </div>
+  <div class="a-row">
+    <label>Category<select name="category"><option value="">—</option>{% for c in categories %}<option value="{{ c.slug }}" {% if product and product.category and product.category.slug == c.slug %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+    <label>Status<select name="status">{% for s in statuses %}<option {% if (product.status if product else 'draft') == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+  </div>
+  <label>Tags <span class="a-muted">(comma separated)</span><input name="tags" value="{{ product.tags|join(', ') if product else '' }}"></label>
+  <div class="a-row">
+    <label>Web address (slug)<input name="slug" value="{{ product.slug if product else '' }}" placeholder="auto from title"></label>
+    <label>Barcode (GTIN)<input name="gtin" value="{{ product.gtin if product else '' }}"></label>
+  </div>
+  <label>Manufacturer part no. (MPN)<input name="mpn" value="{{ product.mpn if product else '' }}"></label>
+  <div class="a-row">
+    <label class="a-check"><input type="checkbox" name="is_new_arrival" value="1" {% if product and product.is_new_arrival %}checked{% endif %}> New arrival</label>
+    <label class="a-check"><input type="checkbox" name="is_on_sale" value="1" {% if product and product.is_on_sale %}checked{% endif %}> On sale</label>
+  </div>
+  <label>Sale price £<input name="sale_price" inputmode="decimal" value="{{ '%.2f'|format(product.sale_price_pence/100) if product and product.sale_price_pence else '' }}"></label>
+</section>
+<section class="a-card">
+  <h2>Sizes, prices &amp; stock</h2>
+  {% set variants = product.variants if product else [] %}
+  <input type="hidden" name="variant_count" value="{{ variants|length }}">
+  {% for v in variants + [None] %}{% set i = loop.index0 %}
+  <fieldset class="a-variant">
+    <legend>{{ ('Variant ' ~ loop.index) if v else 'Add a size / variant' }}{% if v and sold.get(v.id) %} · {{ sold[v.id] }} sold{% endif %}</legend>
+    <input type="hidden" name="v{{ i }}_id" value="{{ v.id if v else '' }}">
+    <div class="a-row"><label>SKU<input name="v{{ i }}_sku" value="{{ v.sku if v else '' }}"></label><label>Size<input name="v{{ i }}_size" value="{{ v.size if v else '' }}"></label><label>Colour<input name="v{{ i }}_colour" value="{{ v.colour if v else '' }}"></label></div>
+    <div class="a-row"><label>Price £<input name="v{{ i }}_price" inputmode="decimal" value="{{ '%.2f'|format(v.price_pence/100) if v else '' }}"></label><label>Cost £ <span class="a-muted">(what you paid)</span><input name="v{{ i }}_cost" inputmode="decimal" value="{{ '%.2f'|format(v.cost_pence/100) if v else '' }}"></label></div>
+    <div class="a-row"><label>In stock<input name="v{{ i }}_stock" inputmode="numeric" value="{{ v.stock_quantity if v else '1' }}"></label><label>Alert at or below<input name="v{{ i }}_threshold" inputmode="numeric" value="{{ v.low_stock_threshold if v else '1' }}"></label></div>
+  </fieldset>
+  {% endfor %}
+  <p class="a-muted">Stock here is the single source of truth for druvo.uk. Changes are logged and queued for DRUVO Manager.</p>
+</section>
+</div>
+<p class="a-sticky"><button class="a-btn primary">{{ 'Save changes' if product else 'Create product' }}</button></p>
+</form>
+{% if product %}
+<section class="a-card">
+  <h2>Photos</h2>
+  <div class="a-photos">
+  {% for img in product.images %}
+    <figure><img src="{{ img.url }}" alt="{{ img.alt }}" width="140" height="140" loading="lazy">
+      <figcaption>{% if loop.first %}<span class="a-pill">Main</span>{% else %}<form method="post" action="/admin/products/{{ product.id }}/images/{{ img.id }}/first"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-link">Make main</button></form>{% endif %}
+      <form method="post" action="/admin/products/{{ product.id }}/images/{{ img.id }}/delete"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-link danger">Remove</button></form></figcaption></figure>
+  {% else %}<p class="a-muted">No photos yet — Google Shopping needs at least one real photo.</p>{% endfor %}
+  </div>
+  <form method="post" action="/admin/products/{{ product.id }}/images" enctype="multipart/form-data" class="a-form inline">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+    <input name="alt" placeholder="Photo description (for Google Images)" maxlength="300">
+    <button class="a-btn">Upload photo</button>
+  </form>
+  <p class="a-muted">Photos are resized, rotated correctly and stripped of location data automatically.</p>
+  {% for v in product.variants %}{% if not sold.get(v.id) and product.variants|length > 1 %}
+  <form method="post" action="/admin/products/{{ product.id }}/variants/{{ v.id }}/delete" class="a-inline"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-link danger">Delete variant {{ v.sku }}</button></form>
+  {% endif %}{% endfor %}
+</section>
+{% endif %}
+{% endblock %}

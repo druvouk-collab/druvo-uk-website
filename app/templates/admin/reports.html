@@ -1,0 +1,11 @@
+{% extends "admin/base.html" %}{% block title %}Sales &amp; profit{% endblock %}
+{% block content %}
+<div class="a-head"><h1>Sales &amp; profit</h1><a class="a-btn" href="/admin/orders.csv">Export orders CSV</a></div>
+<nav class="a-tabs">{% for k, label in [('day','Daily'),('week','Weekly'),('month','Monthly'),('year','Yearly')] %}<a href="?by={{ k }}" {% if by==k %}class="active"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+<div class="a-scroll"><table class="a-table report">
+<thead><tr><th>Period</th><th class="r">Orders</th><th class="r">Sales</th><th class="r">Refunds</th><th class="r">Item cost</th><th class="r">Stripe fees</th><th class="r">Marketplace fees</th><th class="r">Postage &amp; packaging</th><th class="r">Expenses</th><th class="r">Net profit</th><th class="r">Margin</th></tr></thead>
+<tbody>{% for label, t in rows %}
+<tr><td>{{ label }}</td><td class="r">{{ t.orders }}</td><td class="r">{{ money(t.gross_pence) }}</td><td class="r">{{ money(t.refunds_pence) }}</td><td class="r">{{ money(t.cogs_pence) }}</td><td class="r">{{ money(t.payment_fees_pence) }}{% if t.fees_unknown %}*{% endif %}</td><td class="r">{{ money(t.marketplace_fees_pence) }}</td><td class="r">{{ money(t.postage_pence + t.packaging_pence) }}</td><td class="r">{{ money(t.expenses_pence) }}</td><td class="r {{ 'neg' if t.profit_pence < 0 else 'pos' }}"><strong>{{ money(t.profit_pence) }}</strong></td><td class="r">{{ t.margin_pct }}%</td></tr>
+{% endfor %}</tbody></table></div>
+<p class="a-muted">Net profit = sales − refunds − item cost − Stripe fees − marketplace commissions − postage − packaging − expenses. * = Stripe fee not yet received for some orders. Marketplace (eBay/Amazon) sales appear here once DRUVO Manager sync is connected. Figures exclude VAT and income tax.</p>
+{% endblock %}

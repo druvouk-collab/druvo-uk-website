@@ -65,6 +65,8 @@ def shop(db_url, monkeypatch):
 
     monkeypatch.setattr(stripe.checkout.Session, "create", staticmethod(fake_session_create))
     monkeypatch.setattr(stripe.Refund, "create", staticmethod(fake_refund_create))
+    monkeypatch.setattr(stripe.PaymentIntent, "retrieve", staticmethod(
+        lambda pi, expand=None: {"id": pi, "latest_charge": {"balance_transaction": {"fee": 56}}}))
     monkeypatch.setattr("app.services.email_service.httpx.post", fake_post)
     yield {"sessions": sessions, "refunds": refunds, "emails": emails}
     get_settings.cache_clear()
@@ -165,6 +167,7 @@ def test_paid_webhook_confirms_order_once_and_sends_emails(shop):
     assert paid.reservations[0].status == "consumed"
     assert paid.shipping_address["postal_code"] == "OL1 1AA"
     assert paid.confirmation_email_sent_at is not None and paid.shop_notification_sent_at is not None
+    assert paid.payment_fee_pence == 56  # actual Stripe fee captured for profit reports
     assert _stock() == start - 1
 
     # Exact replay and a second event for the same session are both ignored.

@@ -2,7 +2,7 @@
 
 Revision ID: 0001
 Revises: 
-Create Date: 2026-11-24 07:33:03.951244
+Create Date: 2026-11-24 07:48:50.479992
 """
 from __future__ import annotations
 
@@ -27,6 +27,10 @@ def upgrade() -> None:
     sa.Column('failed_logins', sa.Integer(), nullable=False),
     sa.Column('locked_until', sa.DateTime(timezone=True), nullable=True),
     sa.Column('last_login_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('session_version', sa.Integer(), nullable=False),
+    sa.Column('totp_last_step', sa.Integer(), nullable=False),
+    sa.Column('recovery_codes', sa.JSON(), nullable=False),
+    sa.Column('role', sa.String(length=20), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id'),
@@ -65,6 +69,17 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
     )
+    op.create_table('expenses',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('spent_on', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('category', sa.String(length=60), nullable=False),
+    sa.Column('description', sa.String(length=300), nullable=False),
+    sa.Column('amount_pence', sa.Integer(), nullable=False),
+    sa.Column('created_by', sa.String(length=320), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('outbox_events',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('topic', sa.String(length=100), nullable=False),
@@ -77,6 +92,28 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_outbox_status', 'outbox_events', ['status', 'created_at'], unique=False)
+    op.create_table('promotions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=200), nullable=False),
+    sa.Column('code', sa.String(length=50), nullable=False),
+    sa.Column('description', sa.Text(), nullable=False),
+    sa.Column('discount_type', sa.String(length=20), nullable=False),
+    sa.Column('discount_value', sa.Integer(), nullable=False),
+    sa.Column('min_spend_pence', sa.Integer(), nullable=False),
+    sa.Column('starts_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('ends_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('usage_limit', sa.Integer(), nullable=True),
+    sa.Column('times_used', sa.Integer(), nullable=False),
+    sa.Column('active', sa.Boolean(), nullable=False),
+    sa.Column('external_id', sa.String(length=120), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.CheckConstraint("discount_type IN ('percent','fixed')", name='ck_promotions_type'),
+    sa.CheckConstraint('discount_value > 0', name='ck_promotions_value'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('code'),
+    sa.UniqueConstraint('external_id')
+    )
     op.create_table('stripe_events',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('event_id', sa.String(length=255), nullable=False),
@@ -93,10 +130,17 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=200), nullable=False),
     sa.Column('status', sa.String(length=30), nullable=False),
     sa.Column('currency', sa.String(length=3), nullable=False),
+    sa.Column('channel', sa.String(length=30), nullable=False),
     sa.Column('subtotal_pence', sa.Integer(), nullable=False),
+    sa.Column('discount_pence', sa.Integer(), nullable=False),
+    sa.Column('promo_code', sa.String(length=50), nullable=False),
     sa.Column('shipping_pence', sa.Integer(), nullable=False),
     sa.Column('total_pence', sa.Integer(), nullable=False),
     sa.Column('refunded_pence', sa.Integer(), nullable=False),
+    sa.Column('payment_fee_pence', sa.Integer(), nullable=True),
+    sa.Column('marketplace_fee_pence', sa.Integer(), nullable=False),
+    sa.Column('postage_cost_pence', sa.Integer(), nullable=False),
+    sa.Column('packaging_cost_pence', sa.Integer(), nullable=False),
     sa.Column('shipping_method', sa.String(length=60), nullable=False),
     sa.Column('shipping_address', sa.JSON(), nullable=False),
     sa.Column('phone', sa.String(length=50), nullable=False),
@@ -119,7 +163,8 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.CheckConstraint("status IN ('pending_payment','paid','packed','shipped','delivered','cancelled','expired','refunded','partially_refunded')", name='ck_orders_status'),
-    sa.CheckConstraint('total_pence = subtotal_pence + shipping_pence', name='ck_orders_total'),
+    sa.CheckConstraint('discount_pence >= 0 AND discount_pence <= subtotal_pence', name='ck_orders_discount'),
+    sa.CheckConstraint('total_pence = subtotal_pence - discount_pence + shipping_pence', name='ck_orders_total'),
     sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('idempotency_key'),
@@ -161,6 +206,8 @@ def upgrade() -> None:
     sa.Column('url', sa.String(length=1000), nullable=False),
     sa.Column('alt', sa.String(length=300), nullable=False),
     sa.Column('position', sa.Integer(), nullable=False),
+    sa.Column('data', sa.LargeBinary(), nullable=True),
+    sa.Column('content_type', sa.String(length=50), nullable=False),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -185,7 +232,9 @@ def upgrade() -> None:
     sa.Column('size', sa.String(length=60), nullable=False),
     sa.Column('colour', sa.String(length=60), nullable=False),
     sa.Column('price_pence', sa.Integer(), nullable=False),
+    sa.Column('cost_pence', sa.Integer(), nullable=False),
     sa.Column('stock_quantity', sa.Integer(), nullable=False),
+    sa.Column('low_stock_threshold', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.CheckConstraint('price_pence >= 0', name='ck_variants_price_non_negative'),
@@ -205,6 +254,7 @@ def upgrade() -> None:
     sa.Column('colour', sa.String(length=60), nullable=False),
     sa.Column('quantity', sa.Integer(), nullable=False),
     sa.Column('unit_price_pence', sa.Integer(), nullable=False),
+    sa.Column('unit_cost_pence', sa.Integer(), nullable=False),
     sa.CheckConstraint('quantity > 0', name='ck_order_items_quantity_positive'),
     sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['variant_id'], ['variants.id'], ondelete='SET NULL'),
@@ -241,8 +291,10 @@ def downgrade() -> None:
     op.drop_index('ix_orders_email', table_name='orders')
     op.drop_table('orders')
     op.drop_table('stripe_events')
+    op.drop_table('promotions')
     op.drop_index('ix_outbox_status', table_name='outbox_events')
     op.drop_table('outbox_events')
+    op.drop_table('expenses')
     op.drop_table('customers')
     op.drop_table('categories')
     op.drop_table('audit_log')

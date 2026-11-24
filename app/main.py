@@ -15,7 +15,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from app.config import CANONICAL_HOST, get_settings
 from app.lib.druvo_api.client import DruvoApiClient
-from app.routes import account, admin, catalog_api, chat_api, checkout_api, legal, seo, shop, stripe_webhook
+from app.routes import account, admin, admin_panel, catalog_api, chat_api, checkout_api, legal, seo, shop, stripe_webhook
 from app.services.readiness_service import build_readiness_report
 from app.templating import templates
 
@@ -26,6 +26,33 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _init_error_monitoring() -> None:
+    dsn = get_settings().sentry_dsn.strip()
+    if not dsn:
+        return
+    try:
+        import sentry_sdk
+
+        def scrub(event, hint):
+            request = event.get("request") or {}
+            request.pop("cookies", None)
+            request.pop("data", None)
+            headers = request.get("headers") or {}
+            for key in list(headers):
+                if key.lower() in ("cookie", "authorization", "stripe-signature"):
+                    headers[key] = "[removed]"
+            return event
+
+        sentry_sdk.init(dsn=dsn, send_default_pii=False, traces_sample_rate=0.0, before_send=scrub,
+                        environment="production" if get_settings().production_mode else "staging")
+        logger.info("Error monitoring enabled")
+    except Exception:
+        logger.exception("Could not start error monitoring")
+
+
+_init_error_monitoring()
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR.parent / "static"
@@ -57,9 +84,39 @@ app.include_router(checkout_api.router)
 app.include_router(stripe_webhook.router)
 app.include_router(account.router)
 app.include_router(admin.router)
+app.include_router(admin_panel.router)
+app.include_router(admin_panel.media_router)
 app.include_router(legal.router)
 app.include_router(seo.router)
 app.include_router(chat_api.router)
+
+
+@app.exception_handler(admin_panel.AdminLoginRequired)
+async def admin_login_required(request: Request, exc: Exception) -> RedirectResponse:
+    return RedirectResponse("/admin/login", status_code=303)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    headers = response.headers
+    headers.setdefault("X-Content-Type-Options", "nosniff")
+    headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if request.url.scheme == "https" or get_settings().production_mode:
+        headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    if path.startswith("/admin"):
+        headers["X-Frame-Options"] = "DENY"
+        headers["Cache-Control"] = "no-store"
+        headers["X-Robots-Tag"] = "noindex, nofollow"
+        headers["Content-Security-Policy"] = (
+            "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; "
+            "script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'"
+        )
+    else:
+        headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    return response
 
 
 @app.middleware("http")
