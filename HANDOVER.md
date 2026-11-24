@@ -3,7 +3,7 @@
 > Read this first at the start of every working session. Update the session log and task lists at the end of
 > every session. **Never put passwords, API keys, tokens or other secrets in this file or anywhere in the repo.**
 
-Last updated: 24 Nov 2026 (session 2)
+Last updated: 24 Nov 2026 (session 3)
 
 ## 1. Business objectives
 - DRUVO UK sells new, new-with-tags and pre-loved clothing, footwear and accessories to UK customers.
@@ -26,6 +26,19 @@ Last updated: 24 Nov 2026 (session 2)
 | Not used | Netlify, Higgsfield (checked 24 Nov 2026 — empty) |
 
 Secrets live **only** in Render → Environment. `.env` is never committed.
+
+## 2b. DRUVO Manager / DRUVO AI (MacBook) — NOT YET AUDITED
+- Central management app on the owner's MacBook (`/Users/siamkhalil/Desktop/Druvo AI/`). Source not yet shared
+  with Claude — see `docs/ROADMAP.md` §9 for how to share it safely.
+- Known from the website code: local REST API `/api/v1/products|categories|orders|stock/check|promotions`
+  (API-key auth), master inventory, order status history, promotions, local eBay OAuth on 127.0.0.1:8765
+  (README mentions an eBay **Sandbox** RuName).
+- Marketplace status (owner-reported, unverified): DRUVO.uk connected · eBay connected · Amazon connected ·
+  Vinted in progress.
+- Long-term vision: trend research, supplier discovery, profit calculation, SEO listings, multichannel
+  publishing, central stock/price sync, orders/returns, AI recommendations — owner approves all spending.
+- Target architecture: cloud hub (Render + PostgreSQL) holds the single stock ledger and orders; Manager remains
+  the management UI and syncs with the cloud; website never depends on the Mac. Details: `docs/ROADMAP.md`.
 
 ## 3. Technical summary
 - Python 3.12, FastAPI, Jinja2 SSR, custom CSS, no Node build. Start: `bash scripts/start.sh`. Health: `/health`.
@@ -55,6 +68,7 @@ Secrets live **only** in Render → Environment. `.env` is never committed.
 
 ## 5. Outstanding tasks
 See `docs/SOLUTION_PROPOSAL.md` §8 for the phased plan.
+0. **Audit DRUVO Manager** once source is shared (ROADMAP §9).
 1. Owner decisions (proposal §9): hosting upgrade at go-live, business details, Stripe/Resend accounts,
    PayPal yes/no, delivery options, GitHub push access for Claude.
 2. Phase 1 — Postgres schema, migrations, catalogue import.
@@ -80,6 +94,16 @@ See `docs/SOLUTION_PROPOSAL.md` §8 for the phased plan.
 - No company name/address on the site.
 - Delivery charge shown only at checkout — review against DMCC Act drip-pricing rules.
 
+## 6a. Running costs
+Fixed target < £15/month. Planned at go-live: Render Starter $7 + Render Postgres ~$6.30 + ICO £52/yr
+≈ £14–15/month. Resend free tier, staging on free tiers. Variable: Stripe 1.5% + 20p (standard UK cards),
+marketplace fees, postage. Currently paying: £0 hosting (Render Free).
+
+## 6c. SEO performance log
+| Date | Indexed pages | "druvo" position | "druvo uk" position | Notes |
+|---|---|---|---|---|
+| 24 Nov 2026 | unknown (Search Console not set up) | not found | not found | Baseline. Render Free spin-down robots risk. |
+
 ## 6b. Owner decisions (24 Nov 2026)
 - Approved: Render Starter + Render Postgres (~£10–11/month) — **purchase only after final approval**.
 - Approved: Stripe (cards, Apple Pay, Google Pay); PayPal prepared, enabled only after fees confirmed.
@@ -96,6 +120,14 @@ See `docs/SOLUTION_PROPOSAL.md` §8 for the phased plan.
 - No secrets in the repo.
 
 ## 8. Session log
+### 24 Nov 2026 (session 3)
+GitHub write access confirmed (Claude GitHub App). Pushed branch. Phase 1 database built and tested on
+PostgreSQL 16 + SQLite (293 tests passing). Owner sent full project brief (DRUVO Manager vision, marketplaces,
+SEO, costs < £15). Wrote `docs/ROADMAP.md` (existing vs to-build, cloud hub architecture, marketplace API
+research, 30/60/90 SEO plan, costs, security). Paused deep checkout/stock-sync design decisions that depend on
+DRUVO Manager until its source is audited; website checkout (W2) continues. Next: owner shares DRUVO Manager
+source; Claude completes W2 checkout and W5 emails.
+
 ### 24 Nov 2026 (session 2)
 Verified robots.txt/sitemap on live site; confirmed Render Free spin-down robots risk from Render docs.
 Implemented Google structured-data, Merchant feed and delivery-price display changes on
