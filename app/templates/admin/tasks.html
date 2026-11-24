@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}{% block title %}Tasks{% endblock %}
+{% block content %}
+<h1>Tasks</h1>
+{% set total = conflicts|length + overdue|length + listings|length + failed_syncs|length %}
+{% if total == 0 and not low %}<section class="a-card"><p>Nothing needs your attention. 🎉</p></section>{% endif %}
+{% if conflicts %}<section class="a-card"><h2>Oversold / payment problems ({{ conflicts|length }})</h2>
+<ul>{% for o in conflicts %}<li><a href="/admin/orders/{{ o.order_number }}">{{ o.order_number }}</a> ({{ o.channel }}) — {{ o.notes }}</li>{% endfor %}</ul></section>{% endif %}
+{% if overdue %}<section class="a-card"><h2>Dispatch overdue ({{ overdue|length }})</h2>
+<ul>{% for o in overdue %}<li><a href="/admin/orders/{{ o.order_number }}">{{ o.order_number }}</a> ({{ o.channel }}) — due {{ o.dispatch_by.strftime('%d %b') }}</li>{% endfor %}</ul></section>{% endif %}
+{% if listings %}<section class="a-card"><h2>Listings to update by hand ({{ listings|length }})</h2>
+<table class="a-table"><tbody>{% for l in listings %}<tr><td><a href="/admin/products/{{ l.variant.product_id }}">{{ l.variant.sku }}</a> on <strong>{{ names.get(l.channel_code, l.channel_code) }}</strong><br><span class="a-muted">{{ l.attention_reason or l.last_error }}</span>{% if l.external_url %} · <a href="{{ l.external_url }}" target="_blank" rel="noopener">open listing ↗</a>{% endif %}</td>
+<td><form method="post" action="/admin/listings" class="a-form inline"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><input type="hidden" name="back" value="/admin/tasks"><input type="hidden" name="variant_id" value="{{ l.variant_id }}"><input type="hidden" name="channel" value="{{ l.channel_code }}">
+<select name="status"><option value="ended">I've removed it</option><option value="sold">It sold there</option><option value="published">Still listed (stock updated)</option></select><button class="a-btn">Done</button></form></td></tr>{% endfor %}</tbody></table></section>{% endif %}
+{% if failed_syncs %}<section class="a-card"><h2>Failed sync jobs ({{ failed_syncs|length }})</h2>
+<ul>{% for e in failed_syncs %}<li>{{ e.topic }} · {{ e.attempts }} attempts · <span class="a-muted">{{ e.last_error }}</span></li>{% endfor %}</ul></section>{% endif %}
+{% if low %}<section class="a-card"><h2>Low or sold-out stock ({{ low|length }})</h2>
+<ul>{% for v in low %}<li><a href="/admin/products/{{ v.product_id }}">{{ v.name }}</a> {{ v.size }} — {{ v.stock }} left</li>{% endfor %}</ul></section>{% endif %}
+{% endblock %}

@@ -3,7 +3,11 @@
 > Read this first at the start of every working session. Update the session log and task lists at the end of
 > every session. **Never put passwords, API keys, tokens or other secrets in this file or anywhere in the repo.**
 
-Last updated: 24 Nov 2026 (session 5)
+Last updated: 24 Nov 2026 (session 6)
+
+> **Start here:** `docs/MASTER_ROADMAP.md` (the owner's plan) → `docs/PROGRESS.md` (status of every feature)
+> → `docs/OWNER_ACTIONS.md` (what's waiting on the owner). DRUVO Manager is the product; DRUVO.uk is one of
+> five channels (DRUVO.uk, eBay, Amazon, Vinted, Depop).
 
 ## 1. Business objectives
 - DRUVO UK sells new, new-with-tags and pre-loved clothing, footwear and accessories to UK customers.
@@ -61,6 +65,12 @@ Secrets live **only** in Render → Environment. `.env` is never committed.
   (throttled 1/hour per issue) and a daily 08:00 digest (to dispatch + low stock). Optional Sentry (`SENTRY_DSN`).
 - Backups: `.github/workflows/db-backup.yml` nightly pg_dump → AES-256 gpg → 30-day artifact.
 - Owner checklist: `docs/OWNER_ACTIONS.md`.
+- **Multichannel core** (session 6): `app/services/inventory.py` (central stock ledger — every change is atomic,
+  recorded in `stock_movements`, and queues `listing.sync_quantity` jobs), `app/services/channel_sync.py`
+  (platforms, listings, idempotent marketplace sale import with oversell detection, sync worker with backoff,
+  reconciliation, tasks), `app/routes/manager_api.py` (Bearer `MANAGER_API_KEY`; the existing Mac DRUVO Manager
+  can push eBay/Amazon sales and listing states and pull queued jobs). Channel modes: internal (druvo.uk),
+  automatic (eBay/Amazon, "awaiting_manager" until audited), assisted (Vinted/Depop).
 - `CATALOG_SOURCE`: `static` (catalog.json, order-by-email — **live today**), `druvo_api` (DRUVO AI API on the
   Mac; only mode where Stripe test checkout works), `mock` (dev).
 - Stripe test-mode checkout exists (`app/services/stripe_service.py`, `app/routes/checkout_api.py`,
@@ -75,6 +85,11 @@ Secrets live **only** in Render → Environment. `.env` is never committed.
 - **23 Nov 2026** — Static catalogue + order-by-email mode; BALANCE cream tracksuit set (L) £20 listed; Chat as
   email-ordering assistant; FAQ/Delivery updated; "Live stock" → "Availability confirmed by email"; meta
   description and plurals fixed; desktop/mobile check; Stripe & PayPal discussed.
+- **24 Nov 2026 (session 6)** — Owner issued the master roadmap. Built the multichannel core (central stock
+  ledger and history, listings per platform with platform prices/status, marketplace sale import, cross-platform
+  propagation, assisted Vinted/Depop workflow, retries and alerts, reconciliation, tasks), the Manager sync API, and
+  screens for inventory value, platforms and fees, tasks, revenue by platform, best sellers and accounting CSVs.
+  Dashboard rebranded DRUVO Manager. Encrypted backup restore verified. 328 tests passing on PostgreSQL.
 - **24 Nov 2026 (session 5)** — Admin dashboard (orders, dispatch, refunds, products and photos, stock and
   low-stock alerts, customers with GDPR export/erase, discount codes applied at checkout via Stripe coupons,
   expenses, daily/weekly/monthly/yearly sales and profit, CSV export, activity log); 2FA security; security
@@ -156,6 +171,12 @@ marketplace fees, postage. Currently paying: £0 hosting (Render Free).
 - No secrets in the repo.
 
 ## 8. Session log
+### 24 Nov 2026 (session 6)
+Master roadmap received and stored. Reviewed everything against it → `docs/PROGRESS.md`. Research: Amazon cancelled
+SP-API developer fees (May 2026); Royal Mail Click & Drop is free with an API. Built Phase 2/3/5/6/7 foundations that
+apply to every platform (see §4). Recommended architecture: one cloud DRUVO Manager (needs owner confirmation).
+Next: owner actions 1–5 and 14–16; then staging tests; then the Manager audit and eBay/Amazon connection.
+
 ### 24 Nov 2026 (session 5)
 Built the admin dashboard and security/reliability layer (see §4). Couldn't validate Stripe calls with stripe-mock
 (running the locally built tool was blocked in this environment), so validation happens on staging with real test

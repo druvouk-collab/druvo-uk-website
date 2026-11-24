@@ -2,7 +2,7 @@
 
 Revision ID: 0001
 Revises: 
-Create Date: 2026-11-24 07:48:50.479992
+Create Date: 2026-11-24 08:12:35.454352
 """
 from __future__ import annotations
 
@@ -58,6 +58,25 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('slug')
     )
+    op.create_table('channels',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('code', sa.String(length=30), nullable=False),
+    sa.Column('name', sa.String(length=60), nullable=False),
+    sa.Column('mode', sa.String(length=20), nullable=False),
+    sa.Column('enabled', sa.Boolean(), nullable=False),
+    sa.Column('connection_status', sa.String(length=40), nullable=False),
+    sa.Column('fee_percent_bp', sa.Integer(), nullable=False),
+    sa.Column('fee_fixed_pence', sa.Integer(), nullable=False),
+    sa.Column('dispatch_days', sa.Integer(), nullable=False),
+    sa.Column('last_sync_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_error', sa.Text(), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.CheckConstraint("mode IN ('internal','automatic','assisted')", name='ck_channels_mode'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('code')
+    )
     op.create_table('customers',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(length=320), nullable=False),
@@ -89,9 +108,11 @@ def upgrade() -> None:
     sa.Column('last_error', sa.Text(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('sent_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('next_attempt_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('consumer', sa.String(length=20), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('ix_outbox_status', 'outbox_events', ['status', 'created_at'], unique=False)
+    op.create_index('ix_outbox_status', 'outbox_events', ['status', 'consumer', 'created_at'], unique=False)
     op.create_table('promotions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=200), nullable=False),
@@ -131,6 +152,9 @@ def upgrade() -> None:
     sa.Column('status', sa.String(length=30), nullable=False),
     sa.Column('currency', sa.String(length=3), nullable=False),
     sa.Column('channel', sa.String(length=30), nullable=False),
+    sa.Column('external_order_id', sa.String(length=120), nullable=True),
+    sa.Column('dispatch_by', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('fee_status', sa.String(length=10), nullable=False),
     sa.Column('subtotal_pence', sa.Integer(), nullable=False),
     sa.Column('discount_pence', sa.Integer(), nullable=False),
     sa.Column('promo_code', sa.String(length=50), nullable=False),
@@ -167,6 +191,7 @@ def upgrade() -> None:
     sa.CheckConstraint('total_pence = subtotal_pence - discount_pence + shipping_pence', name='ck_orders_total'),
     sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('channel', 'external_order_id', name='uq_orders_channel_external'),
     sa.UniqueConstraint('idempotency_key'),
     sa.UniqueConstraint('order_number'),
     sa.UniqueConstraint('stripe_checkout_session_id'),
@@ -243,6 +268,27 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('sku')
     )
+    op.create_table('channel_listings',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('variant_id', sa.Integer(), nullable=False),
+    sa.Column('channel_code', sa.String(length=30), nullable=False),
+    sa.Column('status', sa.String(length=20), nullable=False),
+    sa.Column('price_pence', sa.Integer(), nullable=True),
+    sa.Column('external_listing_id', sa.String(length=200), nullable=False),
+    sa.Column('external_url', sa.String(length=1000), nullable=False),
+    sa.Column('quantity_listed', sa.Integer(), nullable=True),
+    sa.Column('last_synced_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_error', sa.Text(), nullable=False),
+    sa.Column('attention_reason', sa.String(length=300), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.CheckConstraint("status IN ('not_listed','pending','published','failed','sold','ended','needs_attention')", name='ck_listings_status'),
+    sa.ForeignKeyConstraint(['channel_code'], ['channels.code'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['variant_id'], ['variants.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('variant_id', 'channel_code', name='uq_listing_variant_channel')
+    )
+    op.create_index('ix_listings_status', 'channel_listings', ['status'], unique=False)
     op.create_table('order_items',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('order_id', sa.Integer(), nullable=False),
@@ -260,6 +306,20 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['variant_id'], ['variants.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('stock_movements',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('variant_id', sa.Integer(), nullable=False),
+    sa.Column('delta', sa.Integer(), nullable=False),
+    sa.Column('quantity_after', sa.Integer(), nullable=True),
+    sa.Column('reason', sa.String(length=40), nullable=False),
+    sa.Column('channel', sa.String(length=30), nullable=False),
+    sa.Column('reference', sa.String(length=120), nullable=False),
+    sa.Column('actor', sa.String(length=320), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['variant_id'], ['variants.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('ix_stock_movements_variant', 'stock_movements', ['variant_id', 'created_at'], unique=False)
     op.create_table('stock_reservations',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('order_id', sa.Integer(), nullable=False),
@@ -281,7 +341,11 @@ def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_index('ix_reservations_status_expires', table_name='stock_reservations')
     op.drop_table('stock_reservations')
+    op.drop_index('ix_stock_movements_variant', table_name='stock_movements')
+    op.drop_table('stock_movements')
     op.drop_table('order_items')
+    op.drop_index('ix_listings_status', table_name='channel_listings')
+    op.drop_table('channel_listings')
     op.drop_table('variants')
     op.drop_table('refunds')
     op.drop_table('product_images')
@@ -296,6 +360,7 @@ def downgrade() -> None:
     op.drop_table('outbox_events')
     op.drop_table('expenses')
     op.drop_table('customers')
+    op.drop_table('channels')
     op.drop_table('categories')
     op.drop_table('audit_log')
     op.drop_table('admin_users')

@@ -49,6 +49,29 @@
 </form>
 {% if product %}
 <section class="a-card">
+  <h2>Where it's listed</h2>
+  <p class="a-muted">One stock figure for all platforms. When it sells anywhere, the others are updated automatically
+  (API platforms) or you get a task to remove it by hand (Vinted/Depop until their APIs are approved).</p>
+  <div class="a-scroll"><table class="a-table">
+  <thead><tr><th>Variant</th><th>Platform</th><th>Status</th><th>Platform price £</th><th>Listing link</th><th></th></tr></thead>
+  <tbody>
+  {% for v in product.variants %}{% for c in channels %}{% set l = listings.get((v.id, c.code)) %}
+  <tr><td>{{ v.sku }}<br><span class="a-muted">{{ v.size }} · {{ v.stock_quantity }} in stock</span></td>
+  <td>{{ c.name }}<br><span class="a-muted">{{ 'automatic' if c.mode == 'automatic' else ('website' if c.mode == 'internal' else 'manual (assisted)') }}</span></td>
+  <td><span class="a-status s-{{ {'published':'paid','sold':'shipped','failed':'cancelled','needs_attention':'packed','pending':'pending_payment'}.get(l.status if l else 'not_listed', 'expired') }}">{{ (l.status if l else 'not_listed').replace('_',' ') }}</span>{% if l and l.attention_reason %}<br><span class="a-muted">{{ l.attention_reason }}</span>{% endif %}</td>
+  <td colspan="3"><form method="post" action="/admin/listings" class="a-form inline">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}"><input type="hidden" name="product_id" value="{{ product.id }}">
+    <input type="hidden" name="variant_id" value="{{ v.id }}"><input type="hidden" name="channel" value="{{ c.code }}">
+    <input name="price" inputmode="decimal" placeholder="{{ '%.2f'|format(v.price_pence/100) }}" value="{{ '%.2f'|format(l.price_pence/100) if l and l.price_pence is not none else '' }}" aria-label="Price on {{ c.name }}">
+    {% if c.mode != 'internal' %}<input name="external_url" type="url" placeholder="https://…" value="{{ l.external_url if l else '' }}" aria-label="Listing link">{% endif %}
+    <select name="status" aria-label="Status">{% for s in listing_statuses %}<option value="{{ s }}" {% if (l.status if l else 'not_listed') == s %}selected{% endif %}>{{ {'pending':'publish (request)'}.get(s, s.replace('_',' ')) }}</option>{% endfor %}</select>
+    <button class="a-btn">Save</button>
+    {% if c.mode == 'assisted' %}<a class="a-link" href="/admin/products/{{ product.id }}/pack/{{ c.code }}">Listing pack</a>{% endif %}
+  </form></td></tr>
+  {% endfor %}{% endfor %}
+  </tbody></table></div>
+</section>
+<section class="a-card">
   <h2>Photos</h2>
   <div class="a-photos">
   {% for img in product.images %}

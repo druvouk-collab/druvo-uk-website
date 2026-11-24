@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}{% from "admin/_status.html" import status as st %}{% block title %}{{ order.order_number }}{% endblock %}
 {% block content %}
 <p><a href="/admin/orders">← Orders</a></p>
-<div class="a-head"><h1>{{ order.order_number }}</h1>{{ st(order.status) }}</div>
+<div class="a-head"><h1>{{ order.order_number }}</h1><span><span class="a-pill">{{ order.channel }}</span> {{ st(order.status) }}</span></div>
 {% if order.notes %}<div class="a-flash err">{{ order.notes }}</div>{% endif %}
 <div class="a-grid two">
 <section class="a-card">
@@ -18,7 +18,7 @@
   <table class="a-table compact"><tbody>
     <tr><td>Item cost</td><td class="r">{{ money(cogs) }}</td></tr>
     <tr><td>Stripe fee</td><td class="r">{{ money(order.payment_fee_pence) }}{% if order.payment_fee_pence is none %} <span class="a-muted">(pending)</span>{% endif %}</td></tr>
-    {% if order.marketplace_fee_pence %}<tr><td>Marketplace commission</td><td class="r">{{ money(order.marketplace_fee_pence) }}</td></tr>{% endif %}
+    {% if order.channel != 'druvo.uk' %}<tr><td>Marketplace commission{% if order.fee_status != 'actual' %} <span class="a-pill warn">estimated</span>{% endif %}</td><td class="r">{{ money(order.marketplace_fee_pence) }}</td></tr>{% endif %}
     <tr><td>Postage paid</td><td class="r">{{ money(order.postage_cost_pence) }}</td></tr>
     <tr><td>Packaging</td><td class="r">{{ money(order.packaging_cost_pence) }}</td></tr>
     <tr><th>Profit</th><th class="r {{ 'neg' if profit < 0 else 'pos' }}">{{ money(profit) }}</th></tr>
@@ -35,6 +35,8 @@
   <p>{{ order.name }}<br><a href="mailto:{{ order.email }}">{{ order.email }}</a>{% if order.phone %}<br>{{ order.phone }}{% endif %}</p>
   {% set a = order.shipping_address or {} %}
   {% if a.line1 %}<h2>Ship to</h2><p class="a-address">{{ a.name }}<br>{{ a.line1 }}{% if a.line2 %}<br>{{ a.line2 }}{% endif %}<br>{{ a.city }}<br><strong>{{ a.postal_code }}</strong></p>{% endif %}
+  {% if order.dispatch_by %}<p><strong>Dispatch by {{ order.dispatch_by.strftime('%a %d %b') }}</strong></p>{% endif %}
+  {% if order.external_order_id %}<p class="a-muted">{{ order.channel }} order {{ order.external_order_id }}</p>{% endif %}
   <p class="a-muted">Paid {{ order.paid_at.strftime('%d %b %Y %H:%M') if order.paid_at else '—' }} · {{ order.payment_method_type or 'card' }}{% if order.stripe_payment_intent_id %} · {{ order.stripe_payment_intent_id }}{% endif %}</p>
   {% if order.status == 'paid' %}
   <form method="post" action="/admin/orders/{{ order.order_number }}/packed"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn">Mark packed</button></form>

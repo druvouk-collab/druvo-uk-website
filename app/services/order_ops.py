@@ -88,7 +88,8 @@ def mark_dispatched(
         enqueue_outbox(
             db,
             "order.shipped",
-            {"order_number": order_number, "carrier": carrier, "tracking_number": tracking_number},
+            {"order_number": order_number, "channel": order.channel, "external_order_id": order.external_order_id,
+             "carrier": carrier, "tracking_number": tracking_number},
         )
         order_id = order.id
     if send_email:
@@ -130,6 +131,8 @@ def refund_order(
     with session_scope() as db:
         order = _order(db, order_number)
         if not order.stripe_payment_intent_id:
+            if order.channel != "druvo.uk":
+                raise OrderOpError(f"Refund this order on {order.channel} — marketplace refunds go through the marketplace.")
             raise OrderOpError("This order has no Stripe payment to refund.")
         remaining = order.total_pence - order.refunded_pence
         amount = remaining if amount_pence is None else int(amount_pence)
@@ -160,7 +163,8 @@ def refund_order(
         if restock and not row.restocked:
             for item in order.items:
                 if item.variant_id is not None:
-                    restore_stock(db, item.variant_id, item.quantity)
+                    restore_stock(db, item.variant_id, item.quantity, reference=order_number,
+                                  reason="refund_restock", actor=actor)
             row.restocked = True
             enqueue_outbox(
                 db, "stock.restocked", {"order_number": order_number, "items": [{"sku": i.sku, "quantity": i.quantity} for i in order.items]}

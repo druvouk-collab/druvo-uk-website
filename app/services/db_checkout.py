@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.db import models
 from app.db.base import session_scope
+from app.services import inventory
 
 logger = logging.getLogger(__name__)
 
@@ -110,31 +111,22 @@ def _merge_lines(lines: list[BasketLine]) -> list[BasketLine]:
     return [BasketLine(sku, qty) for sku, qty in merged.items()]
 
 
-def reserve_stock(session: Session, variant_id: int, quantity: int) -> bool:
+def reserve_stock(session: Session, variant_id: int, quantity: int, *, reference: str = "",
+                  reason: str = "checkout_hold") -> bool:
     """Atomic conditional decrement — the core oversell guard (works under concurrency)."""
-    result = session.execute(
-        update(models.Variant)
-        .where(models.Variant.id == variant_id, models.Variant.stock_quantity >= quantity)
-        .values(stock_quantity=models.Variant.stock_quantity - quantity)
-        .execution_options(synchronize_session=False)
-    )
-    return result.rowcount == 1
+    return inventory.take_stock(session, variant_id, quantity, reason=reason, channel="druvo.uk", reference=reference)
 
 
-def restore_stock(session: Session, variant_id: int, quantity: int) -> None:
-    session.execute(
-        update(models.Variant)
-        .where(models.Variant.id == variant_id)
-        .values(stock_quantity=models.Variant.stock_quantity + quantity)
-        .execution_options(synchronize_session=False)
-    )
+def restore_stock(session: Session, variant_id: int, quantity: int, *, reference: str = "",
+                  reason: str = "checkout_released", actor: str = "system") -> None:
+    inventory.return_stock(session, variant_id, quantity, reason=reason, channel="druvo.uk", reference=reference, actor=actor)
 
 
 def release_reservations(session: Session, order: models.Order) -> int:
     released = 0
     for reservation in order.reservations:
         if reservation.status == "active":
-            restore_stock(session, reservation.variant_id, reservation.quantity)
+            restore_stock(session, reservation.variant_id, reservation.quantity, reference=order.order_number)
             reservation.status = "released"
             released += reservation.quantity
     return released
@@ -246,8 +238,9 @@ class DbCheckoutService:
                 raise CheckoutError("Some items are no longer available: " + ", ".join(missing))
 
             sold_out: list[str] = []
+            hold_ref = "checkout:" + (key or email)[:100]
             for line in basket:
-                if not reserve_stock(db, variants[line.sku].id, line.quantity):
+                if not reserve_stock(db, variants[line.sku].id, line.quantity, reference=hold_ref):
                     sold_out.append(line.sku)
             if sold_out:
                 db.rollback()
@@ -464,7 +457,8 @@ class DbCheckoutService:
         if order.status in ("expired", "cancelled"):
             # Paid after the hold was released: try to take the stock again.
             for item in order.items:
-                if item.variant_id is None or not reserve_stock(db, item.variant_id, item.quantity):
+                if item.variant_id is None or not reserve_stock(db, item.variant_id, item.quantity,
+                                                                 reference=order.order_number, reason="late_payment_hold"):
                     conflict = True
             if conflict:
                 order.notes = (order.notes + "\n" if order.notes else "") + (
@@ -484,6 +478,7 @@ class DbCheckoutService:
 
         order.status = "paid"
         order.paid_at = _now()
+        order.dispatch_by = order.paid_at + timedelta(days=2)
         if order.promo_code:
             promo = db.scalar(select(models.Promotion).where(models.Promotion.code == order.promo_code))
             if promo is not None:

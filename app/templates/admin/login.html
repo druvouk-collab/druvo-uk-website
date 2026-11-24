@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}{% block title %}Sign in{% endblock %}
 {% block content %}
 <section class="a-auth">
-  <h1>DRUVO Admin</h1>
+  <h1>DRUVO Manager</h1>
   {% if form_error %}<div class="a-flash err" role="alert">{{ form_error }}</div>{% endif %}
   {% if step == "password" %}
   <form method="post" action="/admin/login" class="a-form">

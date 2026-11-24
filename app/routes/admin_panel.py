@@ -23,7 +23,7 @@ from app.admin import security as sec
 from app.config import get_settings
 from app.db import models
 from app.db.base import session_scope
-from app.services import catalog_admin, order_ops, reporting
+from app.services import catalog_admin, channel_sync, inventory, order_ops, reporting
 from app.services.order_ops import audit
 from app.templating import templates
 
@@ -33,12 +33,15 @@ media_router = APIRouter(tags=["media"], include_in_schema=False)
 
 NAV = [
     ("/admin", "Overview"),
+    ("/admin/tasks", "Tasks"),
     ("/admin/orders", "Orders"),
     ("/admin/products", "Products"),
+    ("/admin/inventory", "Inventory"),
     ("/admin/customers", "Customers"),
     ("/admin/promotions", "Discounts"),
     ("/admin/reports", "Sales & profit"),
     ("/admin/expenses", "Expenses"),
+    ("/admin/channels", "Platforms"),
     ("/admin/activity", "Activity"),
 ]
 
@@ -339,7 +342,7 @@ async def overview(request: Request):
 
 
 @router.get("/orders", response_class=HTMLResponse)
-async def orders_list(request: Request, status: str = "", q: str = "", page: int = 1):
+async def orders_list(request: Request, status: str = "", q: str = "", page: int = 1, channel: str = ""):
     session = _session(request)
     page = max(page, 1)
     with session_scope() as db:
@@ -350,13 +353,50 @@ async def orders_list(request: Request, status: str = "", q: str = "", page: int
             query = query.where(models.Order.status == status)
         else:
             query = query.where(models.Order.status != "pending_payment")
+        if channel:
+            query = query.where(models.Order.channel == channel)
         if q.strip():
             like = f"%{q.strip().lower()}%"
             query = query.where(or_(func.lower(models.Order.order_number).like(like),
                                     func.lower(models.Order.email).like(like), func.lower(models.Order.name).like(like)))
         orders = db.scalars(query.offset((page - 1) * 50).limit(51)).all()
+        channels = db.scalars(select(models.Channel).order_by(models.Channel.id)).all()
     return _render(request, "orders", session, orders=orders[:50], has_more=len(orders) > 50, page=page,
-                   status=status, q=q, statuses=models.ORDER_STATUSES)
+                   status=status, q=q, statuses=models.ORDER_STATUSES, channel=channel, channels=channels,
+                   now=datetime.now(timezone.utc))
+
+
+@router.get("/orders/import", response_class=HTMLResponse)
+async def order_import_page(request: Request):
+    session = _session(request)
+    channel_sync.seed_channels()
+    with session_scope() as db:
+        channels = db.scalars(select(models.Channel).where(models.Channel.code != "druvo.uk")).all()
+    return _render(request, "order_import", session, channels=channels)
+
+
+@router.post("/orders/import")
+async def order_import(request: Request):
+    session, form = await _post(request)
+    try:
+        price = catalog_admin.pence_from_form(form.get("price"), required=True, field="sale price")
+        fee = catalog_admin.pence_from_form(form.get("fee"), field="marketplace fee")
+        shipping = catalog_admin.pence_from_form(form.get("shipping"), field="delivery charged") or 0
+        qty = catalog_admin.int_from_form(form.get("quantity"), default=1, field="quantity") or 1
+        address = {k: str(form.get(k, "")).strip() for k in ("line1", "city", "postal_code") if str(form.get(k, "")).strip()}
+        result = await run_in_threadpool(lambda: channel_sync.record_marketplace_sale(
+            str(form.get("channel", "")), str(form.get("external_order_id", "")),
+            [{"sku": str(form.get("sku", "")), "quantity": qty, "unit_price_pence": price}],
+            actor=session.email, shipping_pence=shipping, marketplace_fee_pence=fee,
+            buyer_name=str(form.get("buyer_name", "")), shipping_address=address))
+    except (catalog_admin.CatalogEditError, channel_sync.ChannelError) as exc:
+        return _redirect("/admin/orders/import", err=str(exc))
+    if result.get("duplicate"):
+        return _redirect(f"/admin/orders/{result['order_number']}", msg="That order was already recorded.")
+    msg = "Sale recorded and stock updated everywhere."
+    if result.get("conflicts"):
+        msg = "Sale recorded — but it was OVERSOLD. See the warning on the order."
+    return _redirect(f"/admin/orders/{result['order_number']}", msg=msg)
 
 
 @router.get("/orders/{number}", response_class=HTMLResponse)
@@ -494,8 +534,16 @@ def _product_form_context(product_id: int | None):
             for v in product.variants:
                 sold[v.id] = int(db.scalar(select(func.coalesce(func.sum(models.OrderItem.quantity), 0))
                                            .where(models.OrderItem.variant_id == v.id)) or 0)
+        channels = db.scalars(select(models.Channel).where(models.Channel.enabled.is_(True))
+                              .order_by(models.Channel.id)).all() if product else []
+        listings = {}
+        if product:
+            for row in db.scalars(select(models.ChannelListing).where(
+                    models.ChannelListing.variant_id.in_([v.id for v in product.variants] or [0]))).all():
+                listings[(row.variant_id, row.channel_code)] = row
         return {"product": product, "categories": categories, "conditions": catalog_admin.CONDITIONS,
-                "statuses": catalog_admin.STATUSES, "sold": sold}
+                "statuses": catalog_admin.STATUSES, "sold": sold, "channels": channels, "listings": listings,
+                "listing_statuses": models.LISTING_STATUSES}
 
 
 @router.get("/products/new", response_class=HTMLResponse)
@@ -507,6 +555,7 @@ async def product_new(request: Request):
 @router.get("/products/{product_id}", response_class=HTMLResponse)
 async def product_edit(request: Request, product_id: int):
     session = _session(request)
+    await run_in_threadpool(channel_sync.seed_channels)
     return _render(request, "product_edit", session, **_product_form_context(product_id))
 
 
@@ -711,7 +760,32 @@ async def reports_page(request: Request, by: str = "day"):
         by = "day"
     count = {"day": 14, "week": 12, "month": 12, "year": 3}[by]
     rows = await run_in_threadpool(reporting.breakdown, by, count)
-    return _render(request, "reports", session, rows=rows, by=by)
+    start, end, label = reporting.period_bounds("year")
+    year = await run_in_threadpool(reporting.totals_between, start, end)
+    best = await run_in_threadpool(reporting.best_sellers, start, end)
+    stock_value = await run_in_threadpool(reporting.inventory_value)
+    return _render(request, "reports", session, rows=rows, by=by, year=year, best=best, stock_value=stock_value)
+
+
+@router.get("/reports.csv")
+async def reports_csv(request: Request, by: str = "month"):
+    """Accounting summary (one row per period) — for your accountant / Self Assessment / Corporation Tax prep."""
+    _session(request)
+    if by not in ("day", "week", "month", "year"):
+        by = "month"
+    rows = await run_in_threadpool(reporting.breakdown, by, {"day": 31, "week": 26, "month": 24, "year": 5}[by])
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["period", "orders", "sales", "refunds", "net_sales", "delivery_charged", "discounts", "item_cost",
+                "payment_fees", "marketplace_fees", "postage", "packaging", "expenses", "net_profit",
+                "orders_with_estimated_fees"])
+    for label, t in rows:
+        w.writerow([label, t.orders, *(f"{v / 100:.2f}" for v in (
+            t.gross_pence, t.refunds_pence, t.net_sales_pence, t.shipping_charged_pence, t.discounts_pence, t.cogs_pence,
+            t.payment_fees_pence, t.marketplace_fees_pence, t.postage_pence, t.packaging_pence, t.expenses_pence,
+            t.profit_pence)), t.estimated_fee_orders + t.fees_unknown])
+    return Response(out.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="druvo-summary-by-{by}.csv"'})
 
 
 @router.get("/expenses", response_class=HTMLResponse)
@@ -761,3 +835,134 @@ async def media(image_id: int):
         raise HTTPException(status_code=404)
     data, content_type = found
     return Response(data, media_type=content_type, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
+# ====================================================================== multichannel
+
+
+@router.post("/listings")
+async def listing_update(request: Request):
+    session, form = await _post(request)
+    product_id = str(form.get("product_id", ""))
+    back = f"/admin/products/{product_id}" if product_id.isdigit() else str(form.get("back", "/admin/tasks"))
+    if not back.startswith("/admin/"):
+        back = "/admin/tasks"
+    try:
+        price_raw = str(form.get("price", "")).strip()
+        price = catalog_admin.pence_from_form(price_raw, field="platform price") if price_raw else None
+        url = str(form.get("external_url", "")).strip()
+        await run_in_threadpool(lambda: channel_sync.upsert_listing(
+            int(form.get("variant_id", 0)), str(form.get("channel", "")), actor=session.email,
+            status=str(form.get("status", "")) or None, price_pence=price,
+            external_url=url if url else None,
+            external_listing_id=str(form.get("external_listing_id", "")).strip() or None))
+    except (catalog_admin.CatalogEditError, channel_sync.ChannelError, ValueError) as exc:
+        return _redirect(back, err=str(exc))
+    return _redirect(back, msg="Listing updated.")
+
+
+@router.get("/products/{product_id}/pack/{channel}", response_class=HTMLResponse)
+async def listing_pack(request: Request, product_id: int, channel: str):
+    """Assisted listing: everything needed to list by hand on Vinted/Depop (or any platform), ready to copy."""
+    session = _session(request)
+    with session_scope() as db:
+        product = db.get(models.Product, product_id)
+        if product is None:
+            raise HTTPException(status_code=404)
+        ch = db.scalar(select(models.Channel).where(models.Channel.code == channel))
+        if ch is None:
+            raise HTTPException(status_code=404)
+        listings = {row.variant_id: row for row in db.scalars(select(models.ChannelListing).where(
+            models.ChannelListing.channel_code == channel,
+            models.ChannelListing.variant_id.in_([v.id for v in product.variants] or [0]))).all()}
+    title_limit = {"ebay": 80}.get(channel, 0)
+    title = product.name if not title_limit else product.name[:title_limit]
+    base = get_settings().public_site_url.rstrip("/")
+    return _render(request, "listing_pack", session, product=product, channel=ch, listings=listings, title=title,
+                   title_limit=title_limit, base=base)
+
+
+@router.get("/inventory", response_class=HTMLResponse)
+async def inventory_page(request: Request, q: str = "", show: str = "live"):
+    session = _session(request)
+    with session_scope() as db:
+        query = (select(models.Variant, models.Product).join(models.Product, models.Variant.product_id == models.Product.id)
+                 .order_by(models.Product.name))
+        if show == "live":
+            query = query.where(models.Product.status == "live")
+        if q.strip():
+            like = f"%{q.strip().lower()}%"
+            query = query.where(or_(func.lower(models.Product.name).like(like), func.lower(models.Variant.sku).like(like)))
+        rows = []
+        cost_value = retail_value = units = 0
+        listed = {}
+        for listing in db.scalars(select(models.ChannelListing).where(
+                models.ChannelListing.status.in_(("published", "pending", "needs_attention", "failed")))).all():
+            listed.setdefault(listing.variant_id, []).append(listing)
+        for variant, product in db.execute(query.limit(1000)).all():
+            reserved = inventory.reserved_quantity(db, variant.id)
+            rows.append({"v": variant, "p": product, "reserved": reserved, "listings": listed.get(variant.id, [])})
+            units += variant.stock_quantity
+            cost_value += variant.stock_quantity * variant.cost_pence
+            retail_value += variant.stock_quantity * variant.price_pence
+    return _render(request, "inventory", session, rows=rows, q=q, show=show, units=units,
+                   cost_value=cost_value, retail_value=retail_value)
+
+
+@router.get("/inventory/{variant_id}", response_class=HTMLResponse)
+async def stock_history(request: Request, variant_id: int):
+    session = _session(request)
+    with session_scope() as db:
+        variant = db.get(models.Variant, variant_id)
+        if variant is None:
+            raise HTTPException(status_code=404)
+        product = variant.product
+        moves = db.scalars(select(models.StockMovement).where(models.StockMovement.variant_id == variant_id)
+                           .order_by(models.StockMovement.id.desc()).limit(300)).all()
+    return _render(request, "stock_history", session, variant=variant, product=product, moves=moves)
+
+
+@router.get("/tasks", response_class=HTMLResponse)
+async def tasks_page(request: Request):
+    session = _session(request)
+    tasks = await run_in_threadpool(channel_sync.open_tasks)
+    with session_scope() as db:
+        low = reporting.low_stock(50)
+        names = {c.code: c.name for c in db.scalars(select(models.Channel)).all()}
+    return _render(request, "tasks", session, low=low, names=names, listing_statuses=models.LISTING_STATUSES,
+                   now=datetime.now(timezone.utc), **tasks)
+
+
+@router.get("/channels", response_class=HTMLResponse)
+async def channels_page(request: Request):
+    session = _session(request)
+    await run_in_threadpool(channel_sync.seed_channels)
+    with session_scope() as db:
+        channels = db.scalars(select(models.Channel).order_by(models.Channel.id)).all()
+        counts = dict(db.execute(select(models.ChannelListing.channel_code, func.count(models.ChannelListing.id))
+                                 .where(models.ChannelListing.status == "published")
+                                 .group_by(models.ChannelListing.channel_code)).all())
+        pending_manager = db.scalar(select(func.count(models.OutboxEvent.id)).where(
+            models.OutboxEvent.consumer == "manager", models.OutboxEvent.status == "pending")) or 0
+    return _render(request, "channels", session, channels=channels, counts=counts, pending_manager=pending_manager,
+                   manager_api_ready=len(get_settings().manager_api_key.strip()) >= 32)
+
+
+@router.post("/channels/{code}")
+async def channel_update(request: Request, code: str):
+    session, form = await _post(request)
+    try:
+        pct = str(form.get("fee_percent", "0")).strip() or "0"
+        bp = round(float(pct) * 100)
+        if not 0 <= bp <= 5000:
+            raise catalog_admin.CatalogEditError("Fee percentage must be between 0 and 50.")
+        fixed = catalog_admin.pence_from_form(form.get("fee_fixed"), field="fixed fee") or 0
+        days = catalog_admin.int_from_form(form.get("dispatch_days"), default=2, field="dispatch days")
+        with session_scope() as db:
+            ch = channel_sync.get_channel(db, code)
+            ch.fee_percent_bp, ch.fee_fixed_pence, ch.dispatch_days = bp, fixed, days
+            ch.enabled = bool(form.get("enabled"))
+            audit(db, session.email, "channel.updated", "channel", code, fee_bp=bp, fee_fixed=fixed, enabled=ch.enabled)
+    except (ValueError, catalog_admin.CatalogEditError, channel_sync.ChannelError) as exc:
+        return _redirect("/admin/channels", err=str(exc))
+    return _redirect("/admin/channels", msg="Platform settings saved.")

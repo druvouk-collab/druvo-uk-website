@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}{% block title %}{{ channel.name }} listing pack{% endblock %}
+{% block content %}
+<p><a href="/admin/products/{{ product.id }}">← {{ product.name }}</a></p>
+<h1>{{ channel.name }} listing pack</h1>
+<p class="a-muted">{{ channel.notes }} Copy each field into the {{ channel.name }} app, then paste the listing link below so DRUVO Manager tracks it.
+Long-press (phone) or select to copy.</p>
+<div class="a-grid two">
+<section class="a-card">
+  <h2>Title{% if title_limit %} ({{ title_limit }} characters max){% endif %}</h2>
+  <textarea class="a-copy" rows="2" readonly>{{ title }}</textarea>
+  <h2>Description</h2>
+  <textarea class="a-copy" rows="10" readonly>{{ product.description }}{% if product.condition %}
+
+Condition: {{ product.condition }}{% endif %}{% if product.brand %}
+Brand: {{ product.brand }}{% endif %}</textarea>
+  <h2>Details</h2>
+  <table class="a-table compact"><tbody>
+  <tr><td>Brand</td><td>{{ product.brand or '—' }}</td></tr><tr><td>Condition</td><td>{{ product.condition or '—' }}</td></tr>
+  <tr><td>Category</td><td>{{ product.category.name if product.category else '—' }}</td></tr>
+  {% for v in product.variants %}{% set l = listings.get(v.id) %}<tr><td>{{ v.sku }}</td><td>Size {{ v.size or '—' }} · {{ v.colour or '' }} · price <strong>{{ money(l.price_pence if l and l.price_pence is not none else v.price_pence) }}</strong> · {{ v.stock_quantity }} in stock</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+<section class="a-card">
+  <h2>Photos</h2>
+  <div class="a-photos">{% for img in product.images %}<figure><a href="{{ img.url }}" download><img src="{{ img.url }}" alt="{{ img.alt }}" width="140" height="140"></a><figcaption><a href="{{ img.url }}" download>Download</a></figcaption></figure>{% else %}<p class="a-muted">No photos yet.</p>{% endfor %}</div>
+  <h2>After listing</h2>
+  {% for v in product.variants %}
+  <form method="post" action="/admin/listings" class="a-form">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}"><input type="hidden" name="product_id" value="{{ product.id }}">
+    <input type="hidden" name="variant_id" value="{{ v.id }}"><input type="hidden" name="channel" value="{{ channel.code }}">
+    <input type="hidden" name="status" value="published">
+    <label>{{ v.sku }} — {{ channel.name }} listing link<input name="external_url" type="url" placeholder="https://…" required></label>
+    <button class="a-btn primary">Mark as listed</button>
+  </form>
+  {% endfor %}
+</section>
+</div>
+{% endblock %}

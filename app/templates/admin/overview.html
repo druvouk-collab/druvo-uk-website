@@ -1,6 +1,7 @@
 {% extends "admin/base.html" %}{% from "admin/_status.html" import status %}{% block title %}Overview{% endblock %}
 {% block content %}
 <h1>Overview</h1>
+<p><a class="a-btn primary" href="/admin/products/new">+ Add product</a> <a class="a-btn" href="/admin/orders/import">+ Record marketplace sale</a> <a class="a-btn" href="/admin/tasks">Tasks</a></p>
 {% if attention %}<div class="a-flash err"><strong>{{ attention|length }} order(s) need attention</strong> (stock conflict or amount mismatch):
   {% for o in attention %}<a href="/admin/orders/{{ o.order_number }}">{{ o.order_number }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
 <div class="a-grid four">

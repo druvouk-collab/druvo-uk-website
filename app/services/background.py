@@ -24,11 +24,17 @@ def run_maintenance_once() -> dict:
 
     from app.services.db_checkout import backfill_payment_fees
 
+    from app.services import channel_sync
+
+    channel_sync.seed_channels()
     released = DbCheckoutService().release_expired_reservations()
+    sync = channel_sync.process_sync_events()
+    reconciled = channel_sync.reconcile()
     emails = send_pending_notifications()
     fees = backfill_payment_fees() if get_settings().stripe_enabled else 0
     digest = send_daily_digest()
-    return {"released_orders": released, "emails": emails, "fees": fees, "digest": digest}
+    return {"released_orders": released, "emails": emails, "fees": fees, "digest": digest, "sync": sync,
+            "reconciled": reconciled}
 
 
 _last_digest: dict[str, str] = {}
@@ -63,7 +69,7 @@ async def maintenance_loop() -> None:
         await asyncio.sleep(INTERVAL_SECONDS)
         try:
             result = await run_in_threadpool(run_maintenance_once)
-            if result["released_orders"] or any(result["emails"].values()):
+            if result["released_orders"] or any(result["emails"].values()) or any(result["sync"].values()):
                 logger.info("Maintenance: %s", result)
         except Exception as exc:
             logger.exception("Maintenance loop iteration failed")

@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from app.db import models
 from app.db.base import session_scope
 from app.services.db_checkout import enqueue_outbox
+from app.services import inventory
 from app.services.order_ops import audit
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -143,8 +144,12 @@ def save_product(form: dict, *, actor: str, product_id: int | None = None) -> in
             if variant is None:
                 variant = models.Variant(sku=cv["sku"], price_pence=0)
                 product.variants.append(variant)
-            for key in ("sku", "size", "colour", "price_pence", "cost_pence", "stock_quantity", "low_stock_threshold"):
+            for key in ("sku", "size", "colour", "price_pence", "cost_pence", "low_stock_threshold"):
                 setattr(variant, key, cv[key])
+            if variant.id is None:
+                variant.stock_quantity = 0
+                db.flush()
+            inventory.set_stock(db, variant, cv["stock_quantity"], actor=actor)
         db.flush()
         after = {v.sku: v.stock_quantity for v in product.variants}
         changes = {sku: [before.get(sku), qty] for sku, qty in after.items() if before.get(sku) != qty}

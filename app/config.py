@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     admin_setup_token: str = ""
     # Optional error monitoring (Sentry free developer plan). Leave blank to disable.
     sentry_dsn: str = ""
+    # Shared secret for the DRUVO Manager sync API (Authorization: Bearer ...). 32+ random characters.
+    manager_api_key: str = ""
     resend_api_key: str = ""
     email_from: str = "DRUVO UK <orders@druvo.uk>"
     shop_notification_email: str = ""

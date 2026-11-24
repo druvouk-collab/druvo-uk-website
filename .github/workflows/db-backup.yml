@@ -5,7 +5,8 @@
 #   BACKUP_PASSPHRASE    – a long random passphrase; store it in your password manager too
 # Backups are encrypted with AES-256 (gpg) before upload and kept as workflow artifacts for 30 days.
 # Restore: download the artifact, then
-#   gpg --decrypt druvo-YYYYMMDD.dump.gpg > druvo.dump && pg_restore --clean --no-owner -d "$DATABASE_URL" druvo.dump
+#   gpg --decrypt druvo-YYYYMMDD.dump.gpg > druvo.dump && pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" druvo.dump
+# Restore round trip verified 24 Nov 2026 (encrypted dump → decrypt → restore → identical row counts).
 name: Database backup
 
 on:

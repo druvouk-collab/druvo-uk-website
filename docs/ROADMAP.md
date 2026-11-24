@@ -1,4 +1,7 @@
-# DRUVO — Development Roadmap
+# DRUVO — Development Roadmap (technical notes)
+
+> **The governing plan is now `docs/MASTER_ROADMAP.md`** (owner's 13 phases), with live status in
+> `docs/PROGRESS.md`. This file keeps the technical research and design notes.
 
 Prepared 24 Nov 2026 · Updated 24 Nov 2026 (session 5) · Lives in the website repo · Status labels: ✅ exists & verified · 🟡 exists, not yet verified
 · 🔨 in development on `develop/online-checkout` · ⬜ not started

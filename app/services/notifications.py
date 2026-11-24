@@ -132,12 +132,14 @@ def send_pending_notifications(order_id: int | None = None, settings: Settings |
             query = query.where(models.Order.id == order_id)
         for order in db.scalars(query).all():
             now = datetime.now(timezone.utc)
-            if order.confirmation_email_sent_at is None and send_order_confirmation(order, cfg):
+            if order.confirmation_email_sent_at is None and order.channel == "druvo.uk" and send_order_confirmation(order, cfg):
                 order.confirmation_email_sent_at = now
                 counts["confirmation"] += 1
             if order.shop_notification_sent_at is None and send_shop_new_order(order, cfg):
                 order.shop_notification_sent_at = now
                 counts["shop"] += 1
+            if order.channel != "druvo.uk":
+                continue  # marketplaces email their own buyers; the shop alert above still goes out
             if order.shipped_at is not None and order.dispatch_email_sent_at is None and send_dispatch(order, cfg):
                 order.dispatch_email_sent_at = now
                 counts["dispatch"] += 1

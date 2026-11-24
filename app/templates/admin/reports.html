@@ -7,5 +7,20 @@
 <tbody>{% for label, t in rows %}
 <tr><td>{{ label }}</td><td class="r">{{ t.orders }}</td><td class="r">{{ money(t.gross_pence) }}</td><td class="r">{{ money(t.refunds_pence) }}</td><td class="r">{{ money(t.cogs_pence) }}</td><td class="r">{{ money(t.payment_fees_pence) }}{% if t.fees_unknown %}*{% endif %}</td><td class="r">{{ money(t.marketplace_fees_pence) }}</td><td class="r">{{ money(t.postage_pence + t.packaging_pence) }}</td><td class="r">{{ money(t.expenses_pence) }}</td><td class="r {{ 'neg' if t.profit_pence < 0 else 'pos' }}"><strong>{{ money(t.profit_pence) }}</strong></td><td class="r">{{ t.margin_pct }}%</td></tr>
 {% endfor %}</tbody></table></div>
+<div class="a-grid two">
+<section class="a-card"><h2>This year by platform</h2>
+<table class="a-table"><thead><tr><th>Platform</th><th class="r">Orders</th><th class="r">Sales</th><th class="r">Profit</th></tr></thead><tbody>
+{% for code, ch in year.by_channel.items()|sort(attribute='1.gross_pence', reverse=True) %}<tr><td>{{ code }}</td><td class="r">{{ ch.orders }}</td><td class="r">{{ money(ch.gross_pence) }}</td><td class="r {{ 'neg' if ch.profit_pence < 0 else 'pos' }}">{{ money(ch.profit_pence) }}</td></tr>
+{% else %}<tr><td colspan="4" class="a-muted">No sales yet this year.</td></tr>{% endfor %}</tbody></table>
+{% if year.estimated_fee_orders %}<p class="a-muted">{{ year.estimated_fee_orders }} marketplace order(s) use estimated fees.</p>{% endif %}
+<h2>Stock value</h2><p>{{ stock_value.units }} units · {{ money(stock_value.cost_pence) }} at cost · {{ money(stock_value.retail_pence) }} at price</p>
+</section>
+<section class="a-card"><h2>Best sellers this year</h2>
+<table class="a-table"><thead><tr><th>Product</th><th class="r">Sold</th><th class="r">Revenue</th><th class="r">Margin</th></tr></thead><tbody>
+{% for b in best %}<tr><td>{{ b.name }}<br><span class="a-muted">{{ b.sku }}</span></td><td class="r">{{ b.qty }}</td><td class="r">{{ money(b.revenue) }}</td><td class="r">{{ money(b.margin) }}</td></tr>
+{% else %}<tr><td colspan="4" class="a-muted">No sales yet.</td></tr>{% endfor %}</tbody></table>
+</section>
+</div>
+<p><a class="a-btn" href="/admin/reports.csv?by=month">Download monthly accounting summary (CSV)</a> <a class="a-btn" href="/admin/reports.csv?by=year">Yearly (CSV)</a></p>
 <p class="a-muted">Net profit = sales − refunds − item cost − Stripe fees − marketplace commissions − postage − packaging − expenses. * = Stripe fee not yet received for some orders. Marketplace (eBay/Amazon) sales appear here once DRUVO Manager sync is connected. Figures exclude VAT and income tax.</p>
 {% endblock %}

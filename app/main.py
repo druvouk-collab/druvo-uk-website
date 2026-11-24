@@ -15,7 +15,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from app.config import CANONICAL_HOST, get_settings
 from app.lib.druvo_api.client import DruvoApiClient
-from app.routes import account, admin, admin_panel, catalog_api, chat_api, checkout_api, legal, seo, shop, stripe_webhook
+from app.routes import account, admin, admin_panel, catalog_api, manager_api, chat_api, checkout_api, legal, seo, shop, stripe_webhook
 from app.services.readiness_service import build_readiness_report
 from app.templating import templates
 
@@ -86,6 +86,7 @@ app.include_router(account.router)
 app.include_router(admin.router)
 app.include_router(admin_panel.router)
 app.include_router(admin_panel.media_router)
+app.include_router(manager_api.router)
 app.include_router(legal.router)
 app.include_router(seo.router)
 app.include_router(chat_api.router)

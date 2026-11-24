@@ -51,3 +51,4 @@ h1 { font-size:1.5rem; margin:.25rem 0 1rem; } h2 { font-size:1rem; margin:1rem 
   .a-row { grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); } .a-form.inline { grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); }
   .a-products { grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); }
 }
+.a-copy { width:100%; font:inherit; padding:.6rem; border:1px solid #cfcfca; border-radius:8px; background:#fafaf8; }

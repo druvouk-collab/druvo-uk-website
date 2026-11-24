@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}{% block title %}Record a marketplace sale{% endblock %}
+{% block content %}
+<p><a href="/admin/orders">← Orders</a></p>
+<h1>Record a marketplace sale</h1>
+<p class="a-muted">Use this when something sells on a platform that isn't connected automatically yet (e.g. Vinted, Depop).
+Stock is taken from the central figure straight away and the other platforms are updated. Recording the same order number twice is ignored.</p>
+<section class="a-card">
+<form method="post" action="/admin/orders/import" class="a-form">
+  <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+  <div class="a-row"><label>Platform<select name="channel">{% for c in channels %}<option value="{{ c.code }}">{{ c.name }}</option>{% endfor %}</select></label>
+  <label>Platform order number<input name="external_order_id" required maxlength="120"></label></div>
+  <div class="a-row"><label>SKU<input name="sku" required></label><label>Quantity<input name="quantity" inputmode="numeric" value="1"></label></div>
+  <div class="a-row"><label>Sale price £ (per item)<input name="price" inputmode="decimal" required></label>
+  <label>Delivery charged £<input name="shipping" inputmode="decimal"></label>
+  <label>Fee the platform took £ <span class="a-muted">(blank = estimate)</span><input name="fee" inputmode="decimal"></label></div>
+  <div class="a-row"><label>Buyer name<input name="buyer_name"></label><label>Address line<input name="line1"></label>
+  <label>Town<input name="city"></label><label>Postcode<input name="postal_code"></label></div>
+  <button class="a-btn primary">Record sale</button>
+</form>
+</section>
+{% endblock %}

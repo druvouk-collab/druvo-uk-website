@@ -1,0 +1,10 @@
+{% extends "admin/base.html" %}{% block title %}Stock history{% endblock %}
+{% block content %}
+<p><a href="/admin/inventory">← Inventory</a></p>
+<h1>{{ product.name }} <span class="a-muted">{{ variant.sku }}</span></h1>
+<p>Available now: <strong>{{ variant.stock_quantity }}</strong></p>
+<div class="a-scroll"><table class="a-table">
+<thead><tr><th>When</th><th>Change</th><th class="r">After</th><th>Reason</th><th>Platform</th><th>Reference</th><th>By</th></tr></thead>
+<tbody>{% for m in moves %}<tr><td>{{ m.created_at.strftime('%d %b %Y %H:%M') }}</td><td class="{{ 'neg' if m.delta < 0 else 'pos' }}">{{ '%+d'|format(m.delta) }}</td><td class="r">{{ m.quantity_after if m.quantity_after is not none else '' }}</td><td>{{ m.reason.replace('_',' ') }}</td><td>{{ m.channel }}</td><td>{% if m.reference and not m.reference.startswith('checkout:') %}<a href="/admin/orders/{{ m.reference }}">{{ m.reference }}</a>{% else %}<span class="a-muted">{{ 'website checkout' if m.reference.startswith('checkout:') else '' }}</span>{% endif %}</td><td>{{ m.actor }}</td></tr>
+{% else %}<tr><td colspan="7" class="a-muted">No movements recorded yet.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

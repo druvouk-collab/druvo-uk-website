@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    UniqueConstraint,
     JSON,
     LargeBinary,
     Boolean,
@@ -151,6 +152,11 @@ class Order(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(30), default="pending_payment", nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="GBP", nullable=False)
     channel: Mapped[str] = mapped_column(String(30), default="druvo.uk", nullable=False)
+    # Marketplace's own order id (eBay/Amazon/Vinted/Depop) — unique per channel, so imports are idempotent.
+    external_order_id: Mapped[str | None] = mapped_column(String(120))
+    dispatch_by: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 'actual' once the real fee is known (Stripe balance transaction / marketplace report), else 'estimated'.
+    fee_status: Mapped[str] = mapped_column(String(10), default="estimated", nullable=False)
     subtotal_pence: Mapped[int] = mapped_column(Integer, nullable=False)
     discount_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     promo_code: Mapped[str] = mapped_column(String(50), default="", nullable=False)
@@ -200,6 +206,7 @@ class Order(TimestampMixin, Base):
         CheckConstraint("discount_pence >= 0 AND discount_pence <= subtotal_pence", name="ck_orders_discount"),
         Index("ix_orders_status_created", "status", "created_at"),
         Index("ix_orders_email", "email"),
+        UniqueConstraint("channel", "external_order_id", name="uq_orders_channel_external"),
     )
 
 
@@ -337,6 +344,80 @@ class Expense(TimestampMixin, Base):
     created_by: Mapped[str] = mapped_column(String(320), default="", nullable=False)
 
 
+CHANNEL_MODES = ("internal", "automatic", "assisted")
+
+
+class Channel(TimestampMixin, Base):
+    """A selling platform. mode: internal (druvo.uk), automatic (API connector), assisted (manual steps)."""
+
+    __tablename__ = "channels"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(30), unique=True, nullable=False)  # druvo.uk, ebay, amazon, vinted, depop
+    name: Mapped[str] = mapped_column(String(60), nullable=False)
+    mode: Mapped[str] = mapped_column(String(20), default="assisted", nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    connection_status: Mapped[str] = mapped_column(String(40), default="not_connected", nullable=False)
+    # Fee estimate used until the marketplace reports the actual fee. Owner sets these in Settings.
+    fee_percent_bp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # basis points: 1290 = 12.9%
+    fee_fixed_pence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    dispatch_days: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+    __table_args__ = (CheckConstraint("mode IN ('internal','automatic','assisted')", name="ck_channels_mode"),)
+
+
+LISTING_STATUSES = ("not_listed", "pending", "published", "failed", "sold", "ended", "needs_attention")
+
+
+class ChannelListing(TimestampMixin, Base):
+    """One variant's listing on one platform — status, price override, marketplace id."""
+
+    __tablename__ = "channel_listings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    variant_id: Mapped[int] = mapped_column(ForeignKey("variants.id", ondelete="CASCADE"), nullable=False)
+    channel_code: Mapped[str] = mapped_column(ForeignKey("channels.code", ondelete="CASCADE"), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="not_listed", nullable=False)
+    price_pence: Mapped[int | None] = mapped_column(Integer)  # None = use the product's base price
+    external_listing_id: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    external_url: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    quantity_listed: Mapped[int | None] = mapped_column(Integer)  # what the marketplace currently shows
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    attention_reason: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+
+    variant: Mapped[Variant] = relationship(lazy="joined")
+
+    __table_args__ = (
+        UniqueConstraint("variant_id", "channel_code", name="uq_listing_variant_channel"),
+        CheckConstraint(
+            "status IN (" + ",".join(f"'{s}'" for s in LISTING_STATUSES) + ")", name="ck_listings_status"
+        ),
+        Index("ix_listings_status", "status"),
+    )
+
+
+class StockMovement(Base):
+    """Append-only history of every stock change (the audit trail behind the central stock figure)."""
+
+    __tablename__ = "stock_movements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    variant_id: Mapped[int] = mapped_column(ForeignKey("variants.id", ondelete="CASCADE"), nullable=False)
+    delta: Mapped[int] = mapped_column(Integer, nullable=False)
+    quantity_after: Mapped[int | None] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(40), nullable=False)
+    channel: Mapped[str] = mapped_column(String(30), default="", nullable=False)
+    reference: Mapped[str] = mapped_column(String(120), default="", nullable=False)
+    actor: Mapped[str] = mapped_column(String(320), default="system", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    __table_args__ = (Index("ix_stock_movements_variant", "variant_id", "created_at"),)
+
+
 class OutboxEvent(Base):
     """Events for DRUVO AI (orders, stock changes). Delivered asynchronously; never blocks checkout."""
 
@@ -350,8 +431,11 @@ class OutboxEvent(Base):
     last_error: Mapped[str] = mapped_column(Text, default="", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Which consumer handles it: 'sync' (in-cloud channel sync worker) or 'manager' (pulled by DRUVO Manager).
+    consumer: Mapped[str] = mapped_column(String(20), default="manager", nullable=False)
 
-    __table_args__ = (Index("ix_outbox_status", "status", "created_at"),)
+    __table_args__ = (Index("ix_outbox_status", "status", "consumer", "created_at"),)
 
 
 __all__ = [
@@ -360,6 +444,10 @@ __all__ = [
     "Category",
     "Customer",
     "Order",
+    "Channel",
+    "ChannelListing",
+    "StockMovement",
+    "LISTING_STATUSES",
     "Promotion",
     "Expense",
     "OrderItem",

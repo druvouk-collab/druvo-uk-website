@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>{% block title %}Admin{% endblock %} · DRUVO UK</title>
+  <title>{% block title %}Admin{% endblock %} · DRUVO Manager</title>
   <link rel="stylesheet" href="/static/css/admin.css?v={{ static_asset_version() }}">
 </head>
 <body>
 {% if admin and admin.mfa %}
 <header class="a-header">
-  <a class="a-brand" href="/admin">DRUVO <span>Admin</span></a>
+  <a class="a-brand" href="/admin">DRUVO <span>Manager</span></a>
   {% if test_mode %}<span class="a-pill warn" title="Stripe is in test mode">Test mode</span>{% endif %}
   <nav class="a-nav" aria-label="Admin">
     {% for href, label in nav %}<a href="{{ href }}" {% if request.url.path == href or (href != '/admin' and request.url.path.startswith(href)) %}class="active"{% endif %}>{{ label }}</a>{% endfor %}

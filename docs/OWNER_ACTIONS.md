@@ -21,6 +21,11 @@ Detailed click-by-click instructions for steps marked 📘 are in `docs/SETUP_GU
 | 11 | Verify **company details** for footer and Terms | — | Merchant Center, legal |
 | 12 | **Merchant Center** and **Meta Commerce Manager** feeds 📘 Step 5 | 20 min | Free Google Shopping, Facebook/Instagram |
 | 13 | Check the **PayPal** fee in Stripe | 2 min | PayPal decision |
+| 14 | Confirm the **architecture decision** (one cloud DRUVO Manager; see PROGRESS.md) | 1 min | Everything |
+| 15 | Tell Claude the **Vinted history** (what was tried, any error or refusal) and whether you'll apply for **Vinted Pro** | 5 min | Vinted |
+| 16 | eBay/Amazon **account facts**: production or sandbox keys? Amazon Professional seller account? | 5 min | Integration audit |
+| 17 | Optional: **Royal Mail Click & Drop** account (free) | 10 min | Labels and tracking |
+| 18 | Set `MANAGER_API_KEY` (40+ random characters) on staging | 2 min | Mac Manager ↔ cloud |
 
 ---
 

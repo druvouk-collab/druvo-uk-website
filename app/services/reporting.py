@@ -35,6 +35,7 @@ class Totals:
     packaging_pence: int = 0
     expenses_pence: int = 0
     fees_unknown: int = 0
+    estimated_fee_orders: int = 0
     by_channel: dict = field(default_factory=dict)
 
     @property
@@ -80,6 +81,8 @@ def totals_between(start: datetime, end: datetime) -> Totals:
             t.shipping_charged_pence += o.shipping_pence
             t.discounts_pence += o.discount_pence
             t.marketplace_fees_pence += o.marketplace_fee_pence
+            if o.channel != "druvo.uk" and o.fee_status != "actual":
+                t.estimated_fee_orders += 1
             t.postage_pence += o.postage_cost_pence
             t.packaging_pence += o.packaging_cost_pence
             if o.payment_fee_pence is None:
@@ -91,9 +94,12 @@ def totals_between(start: datetime, end: datetime) -> Totals:
                 t.items += item.quantity
                 if not fully_refunded:
                     t.cogs_pence += item.unit_cost_pence * item.quantity
-            ch = t.by_channel.setdefault(o.channel, {"orders": 0, "gross_pence": 0})
+            ch = t.by_channel.setdefault(o.channel, {"orders": 0, "gross_pence": 0, "profit_pence": 0})
             ch["orders"] += 1
             ch["gross_pence"] += o.total_pence
+            ch["profit_pence"] += (o.total_pence - o.refunded_pence - (o.payment_fee_pence or 0) - o.marketplace_fee_pence
+                                   - o.postage_cost_pence - o.packaging_cost_pence
+                                   - (0 if fully_refunded else sum(i.unit_cost_pence * i.quantity for i in o.items)))
         t.expenses_pence = int(
             db.scalar(
                 select(func.coalesce(func.sum(models.Expense.amount_pence), 0)).where(
@@ -185,3 +191,32 @@ def orders_needing_attention() -> list[models.Order]:
                 models.Order.status.in_(("paid", "packed")),
             )
         ).all()
+
+
+def best_sellers(start: datetime, end: datetime, limit: int = 10) -> list[dict]:
+    with session_scope() as db:
+        rows = db.execute(
+            select(models.OrderItem.product_name, models.OrderItem.sku,
+                   func.sum(models.OrderItem.quantity).label("qty"),
+                   func.sum(models.OrderItem.quantity * models.OrderItem.unit_price_pence).label("revenue"),
+                   func.sum(models.OrderItem.quantity * (models.OrderItem.unit_price_pence - models.OrderItem.unit_cost_pence)).label("margin"))
+            .join(models.Order, models.Order.id == models.OrderItem.order_id)
+            .where(models.Order.paid_at >= start, models.Order.paid_at < end, models.Order.status.in_(SALE_STATUSES))
+            .group_by(models.OrderItem.product_name, models.OrderItem.sku)
+            .order_by(func.sum(models.OrderItem.quantity * models.OrderItem.unit_price_pence).desc())
+            .limit(limit)
+        ).all()
+        return [{"name": r.product_name, "sku": r.sku, "qty": int(r.qty), "revenue": int(r.revenue), "margin": int(r.margin)}
+                for r in rows]
+
+
+def inventory_value() -> dict:
+    with session_scope() as db:
+        row = db.execute(
+            select(func.coalesce(func.sum(models.Variant.stock_quantity), 0),
+                   func.coalesce(func.sum(models.Variant.stock_quantity * models.Variant.cost_pence), 0),
+                   func.coalesce(func.sum(models.Variant.stock_quantity * models.Variant.price_pence), 0))
+            .join(models.Product, models.Product.id == models.Variant.product_id)
+            .where(models.Product.status != "archived")
+        ).one()
+        return {"units": int(row[0]), "cost_pence": int(row[1]), "retail_pence": int(row[2])}
