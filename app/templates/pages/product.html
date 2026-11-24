@@ -107,6 +107,12 @@
 
     </div>
 
+    <p class="product-meta product-delivery-price" data-delivery-price>
+      + {{ format_gbp(shipping_standard_gbp) }} standard UK delivery
+      (total {{ format_gbp(product.min_price + shipping_standard_gbp) }}){% if shipping_free_threshold_gbp %} · free UK delivery on orders over {{ format_gbp(shipping_free_threshold_gbp) }}{% endif %}.
+      <a href="/delivery">Delivery options</a>
+    </p>
+
 
 
     <h2 class="sr-only">Product details</h2>

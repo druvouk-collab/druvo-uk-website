@@ -34,6 +34,9 @@ class MerchantFeedItem:
     shipping_country: str
     shipping_service: str
     shipping_price_gbp: str
+    google_product_category: str = ""
+    gender: str = ""
+    age_group: str = ""
 
 
 def merchant_availability(variant: ProductVariant) -> str:
@@ -52,6 +55,28 @@ def merchant_price_gbp(variant: ProductVariant, product: Product) -> str:
     if product.is_on_sale and product.sale_price_gbp is not None:
         price = product.sale_price_gbp
     return f"{price:.2f} GBP"
+
+
+# Google product taxonomy IDs (Apparel & Accessories)
+_GOOGLE_CATEGORY_BY_SLUG = {
+    "mens-clothing": "1604",  # Apparel & Accessories > Clothing
+    "womens-clothing": "1604",
+    "footwear": "187",  # Apparel & Accessories > Shoes
+    "accessories": "167",  # Apparel & Accessories > Clothing Accessories
+}
+
+
+def merchant_google_category(product: Product) -> str:
+    return _GOOGLE_CATEGORY_BY_SLUG.get((product.category_slug or "").lower(), "166")
+
+
+def merchant_gender(product: Product) -> str:
+    slug = (product.category_slug or "").lower()
+    if slug.startswith("mens"):
+        return "male"
+    if slug.startswith("womens"):
+        return "female"
+    return "unisex"
 
 
 def merchant_description(product: Product) -> str:
@@ -122,6 +147,9 @@ def build_merchant_feed_items(
                     shipping_country="GB",
                     shipping_service="Standard UK delivery",
                     shipping_price_gbp=f"{cfg.shipping_standard_gbp:.2f} GBP",
+                    google_product_category=merchant_google_category(product),
+                    gender=merchant_gender(product),
+                    age_group="adult",
                 )
             )
 
@@ -142,8 +170,7 @@ def merchant_feed_xml(items: list[MerchantFeedItem], settings: Settings | None =
         channel,
         "description",
     ).text = (
-        "DRUVO UK Google Merchant product feed — live inventory synced from DRUVO AI. "
-        "Demo/development products are excluded until marked live. "
+        "DRUVO UK product feed — new, new-with-tags and pre-loved fashion with UK delivery. "
         f"Returns: {base}/returns · Shipping: {base}/delivery"
     )
     SubElement(channel, "lastBuildDate").text = updated
@@ -169,6 +196,14 @@ def merchant_feed_xml(items: list[MerchantFeedItem], settings: Settings | None =
             _g(entry, "gtin", item.gtin)
         if item.mpn:
             _g(entry, "mpn", item.mpn)
+        if not item.gtin and not item.mpn:
+            _g(entry, "identifier_exists", "no")
+        if item.google_product_category:
+            _g(entry, "google_product_category", item.google_product_category)
+        if item.gender:
+            _g(entry, "gender", item.gender)
+        if item.age_group:
+            _g(entry, "age_group", item.age_group)
 
         shipping = SubElement(entry, f"{{{GOOGLE_NS}}}shipping")
         _g(shipping, "country", item.shipping_country)
