@@ -35,6 +35,9 @@ def shop(db_url, monkeypatch):
     }.items():
         monkeypatch.setenv(key, value)
     get_settings.cache_clear()
+    from app.services.alerts import reset_throttle
+
+    reset_throttle()  # alert throttling is per-process; isolate tests
     catalog_repo.import_catalog_json(CATALOG_PATH)
     with session_scope() as s:
         variant = s.scalar(select(models.Variant))

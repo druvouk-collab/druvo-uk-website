@@ -124,9 +124,12 @@ def upsert_listing(
         listing.last_synced_at = _now()
         db.flush()
         if channel.mode == "automatic" and status == "pending" and before != "pending":
-            # Publishing request for an API platform: queue it for the connector (DRUVO Manager for now).
-            db.add(models.OutboxEvent(topic="listing.publish", consumer="manager",
-                                      payload=_listing_payload(db, listing)))
+            # Publishing request for an API platform: the cloud connector if it exists, else DRUVO Manager.
+            from app.connectors import registered_codes
+
+            cloud = channel_code in registered_codes()
+            db.add(models.OutboxEvent(topic="listing.publish", consumer="sync" if cloud else "manager",
+                                      payload={"listing_id": listing.id} if cloud else _listing_payload(db, listing)))
         audit(db, actor, "listing.updated", "listing", listing.id, channel=channel_code, sku=variant.sku,
               status=listing.status)
         return {"listing_id": listing.id, "status": listing.status}
@@ -291,6 +294,17 @@ def _assisted_sync(db, listing: models.ChannelListing, channel: models.Channel) 
 
 
 def _automatic_sync(db, listing: models.ChannelListing, channel: models.Channel) -> str:
+    from app.connectors import connector_for
+
+    connector = connector_for(channel.code)
+    if connector is not None:
+        qty = max(listing.variant.stock_quantity, 0)
+        connector.update_quantity(_listing_payload(db, listing), qty)
+        listing.quantity_listed = qty
+        listing.last_error = ""
+        if listing.status == "needs_attention" and listing.attention_reason.startswith("Sold out"):
+            listing.status, listing.attention_reason = "published", ""
+        return "ok"
     if channel.connection_status in ("via_manager", "awaiting_manager"):
         db.add(models.OutboxEvent(topic="listing.set_quantity", consumer="manager", payload=_listing_payload(db, listing)))
         if channel.connection_status == "awaiting_manager":
@@ -320,12 +334,17 @@ def process_sync_events(limit: int = 50) -> dict[str, int]:
                 event.status, event.sent_at = "done", _now()
                 counts["done"] += 1
                 continue
-            seen.add(listing_id)
+            if event.topic == "listing.sync_quantity":
+                seen.add(listing_id)
             try:
                 with db.begin_nested():
-                    listing = db.get(models.ChannelListing, listing_id)
-                    if listing is None:
+                    listing = db.get(models.ChannelListing, listing_id) if listing_id else None
+                    if event.topic == "order.submit_tracking":
+                        result = _submit_tracking(db, event.payload or {})
+                    elif listing is None:
                         result = "ok"
+                    elif event.topic == "listing.publish":
+                        result = _publish(db, listing)
                     else:
                         channel = get_channel(db, listing.channel_code)
                         result = (_assisted_sync if channel.mode == "assisted" else _automatic_sync)(db, listing, channel)
@@ -336,7 +355,12 @@ def process_sync_events(limit: int = 50) -> dict[str, int]:
             except Exception as exc:
                 event.attempts += 1
                 event.last_error = f"{type(exc).__name__}: {exc}"[:2000]
-                if event.attempts >= MAX_ATTEMPTS:
+                permanent = getattr(exc, "retryable", True) is False
+                if permanent and listing_id:
+                    failed_listing = db.get(models.ChannelListing, listing_id)
+                    if failed_listing is not None:
+                        failed_listing.status, failed_listing.last_error = "failed", str(exc)[:2000]
+                if permanent or event.attempts >= MAX_ATTEMPTS:
                     event.status = "failed"
                     counts["failed"] += 1
                 else:
@@ -388,3 +412,124 @@ def open_tasks() -> dict[str, list]:
             models.Order.status.in_(("paid", "packed")), models.Order.dispatch_by.is_not(None),
             models.Order.dispatch_by < _now())).all()
         return {"listings": listings, "failed_syncs": failed, "conflicts": conflicts, "overdue": overdue}
+
+
+# ------------------------------------------------------------------ cloud connector jobs
+
+
+def _publish(db, listing: models.ChannelListing) -> str:
+    from app.connectors import ConnectorError, connector_for, readiness_problems
+
+    connector = connector_for(listing.channel_code)
+    if connector is None:
+        raise ConnectorError(f"{listing.channel_code} isn't connected in the cloud yet.", retryable=False)
+    payload = _listing_payload(db, listing)
+    problems = readiness_problems(payload, listing.channel_code)
+    if problems:
+        listing.status, listing.attention_reason = "needs_attention", " ".join(problems)[:300]
+        return "manual_task"
+    result = connector.publish(payload)
+    listing.status, listing.attention_reason, listing.last_error = "published", "", ""
+    listing.external_listing_id = result.external_listing_id[:200]
+    listing.external_url = (result.external_url or "")[:1000]
+    listing.quantity_listed = payload["quantity"]
+    listing.last_synced_at = _now()
+    return "ok"
+
+
+def _submit_tracking(db, payload: dict) -> str:
+    from app.connectors import ConnectorError, connector_for
+
+    connector = connector_for(payload.get("channel", ""))
+    if connector is None:
+        raise ConnectorError("Marketplace isn't connected in the cloud yet.", retryable=False)
+    connector.submit_tracking(payload["external_order_id"], payload.get("carrier", ""), payload.get("tracking_number", ""))
+    return "ok"
+
+
+def poll_marketplace_orders() -> dict[str, int]:
+    """Import new orders from every platform that has a working cloud connector (runs every 5 minutes)."""
+    from app.connectors import connector_for, registered_codes
+
+    imported: dict[str, int] = {}
+    for code in registered_codes():
+        connector = connector_for(code)
+        if connector is None:
+            continue
+        with session_scope() as db:
+            channel = get_channel(db, code)
+            since = channel.last_sync_at - timedelta(minutes=15) if channel.last_sync_at else None
+        try:
+            sales = connector.fetch_orders(since)
+            count = 0
+            for sale in sales:
+                out = record_marketplace_sale(code, sale["external_order_id"], sale["lines"], actor=f"{code}-sync",
+                                              **{k: v for k, v in sale.items() if k not in ("external_order_id", "lines")})
+                count += 0 if out.get("duplicate") else 1
+            with session_scope() as db:
+                ch = get_channel(db, code)
+                ch.last_sync_at, ch.last_error = _now(), ""
+            imported[code] = count
+        except Exception as exc:
+            logger.exception("Order import failed for %s", code)
+            with session_scope() as db:
+                get_channel(db, code).last_error = f"Order import failed: {type(exc).__name__}"[:2000]
+            from app.services.alerts import send_alert
+
+            send_alert(f"order-import-{code}", f"{code} order import failed",
+                       f"New {code} orders couldn't be imported ({type(exc).__name__}). Retrying every 5 minutes.")
+    return imported
+
+
+# ------------------------------------------------------------------ cross-listing ("upload once")
+
+
+def crosslist_product(product_id: int, channel_codes: list[str], *, actor: str) -> dict[str, dict]:
+    """Publish every variant of a product to the chosen platforms in one action.
+
+    druvo.uk → goes live immediately. API platforms → publish job (cloud connector or DRUVO Manager).
+    Assisted platforms → a task with the ready-made listing pack. Readiness problems are reported per platform.
+    """
+    from app.connectors import readiness_problems
+
+    results: dict[str, dict] = {}
+    with session_scope() as db:
+        product = db.get(models.Product, product_id)
+        if product is None:
+            raise ChannelError("Product not found.")
+        variant_ids = [v.id for v in product.variants]
+        channels = {c.code: c for c in db.scalars(select(models.Channel).where(models.Channel.code.in_(channel_codes)))}
+        for code in channel_codes:
+            channel = channels.get(code)
+            if channel is None or not channel.enabled:
+                results[code] = {"status": "skipped", "problems": ["Platform is disabled."]}
+                continue
+            problems: list[str] = []
+            for vid in variant_ids:
+                draft = models.ChannelListing(variant_id=vid, channel_code=code)
+                draft.variant = db.get(models.Variant, vid)
+                payload = _listing_payload(db, draft)
+                payload["gtin"] = product.gtin
+                problems += [p for p in readiness_problems(payload, code) if p not in problems]
+            results[code] = {"status": "blocked" if problems else "queued", "problems": problems, "mode": channel.mode}
+        if any(r.get("status") == "queued" for c, r in results.items() if c == "druvo.uk"):
+            product.status = "live"
+    for code, info in results.items():
+        if info["status"] != "queued":
+            continue
+        mode = info["mode"]
+        for vid in variant_ids:
+            if mode == "internal":
+                upsert_listing(vid, code, actor=actor, status="published")
+            elif mode == "automatic":
+                upsert_listing(vid, code, actor=actor, status="pending")
+            else:
+                upsert_listing(vid, code, actor=actor, status="needs_attention")
+                with session_scope() as db:
+                    listing = db.scalar(select(models.ChannelListing).where(
+                        models.ChannelListing.variant_id == vid, models.ChannelListing.channel_code == code))
+                    if not listing.external_url:
+                        listing.attention_reason = (f"Ready to list on {code.title()}: open the listing pack, list it, "
+                                                    "then paste the link.")
+        info["status"] = {"internal": "live", "automatic": "publishing", "assisted": "task_created"}[mode]
+    return results

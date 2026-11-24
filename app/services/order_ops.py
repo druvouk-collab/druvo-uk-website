@@ -91,6 +91,14 @@ def mark_dispatched(
             {"order_number": order_number, "channel": order.channel, "external_order_id": order.external_order_id,
              "carrier": carrier, "tracking_number": tracking_number},
         )
+        if order.channel not in ("druvo.uk",) and order.external_order_id:
+            from app.connectors import registered_codes
+
+            cloud = order.channel in registered_codes()
+            db.add(models.OutboxEvent(
+                topic="order.submit_tracking", consumer="sync" if cloud else "manager",
+                payload={"channel": order.channel, "external_order_id": order.external_order_id,
+                         "carrier": carrier, "tracking_number": tracking_number}))
         order_id = order.id
     if send_email:
         from app.services.notifications import send_pending_notifications

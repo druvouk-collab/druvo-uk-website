@@ -3,7 +3,7 @@
 # One-time setup (repo → Settings → Secrets and variables → Actions → New repository secret):
 #   BACKUP_DATABASE_URL  – the database's EXTERNAL connection string (Render → Postgres → Connect → External)
 #   BACKUP_PASSPHRASE    – a long random passphrase; store it in your password manager too
-# Backups are encrypted with AES-256 (gpg) before upload and kept as workflow artifacts for 30 days.
+# Backups are encrypted with AES-256 (gpg) before upload and kept as workflow artifacts for 7 days.
 # Restore: download the artifact, then
 #   gpg --decrypt druvo-YYYYMMDD.dump.gpg > druvo.dump && pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" druvo.dump
 # Restore round trip verified 24 Nov 2026 (encrypted dump → decrypt → restore → identical row counts).
@@ -53,5 +53,5 @@ jobs:
         with:
           name: druvo-db-backup
           path: druvo-*.dump.gpg
-          retention-days: 30
+          retention-days: 7  # GitHub Free includes ~500 MB of artifact storage; 7 nightly copies fit comfortably
           if-no-files-found: error

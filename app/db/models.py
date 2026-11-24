@@ -400,6 +400,24 @@ class ChannelListing(TimestampMixin, Base):
     )
 
 
+class ChannelCredential(TimestampMixin, Base):
+    """Marketplace API credentials (OAuth tokens, keys) — encrypted at rest with CREDENTIALS_KEY.
+
+    Secrets are never shown in the dashboard or logs; only the environment and account label are.
+    """
+
+    __tablename__ = "channel_credentials"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    channel_code: Mapped[str] = mapped_column(ForeignKey("channels.code", ondelete="CASCADE"), unique=True, nullable=False)
+    environment: Mapped[str] = mapped_column(String(20), default="sandbox", nullable=False)  # sandbox | production
+    account_label: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (CheckConstraint("environment IN ('sandbox','production')", name="ck_credentials_env"),)
+
+
 class StockMovement(Base):
     """Append-only history of every stock change (the audit trail behind the central stock figure)."""
 
@@ -447,6 +465,7 @@ __all__ = [
     "Channel",
     "ChannelListing",
     "StockMovement",
+    "ChannelCredential",
     "LISTING_STATUSES",
     "Promotion",
     "Expense",

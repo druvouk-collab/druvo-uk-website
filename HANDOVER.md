@@ -3,7 +3,7 @@
 > Read this first at the start of every working session. Update the session log and task lists at the end of
 > every session. **Never put passwords, API keys, tokens or other secrets in this file or anywhere in the repo.**
 
-Last updated: 24 Nov 2026 (session 6)
+Last updated: 24 Nov 2026 (session 7)
 
 > **Start here:** `docs/MASTER_ROADMAP.md` (the owner's plan) → `docs/PROGRESS.md` (status of every feature)
 > → `docs/OWNER_ACTIONS.md` (what's waiting on the owner). DRUVO Manager is the product; DRUVO.uk is one of
@@ -71,6 +71,13 @@ Secrets live **only** in Render → Environment. `.env` is never committed.
   reconciliation, tasks), `app/routes/manager_api.py` (Bearer `MANAGER_API_KEY`; the existing Mac DRUVO Manager
   can push eBay/Amazon sales and listing states and pull queued jobs). Channel modes: internal (druvo.uk),
   automatic (eBay/Amazon, "awaiting_manager" until audited), assisted (Vinted/Depop).
+- **Cloud connectors** (session 7): `app/connectors/` — `Connector` contract (publish, update_quantity,
+  update_price, end, fetch_orders, submit_tracking) + `readiness_problems()`; register a class and store
+  credentials to switch a platform from "via Manager" to fully cloud. `app/services/credentials.py` encrypts
+  marketplace credentials with `CREDENTIALS_KEY` (Fernet) and records sandbox vs production.
+  `channel_sync.crosslist_product()` = "publish everywhere"; `poll_marketplace_orders()` runs every 5 minutes.
+- **Owner decision 24 Nov 2026:** cloud DRUVO Manager approved; the Mac app must not be required for anything.
+  Full costs in `docs/COSTS.md`.
 - `CATALOG_SOURCE`: `static` (catalog.json, order-by-email — **live today**), `druvo_api` (DRUVO AI API on the
   Mac; only mode where Stripe test checkout works), `mock` (dev).
 - Stripe test-mode checkout exists (`app/services/stripe_service.py`, `app/routes/checkout_api.py`,
@@ -85,6 +92,9 @@ Secrets live **only** in Render → Environment. `.env` is never committed.
 - **23 Nov 2026** — Static catalogue + order-by-email mode; BALANCE cream tracksuit set (L) £20 listed; Chat as
   email-ordering assistant; FAQ/Delivery updated; "Live stock" → "Availability confirmed by email"; meta
   description and plurals fixed; desktop/mobile check; Stripe & PayPal discussed.
+- **24 Nov 2026 (session 7)** — Owner approved the cloud architecture. Built the cloud connector framework,
+  encrypted credential vault, publish-everywhere with readiness checks, cloud order polling and tracking upload,
+  and an end-to-end simulated journey test (no Mac). Complete cost breakdown. Backups kept 7 days to stay free.
 - **24 Nov 2026 (session 6)** — Owner issued the master roadmap. Built the multichannel core (central stock
   ledger and history, listings per platform with platform prices/status, marketplace sale import, cross-platform
   propagation, assisted Vinted/Depop workflow, retries and alerts, reconciliation, tasks), the Manager sync API, and
@@ -171,6 +181,11 @@ marketplace fees, postage. Currently paying: £0 hosting (Render Free).
 - No secrets in the repo.
 
 ## 8. Session log
+### 24 Nov 2026 (session 7)
+MacBook not connected to the chat and Manager source not on GitHub → owner guided to add the "Druvo AI" folder
+via the Claude desktop app (one step at a time). Next after access: audit, check sandbox vs live credentials,
+port eBay then Amazon into `app/connectors/`, test in sandboxes, then staging.
+
 ### 24 Nov 2026 (session 6)
 Master roadmap received and stored. Reviewed everything against it → `docs/PROGRESS.md`. Research: Amazon cancelled
 SP-API developer fees (May 2026); Royal Mail Click & Drop is free with an API. Built Phase 2/3/5/6/7 foundations that

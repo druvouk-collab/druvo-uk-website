@@ -1,6 +1,6 @@
 # DRUVO — Master progress tracker
 
-Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **24 Nov 2026, session 6**.
+Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **24 Nov 2026, session 7**.
 
 **Status key** (from the master roadmap):
 ⬜ Not started · 🔨 In development · 🧪 Built but untested in staging (automated code tests pass) ·
@@ -10,12 +10,12 @@ Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **24 
 > 🧪 means the feature has automated tests (328 passing on PostgreSQL 16) but hasn't been exercised on staging
 > with real Stripe/Resend test accounts or real marketplace sandboxes.
 
-## Architecture decision (needs owner confirmation)
+## Architecture decision — ✅ approved by owner 24 Nov 2026
 DRUVO Manager must run 24/7 without the MacBook and be usable from a phone, so its **central system now lives in
 the cloud** (Render web service + PostgreSQL). The dashboard at `/admin` is branded **DRUVO Manager**, and DRUVO.uk
 is one of its five channels. The existing Mac application is **not being rebuilt**: once its source is shared,
-its working eBay/Amazon code is moved into the cloud, or keeps running and talks to the cloud through the
-**Manager sync API**, whichever the audit shows is less work. Until then, eBay/Amazon jobs queue for it.
+its working eBay/Amazon code is **moved into the cloud** as connectors. Owner requirement: the Mac app must
+**not** be needed for sync, orders, stock or listing. The Manager sync API remains only as a temporary bridge.
 
 ---
 
@@ -47,7 +47,8 @@ its working eBay/Amazon code is moved into the cloud, or keeps running and talks
 | Create a product once: name, brand, category, description, size/colour, condition, cost, price, quantity, photos, SKU/barcode | 🧪 |
 | Choose platforms per product, platform-specific price | 🧪 |
 | Listing status per platform: not listed / pending / published / failed / sold / ended / needs attention | 🧪 |
-| Adapt listing to each marketplace (categories, item specifics, image rules) | ⛔ eBay/Amazon after audit · 🧪 basic listing pack for Vinted/Depop |
+| **Publish everywhere in one action** ("upload once") with per-platform readiness checks | 🧪 (end-to-end test with simulated marketplaces) |
+| Adapt listing to each marketplace (categories, item specifics, image rules) | ⛔ eBay/Amazon after audit · 🧪 generic checks (title length, photos, price, condition, brand, category, Amazon barcode) |
 | Delivery information per listing (shipping profiles) | ⬜ |
 | Photograph on phone → create → publish | 🧪 upload works from a phone browser; publishing via API ⛔ |
 
@@ -56,6 +57,7 @@ its working eBay/Amazon code is moved into the cloud, or keeps running and talks
 |---|---|---|
 | DRUVO.uk | Product publishing from central DB, stock, checkout, Stripe cards/Apple Pay/Google Pay, confirmation/dispatch/refund emails, discount codes | 🧪 |
 | DRUVO.uk | PayPal | ⛔ owner to check fee in Stripe (no code needed) |
+| All API platforms | Cloud connector framework: publish / quantity / price / end / import orders / submit tracking, encrypted credential vault (sandbox vs production recorded), retries, permanent-error handling | 🧪 |
 | eBay | Create/update/price/quantity/end listings, import orders, fees, tracking | ⛔ existing Manager code to audit; cloud side ready (sync API, queued jobs, order import) |
 | Amazon | Listings, inventory, pricing, orders, fees, shipping (SP-API, private app for own account) | ⛔ same as eBay. SP-API fees for developers were cancelled in May 2026 |
 | Vinted | Official: Vinted Pro Integrations (allowlist). Now: **assisted** listing pack, listing tracking, manual-removal tasks, sale recording | 🧪 assisted · ⛔ API needs Vinted Pro + allowlist approval |
@@ -135,15 +137,16 @@ activity log, account security. ⬜ Settings page (business details, delivery pr
 ## Phase 12 — Operational testing
 | Layer | Status |
 |---|---|
-| Automated code tests (328, PostgreSQL + SQLite, incl. concurrency) | ✅ |
+| Automated code tests (331, PostgreSQL + SQLite, incl. concurrency) | ✅ |
+| Full journey with **simulated** marketplaces, no Mac (create → publish everywhere → eBay order → stock 0 → other listings updated/tasks → website blocked → dispatch → tracking back to eBay → actual profit) | ✅ automated simulation, not a real marketplace test |
 | Stripe test-mode end-to-end on staging | ⛔ staging + Stripe test keys |
 | Marketplace sandbox tests (eBay sandbox, Amazon SP-API sandbox) | ⛔ Manager audit + developer accounts |
 | Mobile check on a real phone | ⛔ staging |
 | Operation without the MacBook | ⛔ staging |
 
 ## Phase 13 — Production launch
-⬜ After phase 12 and owner approval: Render Starter ($7) + Render Postgres Basic (~$6.30) ≈ £10–11/month
-+ ICO £52/year ≈ £14–15/month in total.
+⬜ After phase 12 and owner approval. Full costs: `docs/COSTS.md` (≈ £14.30–15.00/month, including worker,
+database, photo storage, backups, email and monitoring).
 
 ---
 ## What's needed from the owner → `docs/OWNER_ACTIONS.md`

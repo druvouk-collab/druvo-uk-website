@@ -1,5 +1,18 @@
 # DRUVO UK — Owner action list
 
+## 👉 Current step (one at a time)
+**Share the DRUVO Manager code.** On your MacBook:
+1. Open the **Claude** desktop app (download it from claude.ai/download if it isn't installed) and sign in.
+2. Open this same conversation in the app.
+3. Click **+** next to the message box → **Add folder** → choose **Desktop → Druvo AI** → allow access.
+4. Send a message such as "folder added".
+
+Claude can then read the code directly, including whether the eBay and Amazon keys are sandbox or live,
+**without you copying any passwords**. Nothing on your Mac is changed or deleted.
+
+---
+Reference list (Claude will walk you through these one by one after the current step):
+
 Everything Claude needs from you, in order. **All steps are free.** Nothing here buys a subscription, takes live
 payments or changes druvo.uk. Never paste passwords, keys or tokens into chat, email or GitHub. They go only into
 Render → service → **Environment**, or GitHub → repo → **Settings → Secrets**.
@@ -71,7 +84,7 @@ GitHub → repo → **Settings → Secrets and variables → Actions → New rep
 - `BACKUP_DATABASE_URL` = Render → your Postgres → **Connect → External Database URL**
 - `BACKUP_PASSPHRASE` = a long random passphrase. **Also save it in your password manager**, because backups
   can't be restored without it.
-Then **Actions → Database backup → Run workflow** to test. Backups are kept 30 days.
+Then **Actions → Database backup → Run workflow** to test. Backups are kept 7 days.
 
 ### 11. Company details
 Confirm the exact legal name, company number, registered office address and whether you're VAT registered.

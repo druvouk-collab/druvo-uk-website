@@ -49,6 +49,15 @@
 </form>
 {% if product %}
 <section class="a-card">
+  <h2>Publish to platforms</h2>
+  <form method="post" action="/admin/products/{{ product.id }}/crosslist" class="a-form">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <div class="a-row">{% for c in channels %}<label class="a-check"><input type="checkbox" name="channels" value="{{ c.code }}" {% if c.code == 'druvo.uk' %}checked{% endif %}> {{ c.name }} <span class="a-muted">({{ 'automatic' if c.mode == 'automatic' else ('website' if c.mode == 'internal' else 'assisted') }})</span></label>{% endfor %}</div>
+    <button class="a-btn primary">Publish everywhere selected</button>
+  </form>
+  <p class="a-muted">Checks each platform's requirements first and tells you exactly what's missing.</p>
+</section>
+<section class="a-card">
   <h2>Where it's listed</h2>
   <p class="a-muted">One stock figure for all platforms. When it sells anywhere, the others are updated automatically
   (API platforms) or you get a task to remove it by hand (Vinted/Depop until their APIs are approved).</p>

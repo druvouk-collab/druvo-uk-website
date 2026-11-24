@@ -2,7 +2,7 @@
 
 Revision ID: 0001
 Revises: 
-Create Date: 2026-11-24 08:12:35.454352
+Create Date: 2026-11-24 08:23:57.896794
 """
 from __future__ import annotations
 
@@ -142,6 +142,20 @@ def upgrade() -> None:
     sa.Column('processed_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('event_id')
+    )
+    op.create_table('channel_credentials',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('channel_code', sa.String(length=30), nullable=False),
+    sa.Column('environment', sa.String(length=20), nullable=False),
+    sa.Column('account_label', sa.String(length=200), nullable=False),
+    sa.Column('encrypted', sa.Text(), nullable=False),
+    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.CheckConstraint("environment IN ('sandbox','production')", name='ck_credentials_env'),
+    sa.ForeignKeyConstraint(['channel_code'], ['channels.code'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('channel_code')
     )
     op.create_table('orders',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -354,6 +368,7 @@ def downgrade() -> None:
     op.drop_index('ix_orders_status_created', table_name='orders')
     op.drop_index('ix_orders_email', table_name='orders')
     op.drop_table('orders')
+    op.drop_table('channel_credentials')
     op.drop_table('stripe_events')
     op.drop_table('promotions')
     op.drop_index('ix_outbox_status', table_name='outbox_events')

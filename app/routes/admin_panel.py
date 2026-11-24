@@ -589,6 +589,27 @@ async def product_update(request: Request, product_id: int):
     return _redirect(f"/admin/products/{product_id}", msg="Saved.")
 
 
+@router.post("/products/{product_id}/crosslist")
+async def product_crosslist(request: Request, product_id: int):
+    """Upload once → publish everywhere selected."""
+    session, form = await _post(request)
+    codes = [str(c) for c in form.getlist("channels")]
+    if not codes:
+        return _redirect(f"/admin/products/{product_id}", err="Tick at least one platform.")
+    try:
+        results = await run_in_threadpool(lambda: channel_sync.crosslist_product(product_id, codes, actor=session.email))
+    except channel_sync.ChannelError as exc:
+        return _redirect(f"/admin/products/{product_id}", err=str(exc))
+    labels = {"live": "live", "publishing": "publishing", "task_created": "listing pack ready",
+              "blocked": "needs fixing", "skipped": "skipped"}
+    summary = "; ".join(f"{code}: {labels.get(r['status'], r['status'])}" + (f" ({' '.join(r['problems'])})"
+                        if r.get("problems") else "") for code, r in results.items())
+    blocked = any(r["status"] in ("blocked", "skipped") for r in results.values())
+    if blocked:
+        return _redirect(f"/admin/products/{product_id}", err=summary)
+    return _redirect(f"/admin/products/{product_id}", msg=summary)
+
+
 @router.post("/products/{product_id}/images")
 async def product_image_upload(request: Request, product_id: int):
     session, form = await _post(request)
@@ -944,8 +965,13 @@ async def channels_page(request: Request):
                                  .group_by(models.ChannelListing.channel_code)).all())
         pending_manager = db.scalar(select(func.count(models.OutboxEvent.id)).where(
             models.OutboxEvent.consumer == "manager", models.OutboxEvent.status == "pending")) or 0
+    from app.connectors import registered_codes
+    from app.services.credentials import credential_summary
+
     return _render(request, "channels", session, channels=channels, counts=counts, pending_manager=pending_manager,
-                   manager_api_ready=len(get_settings().manager_api_key.strip()) >= 32)
+                   manager_api_ready=len(get_settings().manager_api_key.strip()) >= 32,
+                   creds=credential_summary(), cloud_connectors=registered_codes(),
+                   vault_ready=bool(get_settings().credentials_key.strip()))
 
 
 @router.post("/channels/{code}")

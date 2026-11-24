@@ -28,13 +28,14 @@ def run_maintenance_once() -> dict:
 
     channel_sync.seed_channels()
     released = DbCheckoutService().release_expired_reservations()
+    imported = channel_sync.poll_marketplace_orders()
     sync = channel_sync.process_sync_events()
     reconciled = channel_sync.reconcile()
     emails = send_pending_notifications()
     fees = backfill_payment_fees() if get_settings().stripe_enabled else 0
     digest = send_daily_digest()
     return {"released_orders": released, "emails": emails, "fees": fees, "digest": digest, "sync": sync,
-            "reconciled": reconciled}
+            "reconciled": reconciled, "imported": imported}
 
 
 _last_digest: dict[str, str] = {}

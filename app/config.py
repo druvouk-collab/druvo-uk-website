@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     # Shared secret for the DRUVO Manager sync API (Authorization: Bearer ...). 32+ random characters.
     manager_api_key: str = ""
+    # Fernet key (44 chars) that encrypts marketplace credentials in the database. Generate once, keep safe:
+    # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    credentials_key: str = ""
     resend_api_key: str = ""
     email_from: str = "DRUVO UK <orders@druvo.uk>"
     shop_notification_email: str = ""
