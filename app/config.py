@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import model_validator, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.lib.druvo_api.key_sanitize import sanitize_api_base_url, sanitize_api_key
@@ -73,6 +73,17 @@ class Settings(BaseSettings):
     tiktok_pixel_id: str = ""
     snap_pixel_id: str = ""
     ga4_measurement_id: str = ""
+
+    @model_validator(mode="after")
+    def _db_needs_url(self):
+        # Safety net: CATALOG_SOURCE=db without DATABASE_URL would show an empty shop. Fall back to the
+        # static catalogue with email ordering until the database is connected.
+        if self.catalog_source == "db" and not self.database_url.strip():
+            import logging
+
+            logging.getLogger(__name__).warning("CATALOG_SOURCE=db but DATABASE_URL is empty; using static catalogue.")
+            self.catalog_source = "static"
+        return self
 
     @property
     def stripe_mode(self) -> str:
