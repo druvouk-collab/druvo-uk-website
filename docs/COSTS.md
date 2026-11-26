@@ -41,3 +41,22 @@ so marketplace sync and webhooks run 24/7. The background jobs are light: one ch
 limit is a single instance: during a deploy (about 1 minute) sync pauses and then catches up automatically,
 because jobs are queued in the database, retried and reconciled. Upgrade when the dashboard or sync becomes
 noticeably slow, not before.
+
+
+## Neon free database — is it suitable? (checked 26 Nov 2026)
+| | Neon Free | What it means for DRUVO |
+|---|---|---|
+| Compute | 100 CU-hours per project per month; scales to zero after 5 min idle (can't be turned off) | At the smallest size (0.25 CU) that's ~400 of the month's 720 hours awake |
+| Storage | 1 GB per project | Enough for products, orders and a few thousand resized photos |
+| Restore | 6-hour point-in-time window, 1 manual snapshot | Too short on its own: our nightly encrypted GitHub backups are required |
+| Over the limit | Compute suspends until next month (data kept) | **The shop would go offline mid-month** |
+
+The background job runs every 5 minutes, which would keep Neon awake almost all month (~180 CU-hours, over the
+free allowance). Set `MAINTENANCE_INTERVAL_SECONDS=900` on Neon Free so the database can sleep between runs
+(roughly 60 CU-hours plus customer traffic).
+
+**Verdict:** Neon Free is suitable for staging and tests now, and can run a very low-traffic launch at £0 with the
+900-second setting and nightly backups, but with no margin or support. For a shop taking payments, Render Postgres
+Basic (~$6/month, always on, same region as the site) is the safer choice. Neon's paid Launch plan is usage-based
+($0.106 per CU-hour, $0.35 per GB-month); kept always on at 0.25 CU it would cost more than Render Postgres.
+Sources: neon.com/faqs/free-plan-limits-and-quotas, neon.com/pricing, neon.com/docs/postgres/backup-restore/history-window.
