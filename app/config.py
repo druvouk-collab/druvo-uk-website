@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     chat_enabled: bool = True
     chat_rate_limit_per_hour: int = 30
     google_site_verification: str = ""
+    # Background job interval (stock holds, emails, marketplace sync). Raise to 900+ on Neon's free database.
+    maintenance_interval_seconds: int = 300
     # Advertising pixels — empty means off. Loaded only after the visitor accepts marketing cookies.
     meta_pixel_id: str = ""
     tiktok_pixel_id: str = ""

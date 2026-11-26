@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 INTERVAL_SECONDS = 300
 
 
+def interval_seconds() -> int:
+    """MAINTENANCE_INTERVAL_SECONDS (60–3600, default 300). On Neon's free database use 900 or more, so the
+    database can scale to zero between runs and stay inside the free monthly compute allowance."""
+    return max(60, min(3600, int(get_settings().maintenance_interval_seconds or INTERVAL_SECONDS)))
+
+
 def run_maintenance_once() -> dict:
     from app.services.db_checkout import DbCheckoutService
     from app.services.notifications import send_pending_notifications
@@ -67,7 +73,7 @@ def send_daily_digest(force: bool = False) -> bool:
 
 async def maintenance_loop() -> None:
     while True:
-        await asyncio.sleep(INTERVAL_SECONDS)
+        await asyncio.sleep(interval_seconds())
         try:
             result = await run_in_threadpool(run_maintenance_once)
             if result["released_orders"] or any(result["emails"].values()) or any(result["sync"].values()):
