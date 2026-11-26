@@ -1,0 +1,60 @@
+# Tests the LIVE druvo.uk in a real browser (mobile + desktop) and runs Google Lighthouse.
+# Screenshots, the JSON report and Lighthouse reports are saved as the run's "browser-check" artifact.
+# Runs after every change to main, weekly on Monday morning, and on demand (Actions → Browser check → Run).
+name: Browser check
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "23 6 * * 1"
+  push:
+    branches: [main, "ops/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Wait for Render to finish deploying
+        if: github.event_name == 'push'
+        run: sleep 240
+      - name: Install browser
+        run: |
+          pip install playwright==1.49.1
+          python -m playwright install --with-deps chromium
+      - name: Real-browser check (mobile + desktop)
+        run: python scripts/browser_check.py https://druvo.uk browser-check
+      - name: Lighthouse (mobile) — performance, accessibility, best practices, SEO
+        if: always()
+        run: |
+          for p in "" "shop" "product/balance-cream-2-piece-sweatshirt-jogger-tracksuit-set-l"; do
+            name=$(echo "${p:-home}" | tr '/' '_')
+            npx -y lighthouse@12 "https://druvo.uk/$p" --quiet --chrome-flags="--headless=new --no-sandbox" \
+              --output=json --output=html --output-path="browser-check/lighthouse-$name" || true
+            python3 - "browser-check/lighthouse-$name.report.json" <<'EOF'
+          import json, sys
+          r = json.load(open(sys.argv[1]))
+          s = {k: round(v["score"] * 100) for k, v in r["categories"].items() if v["score"] is not None}
+          a = r["audits"]
+          print(r["finalDisplayedUrl"], s,
+                "LCP", a["largest-contentful-paint"]["displayValue"],
+                "CLS", a["cumulative-layout-shift"]["displayValue"],
+                "TBT", a["total-blocking-time"]["displayValue"])
+          for k, v in a.items():
+              if v.get("score") is not None and v["score"] < 0.9 and v.get("scoreDisplayMode") in ("binary", "numeric", "metricSavings"):
+                  print("   needs work:", k, "-", v.get("displayValue", ""))
+          EOF
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-check
+          path: browser-check/
+          retention-days: 14

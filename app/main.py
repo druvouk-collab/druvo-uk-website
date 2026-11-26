@@ -61,10 +61,15 @@ STATIC_DIR = BASE_DIR.parent / "static"
 def _json_error_path(path: str) -> bool:
     return path.startswith("/api/") or path.startswith("/webhooks/")
 
+_production = get_settings().production_mode
 app = FastAPI(
     title="DRUVO UK",
     description="Public e-commerce storefront for DRUVO UK resale",
     version="0.1.0",
+    # Interactive API docs are for development only; they map every endpoint for attackers.
+    docs_url=None if _production else "/docs",
+    redoc_url=None if _production else "/redoc",
+    openapi_url=None if _production else "/openapi.json",
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
@@ -125,7 +130,11 @@ async def static_cache_headers(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
     if path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=604800, immutable"
+        if request.query_params.get("v"):
+            # Versioned CSS/JS (?v=...) change URL whenever they change, so browsers can keep them a year.
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "public, max-age=604800"
     return response
 
 
@@ -153,8 +162,13 @@ async def readiness() -> JSONResponse:
 
 
 @app.get("/health/druvo")
-async def druvo_health() -> JSONResponse:
+async def druvo_health(request: Request) -> JSONResponse:
     settings = get_settings()
+    # Configuration details are for the owner only on the live site.
+    if settings.production_mode:
+        token = settings.admin_checklist_token
+        if not token or request.query_params.get("token") != token:
+            return JSONResponse({"detail": "Not Found"}, status_code=404)
     raw_key = os.getenv("DRUVO_API_KEY", "")
     payload = {
         "catalog_source": settings.catalog_source,

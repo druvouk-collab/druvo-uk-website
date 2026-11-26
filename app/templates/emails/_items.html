@@ -1,5 +1,5 @@
 <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin:12px 0;">
-{% for item in items %}<tr style="border-bottom:1px solid #eee;"><td>{{ item.product_name }}{% if item.colour or item.size %}<br><span style="color:#666;">{{ [item.colour, item.size] | select | join(" / ") }}</span>{% endif %}</td><td align="right">× {{ item.quantity }}</td><td align="right">{{ (item.unit_price_pence * item.quantity) | money }}</td></tr>
+{% for item in items %}<tr style="border-bottom:1px solid #eee;"><td>{{ item.product_name }}{% if item.colour or item.size %}<br><span style="color:#666;">{{ [item.colour, item.size] | select | join(" / ") }}</span>{% endif %}</td><td align="right" style="white-space:nowrap;">× {{ item.quantity }}</td><td align="right" style="white-space:nowrap;">{{ (item.unit_price_pence * item.quantity) | money }}</td></tr>
 {% endfor %}<tr><td colspan="2">Items</td><td align="right">{{ order.subtotal_pence | money }}</td></tr>
 <tr><td colspan="2">Delivery</td><td align="right">{% if order.shipping_pence %}{{ order.shipping_pence | money }}{% else %}Free{% endif %}</td></tr>
 <tr><td colspan="2"><strong>Total paid</strong></td><td align="right"><strong>{{ order.total_pence | money }}</strong></td></tr>

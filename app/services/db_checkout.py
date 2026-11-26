@@ -588,6 +588,7 @@ class DbCheckoutService:
                 "email": order.email,
                 "total_gbp": order.total_pence / 100,
                 "paid": order.status in ("paid", "packed", "shipped", "delivered"),
+                "skus": [item.sku for item in order.items],
             }
 
     def stock_check(self, lines: list[BasketLine]) -> dict[str, Any]:

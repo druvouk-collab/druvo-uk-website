@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     chat_enabled: bool = True
     chat_rate_limit_per_hour: int = 30
     google_site_verification: str = ""
+    # Advertising pixels — empty means off. Loaded only after the visitor accepts marketing cookies.
+    meta_pixel_id: str = ""
+    tiktok_pixel_id: str = ""
+    snap_pixel_id: str = ""
+    ga4_measurement_id: str = ""
 
     @property
     def stripe_mode(self) -> str:
