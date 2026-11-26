@@ -1,6 +1,11 @@
 # DRUVO UK — Owner action list
 
 ## 👉 Current step (one at a time)
+**Approve the 503 fix.** Open https://github.com/druvouk-collab/druvo-uk-website/pull/1 → **Merge pull request**
+→ **Confirm merge**. Free; keeps druvo.uk awake and emails you if it goes down. Render redeploys by itself.
+
+**Then:** share the DRUVO Manager code (below).
+
 **Share the DRUVO Manager code.** On your MacBook:
 1. Open the **Claude** desktop app (download it from claude.ai/download if it isn't installed) and sign in.
 2. Open this same conversation in the app.

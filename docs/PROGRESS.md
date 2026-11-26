@@ -1,6 +1,6 @@
 # DRUVO — Master progress tracker
 
-Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **24 Nov 2026, session 7**.
+Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **26 Nov 2026, session 8**.
 
 **Status key** (from the master roadmap):
 ⬜ Not started · 🔨 In development · 🧪 Built but untested in staging (automated code tests pass) ·
@@ -18,6 +18,16 @@ its working eBay/Amazon code is **moved into the cloud** as connectors. Owner re
 **not** be needed for sync, orders, stock or listing. The Manager sync API remains only as a temporary bridge.
 
 ---
+
+## Live site status — 26 Nov 2026
+| Item | Status | Evidence / notes |
+|---|---|---|
+| druvo.uk reachable, all sitemap pages/images/robots/sitemap/feed 200 | ✅ at 01:30 UTC | GitHub Actions run 45736203312 (outside check) |
+| 503 errors from Render Free spin-down | 🧪 fix in PR #1 | keep-alive every 10 min + hourly check emailing owner; ⛔ needs owner to merge PR #1 |
+| Google shipping/returns structured data + delivery price on product page | 🧪 in PR #1 | 288 tests; rendered locally in production mode |
+| Search Console verification / indexing status | ⛔ | owner must verify the domain (OWNER_ACTIONS #10) |
+| Merchant Center | ⛔ | account + verified company details |
+| Online card checkout on live site | ⛔ | staging + Stripe test keys, then Starter + Postgres approval |
 
 ## Phase 1 — Review and consolidate
 | Item | Status | Notes |
@@ -137,7 +147,7 @@ activity log, account security. ⬜ Settings page (business details, delivery pr
 ## Phase 12 — Operational testing
 | Layer | Status |
 |---|---|
-| Automated code tests (331, PostgreSQL + SQLite, incl. concurrency) | ✅ |
+| Automated code tests (331, PostgreSQL + SQLite, incl. concurrency; 329 passed / 2 skipped on SQLite 26 Nov) | ✅ |
 | Full journey with **simulated** marketplaces, no Mac (create → publish everywhere → eBay order → stock 0 → other listings updated/tasks → website blocked → dispatch → tracking back to eBay → actual profit) | ✅ automated simulation, not a real marketplace test |
 | Stripe test-mode end-to-end on staging | ⛔ staging + Stripe test keys |
 | Marketplace sandbox tests (eBay sandbox, Amazon SP-API sandbox) | ⛔ Manager audit + developer accounts |

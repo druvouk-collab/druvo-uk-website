@@ -144,9 +144,11 @@ See `docs/SOLUTION_PROPOSAL.md` §8 for the phased plan.
   review — the 14-day cancellation right applies to all distance sales and refunds are due within 14 days of
   receiving goods back.
 - Render Free plan: spins down after 15 min; serves "disallow all" robots.txt while asleep (SEO risk);
-  blocks SMTP; ephemeral disk.
+  blocks SMTP; ephemeral disk. Likely cause of the 503 reported 26 Nov. Mitigation (free): keep-alive +
+  monitor in PR #1. Permanent fix: Render Starter at go-live (already approved in principle).
 - No company name/address on the site.
-- Delivery charge shown only at checkout — review against DMCC Act drip-pricing rules.
+- Delivery charge shown only at checkout — review against DMCC Act drip-pricing rules. Fixed in PR #1
+  (product pages show "+ £3.99 standard UK delivery (total …)"), live once merged.
 
 - **Repository is PUBLIC** on GitHub. No secrets are in it, but making it private is recommended
   (GitHub → repo → Settings → Danger Zone → Change visibility). Render deploys private repos fine.
@@ -181,6 +183,16 @@ marketplace fees, postage. Currently paying: £0 hosting (Render Free).
 - No secrets in the repo.
 
 ## 8. Session log
+### 26 Nov 2026 (session 8) — 503 report
+Owner reported a 503 on druvo.uk. At 01:30 UTC the live site was healthy from an outside GitHub runner: all
+18 sitemap pages, images, robots.txt, sitemap and Merchant feed returned 200 in under 1.5 s. Cause: Render
+Free spin-down (cold starts can return 503 and serve "disallow all" robots.txt). Fix built at no cost:
+`site-monitor.yml` (keep-alive every 10 min + hourly full check that emails the owner on failure) and
+`scripts/site_check.py`. Also brought the tested Google shipping/returns structured data and "+ £3.99 delivery"
+line to the live branch. Both are in **PR #1** (`ops/site-monitor` → `main`), awaiting owner approval —
+Claude was not permitted to push to `main` itself. Tests: 288 (main + PR), 329 passed / 2 skipped (develop).
+Search Console, Merchant Center and real Stripe testing still need the owner (unchanged).
+
 ### 24 Nov 2026 (session 7)
 MacBook not connected to the chat and Manager source not on GitHub → owner guided to add the "Druvo AI" folder
 via the Claude desktop app (one step at a time). Next after access: audit, check sandbox vs live credentials,
