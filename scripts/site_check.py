@@ -122,6 +122,21 @@ def main() -> int:
                 checked_images.add(src)
                 check(src)
 
+    # Legal pages: key UK consumer-law content must stay on the live site.
+    must = {
+        "/returns": ["Model cancellation form", "Consumer Rights Act 2015", "within 14 days"],
+        "/delivery": ["1–2 working days"],
+        "/privacy": ["Information Commissioner"],
+        "/terms": ["England and Wales"],
+    }
+    for path, phrases in must.items():
+        body = check(path)
+        for phrase in phrases:
+            if body and phrase not in body:
+                problems.append(f"{path} is missing: {phrase}")
+        if "£6.99" in body:
+            problems.append(f"{path} still offers £6.99 express delivery")
+
     feed = check("/google-merchant-feed.xml")
     items = feed.count("<item>")
     print(f"Merchant feed has {items} item(s); product pages checked: {products}")
