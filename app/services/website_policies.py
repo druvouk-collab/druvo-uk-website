@@ -32,13 +32,14 @@ def build_website_policies(settings: Settings) -> WebsitePolicies:
     return WebsitePolicies(
         delivery_summary=(
             f"Standard UK delivery: 2–4 working days — £{standard:.2f} "
-            f"(free on orders over £{threshold:.2f}). "
-            "Express UK delivery: 1–2 working days — £6.99 (see /delivery)."
+            f"(free on orders over £{threshold:.2f}), dispatched within 1–2 working days. "
+            "No express or international delivery at the moment (see /delivery)."
         ),
         returns_summary=(
-            "Returns within 14 days of delivery for eligible unworn items with tags attached. "
+            "You can cancel and return any item within 14 days of receiving it, for any reason. "
             f"Contact {email} with your order number to start a return. "
-            "Refunds processed within 5–10 working days after inspection. See /returns."
+            "We refund the item and standard delivery within 14 days of getting it back (or proof of postage). "
+            "Return postage is paid by the customer unless the item is faulty. See /returns."
         ),
         payment_methods=(
             f"We take orders by email at {email}. We'll reply to confirm stock, the delivery cost "

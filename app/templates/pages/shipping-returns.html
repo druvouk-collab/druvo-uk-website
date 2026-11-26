@@ -8,16 +8,9 @@
   <p>Everything you need to know about UK delivery and returning items to DRUVO UK.</p>
 
   <h2>UK delivery</h2>
-  <p>We ship across the United Kingdom using tracked services.</p>
-  <ul>
-    <li><strong>Standard UK delivery:</strong> 2–4 working days — £3.99 (free on orders over £75)</li>
-    <li><strong>Express UK delivery:</strong> 1–2 working days — £6.99</li>
-  </ul>
-  <p>You will receive a tracking number by email once your order has been dispatched. For full delivery details see our <a href="/delivery">delivery information</a> page.</p>
+  <p>Standard tracked UK delivery: {{ format_gbp(shipping_standard_gbp) }} per order, free over {{ format_gbp(shipping_free_threshold_gbp) }}. We dispatch within 1–2 working days; delivery usually takes 2–4 working days after that. Full details: <a href="/delivery">delivery information</a>.</p>
 
   <h2>Returns</h2>
-  <p>You may return eligible items within <strong>14 days</strong> of delivery under UK consumer regulations, provided items are unworn, with tags attached, and in the same condition as received.</p>
-  <p>To start a return, contact <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> with your order number. Return postage is the customer’s responsibility unless the item is faulty or not as described.</p>
-  <p>Refunds are processed within 5–10 working days after we receive and inspect the return. See our full <a href="/returns">returns policy</a>.</p>
+  <p>You can cancel and return items within 14 days of receiving them, for any reason. We refund the item price and the standard delivery charge within 14 days of getting the item back (or your proof of postage). Return postage is yours to pay unless the item is faulty or not as described. Full details and how to start a return: <a href="/returns">returns &amp; refunds</a>.</p>
 </article>
 {% endblock %}

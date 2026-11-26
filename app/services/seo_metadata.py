@@ -288,8 +288,8 @@ def delivery_document_title() -> str:
 
 def delivery_meta_description() -> str:
     return meta_description(
-        "DRUVO UK delivery — standard UK tracked shipping in 2–4 working days (£3.99, free over £75) "
-        "and express 1–2 day delivery. Order tracking by email."
+        "DRUVO UK delivery — tracked UK shipping, dispatched in 1–2 working days and delivered in 2–4 "
+        "(£3.99, free over £75). Tracking number by email."
     )
 
 
