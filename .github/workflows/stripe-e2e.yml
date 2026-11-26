@@ -1,0 +1,92 @@
+# Free end-to-end checkout test with Stripe TEST mode. No real money moves, nothing is bought.
+#
+# Starts the shop on the GitHub runner with a throwaway PostgreSQL database, opens it in a real browser,
+# buys one item with Stripe's test card 4242 4242 4242 4242, forwards Stripe's webhook with the Stripe CLI,
+# and checks the order is marked paid and stock goes down by one. Screenshots are saved as an artifact.
+#
+# One-time setup by the owner (GitHub → repo → Settings → Secrets and variables → Actions):
+#   STRIPE_TEST_SECRET_KEY       sk_test_...  (Stripe Dashboard → Developers → API keys, TEST mode)
+#   STRIPE_TEST_PUBLISHABLE_KEY  pk_test_...
+#   RESEND_API_KEY (optional)    to also send a real test confirmation email
+# The job refuses to run with a live key.
+name: Stripe test checkout
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["develop/**", "ops/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: druvo
+          POSTGRES_PASSWORD: druvo
+          POSTGRES_DB: druvo
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+      STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_TEST_PUBLISHABLE_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      DATABASE_URL: postgresql://druvo:druvo@localhost:5432/druvo
+      CATALOG_SOURCE: db
+      SITE_URL: http://127.0.0.1:8080
+      PRODUCTION_MODE: "false"
+      CHAT_ENABLED: "false"
+      SESSION_SECRET: ci-only-not-a-secret-0123456789abcdef
+      SHOP_NOTIFICATION_EMAIL: druvo.uk@gmail.com
+      EMAIL_FROM: DRUVO UK <orders@druvo.uk>
+    steps:
+      - name: Skip unless Stripe test keys are configured
+        id: keys
+        run: |
+          case "$STRIPE_SECRET_KEY" in
+            sk_test_*) echo "ok=true" >> "$GITHUB_OUTPUT" ;;
+            sk_live_*) echo "::error::A LIVE Stripe key was given. Use the TEST key (sk_test_...)."; exit 1 ;;
+            *) echo "::notice::Stripe test keys not set yet — see the comment at the top of this file."; echo "ok=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - uses: actions/checkout@v4
+        if: steps.keys.outputs.ok == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.keys.outputs.ok == 'true'
+        with:
+          python-version: "3.12"
+      - name: Install
+        if: steps.keys.outputs.ok == 'true'
+        run: |
+          pip install -r requirements.txt playwright==1.49.1
+          python -m playwright install --with-deps chromium
+          curl -sL https://github.com/stripe/stripe-cli/releases/download/v1.21.8/stripe_1.21.8_linux_x86_64.tar.gz | tar xz -C /usr/local/bin stripe
+      - name: Start Stripe webhook forwarding and the shop
+        if: steps.keys.outputs.ok == 'true'
+        run: |
+          export STRIPE_WEBHOOK_SECRET=$(stripe listen --api-key "$STRIPE_SECRET_KEY" --print-secret)
+          echo "::add-mask::$STRIPE_WEBHOOK_SECRET"
+          echo "STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET" >> "$GITHUB_ENV"
+          nohup stripe listen --api-key "$STRIPE_SECRET_KEY" \
+            --events checkout.session.completed,checkout.session.expired,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,charge.refunded \
+            --forward-to http://127.0.0.1:8080/webhooks/stripe > stripe-listen.log 2>&1 &
+          PORT=8080 HOST=127.0.0.1 nohup bash scripts/start.sh > app.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8080/health && break; sleep 2; done
+      - name: Buy one item with the Stripe test card
+        if: steps.keys.outputs.ok == 'true'
+        run: python scripts/stripe_e2e.py http://127.0.0.1:8080 "postgresql+psycopg://druvo:druvo@localhost:5432/druvo" stripe-e2e
+      - name: Logs
+        if: always() && steps.keys.outputs.ok == 'true'
+        run: |
+          echo "--- Stripe CLI"; tail -40 stripe-listen.log || true
+          echo "--- App (emails, webhooks)"; grep -iE "email|webhook|order|error" app.log | tail -60 || true
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.keys.outputs.ok == 'true'
+        with:
+          name: stripe-e2e
+          path: stripe-e2e/
+          retention-days: 14
