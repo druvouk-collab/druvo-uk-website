@@ -147,9 +147,12 @@ def organization_json_ld(settings: Settings | None = None) -> str:
     payload = {
         "@context": "https://schema.org",
         "@type": "Organization",
+        "@id": f"{base}/#organization",
         "name": cfg.site_name,
+        "alternateName": ["DRUVO", "Druvo UK"],
         "url": base,
         "email": cfg.contact_email,
+        "hasMerchantReturnPolicy": merchant_return_policy(cfg, base),
         "description": (
             "DRUVO UK is a premium UK resale store for pre-loved and new-with-tags "
             "clothing, footwear and accessories."
@@ -168,8 +171,11 @@ def website_json_ld(settings: Settings | None = None) -> str:
     payload = {
         "@context": "https://schema.org",
         "@type": "WebSite",
+        "@id": f"{base}/#website",
         "name": cfg.site_name,
+        "alternateName": ["DRUVO", "Druvo UK"],
         "url": base,
+        "publisher": {"@id": f"{base}/#organization"},
         "potentialAction": {
             "@type": "SearchAction",
             "target": {
@@ -202,6 +208,38 @@ def _product_images(product: Product, base: str) -> list[str]:
     if not images:
         images = [f"{base}/static/images/placeholder-product.svg"]
     return images
+
+
+def merchant_return_policy(cfg: Settings, base: str) -> dict:
+    """UK 14-day return window, mirrors /returns. Customer pays return postage."""
+    return {
+        "@type": "MerchantReturnPolicy",
+        "applicableCountry": "GB",
+        "returnPolicyCountry": "GB",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+        "merchantReturnDays": 14,
+        "returnMethod": "https://schema.org/ReturnByMail",
+        "returnFees": "https://schema.org/ReturnShippingFees",
+        "merchantReturnLink": f"{base}/returns",
+    }
+
+
+def offer_shipping_details(cfg: Settings) -> dict:
+    """Standard UK delivery: £3.99, 1–2 working days handling, 2–4 working days transit."""
+    return {
+        "@type": "OfferShippingDetails",
+        "shippingRate": {
+            "@type": "MonetaryAmount",
+            "value": f"{cfg.shipping_standard_gbp:.2f}",
+            "currency": "GBP",
+        },
+        "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "GB"},
+        "deliveryTime": {
+            "@type": "ShippingDeliveryTime",
+            "handlingTime": {"@type": "QuantitativeValue", "minValue": 1, "maxValue": 2, "unitCode": "DAY"},
+            "transitTime": {"@type": "QuantitativeValue", "minValue": 2, "maxValue": 4, "unitCode": "DAY"},
+        },
+    }
 
 
 def _seller_organization(cfg: Settings, base: str) -> dict:
@@ -247,6 +285,8 @@ def _variant_offer(
         "url": f"{base}/product/{product.slug}",
         "itemCondition": condition_url,
         "seller": seller,
+        "shippingDetails": offer_shipping_details(get_settings()),
+        "hasMerchantReturnPolicy": merchant_return_policy(get_settings(), base),
     }
     if variant.colour:
         offer["color"] = variant.colour
