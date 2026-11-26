@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     chat_enabled: bool = True
     chat_rate_limit_per_hour: int = 30
     google_site_verification: str = ""
+    # Seller identity (E-Commerce Regulations 2002). Shown on Terms/Returns/footer only once set by the owner.
+    business_legal_name: str = ""
+    business_address: str = ""
+    company_number: str = ""
+    vat_number: str = ""
     # Advertising pixels — empty means off. Loaded only after the visitor accepts marketing cookies.
     meta_pixel_id: str = ""
     tiktok_pixel_id: str = ""

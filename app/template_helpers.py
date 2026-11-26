@@ -55,6 +55,17 @@ def marketing_config() -> dict:
     return {k: v.strip() for k, v in raw.items() if v and _PIXEL_ID.match(v.strip())}
 
 
+def business_identity() -> dict:
+    s = get_settings()
+    return {
+        "name": s.business_legal_name.strip() or s.site_name,
+        "company_number": s.company_number.strip(),
+        "address": s.business_address.strip(),
+        "vat_number": s.vat_number.strip(),
+        "confirmed": bool(s.business_legal_name.strip() and s.business_address.strip()),
+    }
+
+
 def template_globals() -> dict:
     settings = get_settings()
     return {
@@ -71,6 +82,8 @@ def template_globals() -> dict:
         "static_asset_version": static_asset_version,
         "current_year": 2026,
         "marketing_config": marketing_config,
+        "business_identity": business_identity,
+        "online_orders": bool(getattr(settings, "database_enabled", False)),
         "shipping_standard_gbp": settings.shipping_standard_gbp,
         "shipping_free_threshold_gbp": settings.shipping_free_threshold_gbp,
         "placeholder_product": "/static/images/placeholder-product.svg",

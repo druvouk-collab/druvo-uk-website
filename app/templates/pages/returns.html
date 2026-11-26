@@ -4,9 +4,30 @@
 {% block twitter_description %}{{ seo_description }}{% endblock %}
 {% block content %}
 <article class="container prose">
-  <h1>Returns Policy</h1>
-  <p>You may return eligible items within <strong>14 days</strong> of delivery under UK consumer regulations, provided items are unworn, with tags attached, and in the same condition as received.</p>
-  <p>To start a return, contact <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> with your order number. Return postage is the customer’s responsibility unless the item is faulty or not as described.</p>
-  <p>Refunds are processed within 5–10 working days after we receive and inspect the return.</p>
+  <h1>Returns &amp; Refunds</h1>
+  <p>You can return anything you buy from us within <strong>14 days</strong> for any reason. This is your legal right when buying online in the UK, and it's in addition to your rights if an item is faulty.</p>
+
+  <h2>Changed your mind (14-day right to cancel)</h2>
+  <ol>
+    <li><strong>Tell us within 14 days</strong> of the day after you receive your order.
+      {% if online_orders %}Use <strong>Start a return</strong> on your order page (the link is in your order emails, or <a href="/orders/find">find your order</a>), or email{% else %}Email{% endif %} <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> with your order number. You can also use the cancellation form below, but you don't have to.</li>
+    <li><strong>Send the item back within 14 days</strong> of telling us, with your order number inside. Use a tracked service and keep your proof of postage. We'll email you the returns address.</li>
+    <li><strong>We refund you within 14 days</strong> of receiving the item back, or of you sending proof of postage, whichever is sooner. We refund the price you paid and the standard delivery charge, to the payment method you used.</li>
+  </ol>
+  <p>You pay the cost of returning the item unless it's faulty or not as described. You can handle and try an item as you would in a shop. If an item comes back worn, washed, damaged or without its tags because it was handled more than that, we may reduce the refund to reflect its lower value, and we'll explain why.</p>
+  <p>For hygiene reasons, earrings, underwear and swimwear can only be returned if their hygiene seal or protective packaging hasn't been removed.</p>
+
+  <h2>Faulty or not as described</h2>
+  <p>Under the Consumer Rights Act 2015, if an item is faulty, not as described or not fit for purpose, you can reject it for a full refund within 30 days of delivery, including return postage. After 30 days you're entitled to a repair or replacement, or a refund if that isn't possible. Email us with your order number and a photo.</p>
+  <p>Many of our items are pre-loved. Each listing describes the item's condition; normal signs of wear that match the description aren't a fault.</p>
+
+  <h2>Model cancellation form</h2>
+  <p>Copy, complete and email this to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> if you wish (it's optional):</p>
+  <blockquote>
+    To {{ business_identity().name }}, {{ contact_email }}: I hereby give notice that I cancel my contract for the sale of the following goods: [item]. Ordered on [date] / received on [date]. Order number: [number]. Name: [name]. Address: [address]. Date: [date].
+  </blockquote>
+
+  <h2>Who we are</h2>
+  {% include "components/business_identity.html" %}
 </article>
 {% endblock %}
