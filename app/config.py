@@ -101,6 +101,9 @@ class Settings(BaseSettings):
 
     @property
     def stripe_enabled(self) -> bool:
+        # Safety lock: a LIVE key takes no payments until the owner also sets STRIPE_LIVE_MODE_CONFIRMED=true.
+        if self.stripe_mode == "live" and not self.stripe_live_mode_confirmed:
+            return False
         return bool(self.stripe_secret_key and self.stripe_publishable_key)
 
     @property

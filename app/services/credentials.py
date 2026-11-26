@@ -23,8 +23,14 @@ def _fernet() -> Fernet:
         raise CredentialsError("CREDENTIALS_KEY is not set — marketplace credentials can't be stored securely.")
     try:
         return Fernet(key.encode())
-    except (ValueError, TypeError) as exc:
-        raise CredentialsError("CREDENTIALS_KEY is not a valid Fernet key.") from exc
+    except (ValueError, TypeError):
+        if len(key) < 32:
+            raise CredentialsError("CREDENTIALS_KEY is too short (use 32+ random characters).") from None
+        # Any long random secret (e.g. Render's generated value) is turned into a Fernet key.
+        import base64
+        import hashlib
+
+        return Fernet(base64.urlsafe_b64encode(hashlib.sha256(key.encode()).digest()))
 
 
 def save_credentials(channel_code: str, secrets: dict, *, environment: str, account_label: str = "",

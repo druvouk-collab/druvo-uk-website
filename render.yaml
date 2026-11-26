@@ -2,65 +2,101 @@
 # Docs: https://render.com/docs/blueprint-spec
 
 services:
-  - type: web
-    name: druvo-uk
-    runtime: python
-    plan: free
-    region: frankfurt
-    branch: main
-    buildCommand: pip install -r requirements.txt
-    startCommand: bash scripts/start.sh
-    healthCheckPath: /health
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.0"
-      - key: SITE_NAME
-        value: DRUVO UK
-      - key: CONTACT_EMAIL
-        value: druvo.uk@gmail.com
-      - key: CATALOG_SOURCE
-        value: druvo_api
-      - key: SITE_URL
-        value: "https://druvo.uk"
-      - key: SESSION_SECRET
-        generateValue: true
-      - key: DRUVO_API_BASE_URL
-        value: ""
-      - key: DRUVO_API_KEY
-        sync: false
-      - key: DRUVO_API_TIMEOUT_SECONDS
-        value: "30"
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_PUBLISHABLE_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-      - key: CHECKOUT_DB_PATH
-        value: "/tmp/druvo_checkout.db"
-      - key: SHIPPING_STANDARD_GBP
-        value: "3.99"
-      - key: SHIPPING_FREE_THRESHOLD_GBP
-        value: "75"
-      - key: SMTP_HOST
-        sync: false
-      - key: SMTP_FROM
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASSWORD
-        sync: false
-      - key: ADMIN_CHECKLIST_TOKEN
-        sync: false
-      - key: PRODUCTION_MODE
-        value: "true"
-      - key: CHAT_ENABLED
-        value: "true"
-      - key: CHAT_MODEL
-        value: "gpt-4o-mini"
-      - key: CHAT_RATE_LIMIT_PER_HOUR
-        value: "30"
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: GOOGLE_SITE_VERIFICATION
-        sync: false
+- type: web
+  name: druvo-uk
+  runtime: python
+  plan: free
+  region: frankfurt
+  branch: main
+  buildCommand: pip install -r requirements.txt
+  startCommand: bash scripts/start.sh
+  healthCheckPath: /health
+  envVars:
+  - key: PYTHON_VERSION
+    value: 3.12.0
+  - key: SITE_NAME
+    value: DRUVO UK
+  - key: CONTACT_EMAIL
+    value: druvo.uk@gmail.com
+  - key: CATALOG_SOURCE
+    value: db
+  - key: SITE_URL
+    value: https://druvo.uk
+  - key: SESSION_SECRET
+    generateValue: true
+  - key: DRUVO_API_BASE_URL
+    value: ''
+  - key: DRUVO_API_KEY
+    sync: false
+  - key: DRUVO_API_TIMEOUT_SECONDS
+    value: '30'
+  - key: STRIPE_SECRET_KEY
+    sync: false
+  - key: STRIPE_PUBLISHABLE_KEY
+    sync: false
+  - key: STRIPE_WEBHOOK_SECRET
+    sync: false
+  - key: CHECKOUT_DB_PATH
+    value: /tmp/druvo_checkout.db
+  - key: SHIPPING_STANDARD_GBP
+    value: '3.99'
+  - key: SHIPPING_FREE_THRESHOLD_GBP
+    value: '75'
+  - key: SMTP_HOST
+    sync: false
+  - key: SMTP_FROM
+    sync: false
+  - key: SMTP_USER
+    sync: false
+  - key: SMTP_PASSWORD
+    sync: false
+  - key: ADMIN_CHECKLIST_TOKEN
+    sync: false
+  - key: PRODUCTION_MODE
+    value: 'true'
+  - key: CHAT_ENABLED
+    value: 'true'
+  - key: CHAT_MODEL
+    value: gpt-4o-mini
+  - key: CHAT_RATE_LIMIT_PER_HOUR
+    value: '30'
+  - key: OPENAI_API_KEY
+    sync: false
+  - key: GOOGLE_SITE_VERIFICATION
+    sync: false
+  - key: DATABASE_URL
+    sync: false
+  - key: RESEND_API_KEY
+    sync: false
+  - key: EMAIL_FROM
+    value: DRUVO UK <orders@druvo.uk>
+  - key: SHOP_NOTIFICATION_EMAIL
+    value: druvo.uk@gmail.com
+  - key: ADMIN_SETUP_TOKEN
+    sync: false
+  - key: MANAGER_API_KEY
+    sync: false
+  - key: CREDENTIALS_KEY
+    generateValue: true
+  - key: SENTRY_DSN
+    sync: false
+  - key: STRIPE_LIVE_MODE_CONFIRMED
+    value: 'false'
+  - key: MAINTENANCE_INTERVAL_SECONDS
+    value: '300'
+  - key: BUSINESS_LEGAL_NAME
+    sync: false
+  - key: COMPANY_NUMBER
+    sync: false
+  - key: BUSINESS_ADDRESS
+    sync: false
+  - key: VAT_NUMBER
+    sync: false
+  - key: META_PIXEL_ID
+    sync: false
+  - key: TIKTOK_PIXEL_ID
+    sync: false
+  - key: SNAP_PIXEL_ID
+    sync: false
+  - key: GA4_MEASUREMENT_ID
+    sync: false
