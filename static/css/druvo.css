@@ -695,3 +695,17 @@ button, input, select, textarea { font: inherit; }
   .druvo-chat-chip { font-size: 0.8rem; min-height: 36px; }
   .druvo-chat-form textarea { font-size: 16px; }
 }
+
+/* Cookie consent (only shown when advertising pixels are configured) */
+.consent-banner {
+  position: fixed; left: 1rem; right: 1rem; bottom: 1rem; z-index: 1000; max-width: 640px; margin: 0 auto;
+  background: var(--bg-card); color: inherit; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1rem 1.25rem; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-size: .9rem;
+}
+.consent-banner[hidden] { display: none; }
+.consent-banner p { margin: 0 0 .75rem; }
+.consent-actions { display: flex; gap: .75rem; justify-content: flex-end; flex-wrap: wrap; }
+.consent-actions .btn { min-width: 110px; }
+/* Keep the consent buttons clear of the chat launcher in the bottom-right corner. */
+.consent-banner { bottom: 5.25rem; }
+.consent-banner a { text-decoration: underline; }

@@ -87,6 +87,13 @@
 
   {% if chat_enabled %}<script type="module" src="/static/js/chat.js?v={{ static_asset_version() }}"></script>{% endif %}
 
+  {% set mkt = marketing_config() %}
+  {% if mkt %}
+  <script type="application/json" id="druvo-marketing-config">{{ mkt | tojson }}</script>
+  {% include "components/consent_banner.html" %}
+  <script type="module" src="/static/js/marketing.js?v={{ static_asset_version() }}"></script>
+  {% endif %}
+
   {% block scripts %}{% endblock %}
 
 </body>

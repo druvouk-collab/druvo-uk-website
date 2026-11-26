@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from pathlib import Path
 
 from app.config import get_settings
@@ -43,6 +44,17 @@ def static_asset_version() -> str:
     return _STATIC_VERSION
 
 
+_PIXEL_ID = re.compile(r"^[A-Za-z0-9-]{4,64}$")
+
+
+def marketing_config() -> dict:
+    """Pixel IDs that are set and well-formed (anything else is ignored, never echoed into the page)."""
+    s = get_settings()
+    raw = {"meta": s.meta_pixel_id, "tiktok": s.tiktok_pixel_id, "snap": s.snap_pixel_id,
+           "ga4": s.ga4_measurement_id}
+    return {k: v.strip() for k, v in raw.items() if v and _PIXEL_ID.match(v.strip())}
+
+
 def template_globals() -> dict:
     settings = get_settings()
     return {
@@ -58,6 +70,7 @@ def template_globals() -> dict:
         "product_image_alt": product_image_alt,
         "static_asset_version": static_asset_version,
         "current_year": 2026,
+        "marketing_config": marketing_config,
         "shipping_standard_gbp": settings.shipping_standard_gbp,
         "shipping_free_threshold_gbp": settings.shipping_free_threshold_gbp,
         "placeholder_product": "/static/images/placeholder-product.svg",

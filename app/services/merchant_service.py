@@ -223,3 +223,33 @@ async def build_merchant_feed_xml(settings: Settings | None = None) -> str:
 
 def _g(parent: Element, tag: str, text: str) -> None:
     SubElement(parent, f"{{{GOOGLE_NS}}}{tag}").text = text
+
+
+SOCIAL_FEED_COLUMNS = [
+    "id", "title", "description", "availability", "condition", "price", "link", "image_link", "brand",
+    "item_group_id", "color", "size", "gender", "age_group", "google_product_category", "shipping",
+]
+
+
+def social_catalog_csv(items: list[MerchantFeedItem]) -> str:
+    """Product catalogue CSV in the column format Meta, TikTok and Snapchat catalogues accept."""
+    import csv
+    import io
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(SOCIAL_FEED_COLUMNS)
+    for it in items:
+        writer.writerow([
+            it.id, it.title, it.description, it.availability.replace("_", " "), it.condition, it.price_gbp, it.link,
+            it.image_link, it.brand or "DRUVO UK", it.item_group_id, it.color, it.size, it.gender,
+            it.age_group, it.google_product_category,
+            f"{it.shipping_country}::{it.shipping_service}:{it.shipping_price_gbp}",
+        ])
+    return buf.getvalue()
+
+
+async def build_social_catalog_csv(settings: Settings | None = None) -> str:
+    cfg = settings or get_settings()
+    products = await CatalogService(cfg).list_products()
+    return social_catalog_csv(build_merchant_feed_items(products, cfg))
