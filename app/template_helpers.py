@@ -58,6 +58,8 @@ def template_globals() -> dict:
         "product_image_alt": product_image_alt,
         "static_asset_version": static_asset_version,
         "current_year": 2026,
+        "shipping_standard_gbp": settings.shipping_standard_gbp,
+        "shipping_free_threshold_gbp": settings.shipping_free_threshold_gbp,
         "placeholder_product": "/static/images/placeholder-product.svg",
         "placeholder_category": "/static/images/placeholder-category.svg",
     }
