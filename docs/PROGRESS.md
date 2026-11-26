@@ -19,15 +19,19 @@ its working eBay/Amazon code is **moved into the cloud** as connectors. Owner re
 
 ---
 
-## Live site status — 26 Nov 2026
+## Live site status — 26 Nov 2026 (session 8)
 | Item | Status | Evidence / notes |
 |---|---|---|
-| druvo.uk reachable, all sitemap pages/images/robots/sitemap/feed 200 | ✅ at 01:30 UTC | GitHub Actions run 45736203312 (outside check) |
-| 503 errors from Render Free spin-down | 🧪 fix in PR #1 | keep-alive every 10 min + hourly check emailing owner; ⛔ needs owner to merge PR #1 |
-| Google shipping/returns structured data + delivery price on product page | 🧪 in PR #1 | 288 tests; rendered locally in production mode |
-| Search Console verification / indexing status | ⛔ | owner must verify the domain (OWNER_ACTIONS #10) |
-| Merchant Center | ⛔ | account + verified company details |
-| Online card checkout on live site | ⛔ | staging + Stripe test keys, then Starter + Postgres approval |
+| druvo.uk reachable; all sitemap pages, images, robots, sitemap, feed return 200 | 🚀 | Actions runs 45736203312, 45737052981 |
+| 503 from Render Free spin-down → keep-alive every 10 min + hourly outside check (emails owner on failure) | 🚀 merged PR #1 | Render staff discourage keep-alive pings on Free; temporary bridge until Starter is approved |
+| Delivery price on product page + Google shipping/returns structured data | 🚀 merged PR #1 | live check passed after deploy |
+| Real-browser check, mobile 390px + desktop 1440px, all 14 pages, add-to-basket | ✅ on live site | run 45737534081: 0 JS errors, 0 broken images, no sideways scroll; PR #2 makes it permanent (awaiting merge) |
+| Lighthouse (mobile, live) | ✅ measured | SEO 100 · Accessibility 98–100 · Best practices 96 · Performance 80 (product) – 92 (shop) |
+| Speed: smaller photos (−818 KB), non-blocking font, longer caching | 🧪 PR #3 | 288 tests + browser check pass locally; awaiting merge |
+| Stripe test-mode checkout, end to end, free | 🧪 workflow ready | `stripe-e2e.yml` on develop; ⛔ needs Stripe TEST keys as GitHub secrets |
+| Search Console verification + sitemap submission | ⛔ owner | tag support already in code (`GOOGLE_SITE_VERIFICATION`) |
+| Google index | ⛔ unknown | druvo.uk not found in a web search on 26 Nov; confirm in Search Console |
+| Merchant Center | ⛔ | needs live online checkout first (order-by-email risks rejection), plus business details |
 
 ## Phase 1 — Review and consolidate
 | Item | Status | Notes |

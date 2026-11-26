@@ -183,6 +183,13 @@ marketplace fees, postage. Currently paying: £0 hosting (Render Free).
 - No secrets in the repo.
 
 ## 8. Session log
+### 26 Nov 2026 (session 8b) — owner approved PR #1
+PR #1 merged and verified live. Render Free keep-alive: Render support has called keep-awake pings on Free an
+abuse of the free tier and pointed to paid instances, so treat it as temporary; recommend Starter ($7/mo) once
+approved. Live real-browser test passed on mobile and desktop (PR #2 to keep it running). Speed work in PR #3.
+Stripe test-mode end-to-end workflow added on develop (needs Stripe TEST keys as GitHub secrets). Claude can
+merge only with owner approval per PR.
+
 ### 26 Nov 2026 (session 8) — 503 report
 Owner reported a 503 on druvo.uk. At 01:30 UTC the live site was healthy from an outside GitHub runner: all
 18 sitemap pages, images, robots.txt, sitemap and Merchant feed returned 200 in under 1.5 s. Cause: Render

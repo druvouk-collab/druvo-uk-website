@@ -1,10 +1,19 @@
 # DRUVO UK — Owner action list
 
 ## 👉 Current step (one at a time)
-**Approve the 503 fix.** Open https://github.com/druvouk-collab/druvo-uk-website/pull/1 → **Merge pull request**
-→ **Confirm merge**. Free; keeps druvo.uk awake and emails you if it goes down. Render redeploys by itself.
+**Verify druvo.uk in Google Search Console** (free, ~10 min):
+1. Open https://search.google.com/search-console/welcome (sign in as druvo.uk@gmail.com).
+2. Right-hand box **URL prefix** → type `https://druvo.uk/` → **Continue**.
+3. Choose **HTML tag** → copy only the code inside `content="…"`.
+4. Open https://dashboard.render.com → **druvo-uk** → **Environment** → **Add environment variable**:
+   key `GOOGLE_SITE_VERIFICATION`, value = that code → **Save, rebuild and deploy**.
+5. When the deploy shows **Live** (2–3 min), go back to Search Console → **Verify**.
+6. Left menu **Sitemaps** → enter `sitemap.xml` → **Submit**. Then **URL inspection** → paste
+   `https://druvo.uk/` → **Request indexing**.
 
-**Then:** share the DRUVO Manager code (below).
+**Next:** merge PR #2 and PR #3 · add Stripe TEST keys as GitHub secrets · share the DRUVO Manager code.
+
+
 
 **Share the DRUVO Manager code.** On your MacBook:
 1. Open the **Claude** desktop app (download it from claude.ai/download if it isn't installed) and sign in.
