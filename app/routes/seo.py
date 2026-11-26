@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse, Response
 
-from app.services.merchant_service import build_merchant_feed_xml
+from app.services.merchant_service import build_merchant_feed_xml, build_social_catalog_csv
 from app.services.seo_service import build_sitemap_urls, robots_txt, sitemap_xml
 
 router = APIRouter(tags=["seo"])
@@ -28,3 +28,11 @@ async def google_merchant_feed() -> Response:
     """Public Google Merchant product feed synced from DRUVO AI inventory."""
     body = await build_merchant_feed_xml()
     return Response(content=body, media_type="application/xml; charset=utf-8")
+
+
+@router.get("/feeds/social-catalog.csv")
+async def social_catalog() -> Response:
+    """Product catalogue for Meta (Facebook/Instagram), TikTok and Snapchat catalogue managers."""
+    body = await build_social_catalog_csv()
+    return Response(content=body, media_type="text/csv; charset=utf-8",
+                    headers={"Cache-Control": "public, max-age=3600"})

@@ -64,11 +64,26 @@
     details with marketplaces unless required to fulfil an order or comply with law.
   </p>
 
-  <h2>Cookies and local storage</h2>
+  <h2 id="cookies">Cookies and local storage</h2>
   <p>
-    This website may use essential cookies or browser local storage for basket functionality and session
-    management. We do not currently use third-party advertising trackers on this site.
+    This website uses essential browser storage for your basket, checkout and session. These are needed for
+    the shop to work and do not need consent.
   </p>
+  {% set mkt = marketing_config() %}
+  {% if mkt %}
+  <p>
+    With your permission only, we also use advertising and analytics cookies from
+    {% if mkt.meta %}Meta (Facebook and Instagram){% if mkt.tiktok or mkt.snap or mkt.ga4 %}, {% endif %}{% endif %}
+    {%- if mkt.tiktok %}TikTok{% if mkt.snap or mkt.ga4 %}, {% endif %}{% endif %}
+    {%- if mkt.snap %}Snapchat{% if mkt.ga4 %}, {% endif %}{% endif %}
+    {%- if mkt.ga4 %}Google Analytics{% endif %}. They record pages and products you view, items added to your
+    basket and completed purchases, so we can measure our adverts and show relevant products. Each provider
+    processes this under its own privacy policy. Nothing is loaded until you choose <strong>Accept</strong>; you
+    can change your choice at any time with <a href="#" data-consent-reopen>Cookie settings</a>.
+  </p>
+  {% else %}
+  <p>We do not currently use advertising or analytics cookies on this site.</p>
+  {% endif %}
 
   <h2>Data retention</h2>
   <p>

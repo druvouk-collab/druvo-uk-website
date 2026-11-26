@@ -37,6 +37,8 @@ export function addToCart(item) {
     cart.push(item);
   }
   saveCart(cart);
+  // Lets the (consent-gated) advertising pixels record "add to basket".
+  window.dispatchEvent(new CustomEvent("druvo:add_to_cart", { detail: item }));
 }
 
 export function removeFromCart(index) {

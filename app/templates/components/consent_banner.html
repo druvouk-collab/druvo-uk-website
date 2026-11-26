@@ -1,0 +1,16 @@
+<div class="consent-banner" id="consent-banner" role="dialog" aria-live="polite" aria-label="Cookie choices" hidden>
+  <p>
+    We use essential storage to run your basket. With your permission we also use advertising cookies
+    {%- set names = [] -%}
+    {%- if mkt.meta %}{% set _ = names.append("Meta (Facebook, Instagram)") %}{% endif -%}
+    {%- if mkt.tiktok %}{% set _ = names.append("TikTok") %}{% endif -%}
+    {%- if mkt.snap %}{% set _ = names.append("Snapchat") %}{% endif -%}
+    {%- if mkt.ga4 %}{% set _ = names.append("Google Analytics") %}{% endif %}
+    from {{ names | join(", ") }} to measure our ads and show you relevant products.
+    <a href="/privacy#cookies">Privacy &amp; cookies</a>
+  </p>
+  <div class="consent-actions">
+    <button type="button" class="btn btn-secondary" data-consent-reject>Reject</button>
+    <button type="button" class="btn btn-primary" data-consent-accept>Accept</button>
+  </div>
+</div>
