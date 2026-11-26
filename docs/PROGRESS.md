@@ -1,6 +1,6 @@
 # DRUVO — Master progress tracker
 
-Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **26 Nov 2026, session 8**.
+Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **26 Nov 2026, session 9**.
 
 **Status key** (from the master roadmap):
 ⬜ Not started · 🔨 In development · 🧪 Built but untested in staging (automated code tests pass) ·
@@ -19,19 +19,22 @@ its working eBay/Amazon code is **moved into the cloud** as connectors. Owner re
 
 ---
 
-## Live site status — 26 Nov 2026 (session 8)
+## Live site status — 26 Nov 2026 (session 9)
 | Item | Status | Evidence / notes |
 |---|---|---|
-| druvo.uk reachable; all sitemap pages, images, robots, sitemap, feed return 200 | 🚀 | Actions runs 45736203312, 45737052981 |
-| 503 from Render Free spin-down → keep-alive every 10 min + hourly outside check (emails owner on failure) | 🚀 merged PR #1 | Render staff discourage keep-alive pings on Free; temporary bridge until Starter is approved |
-| Delivery price on product page + Google shipping/returns structured data | 🚀 merged PR #1 | live check passed after deploy |
-| Real-browser check, mobile 390px + desktop 1440px, all 14 pages, add-to-basket | ✅ on live site | run 45737534081: 0 JS errors, 0 broken images, no sideways scroll; PR #2 makes it permanent (awaiting merge) |
-| Lighthouse (mobile, live) | ✅ measured | SEO 100 · Accessibility 98–100 · Best practices 96 · Performance 80 (product) – 92 (shop) |
-| Speed: smaller photos (−818 KB), non-blocking font, longer caching | 🧪 PR #3 | 288 tests + browser check pass locally; awaiting merge |
-| Stripe test-mode checkout, end to end, free | 🧪 workflow ready | `stripe-e2e.yml` on develop; ⛔ needs Stripe TEST keys as GitHub secrets |
-| Search Console verification + sitemap submission | ⛔ owner | tag support already in code (`GOOGLE_SITE_VERIFICATION`) |
-| Google index | ⛔ unknown | druvo.uk not found in a web search on 26 Nov; confirm in Search Console |
-| Merchant Center | ⛔ | needs live online checkout first (order-by-email risks rejection), plus business details |
+| druvo.uk up; every sitemap page, image, robots, sitemap, feeds 200 | 🚀 | site monitor run 45776049124 |
+| Real browser, iPhone-size + desktop, 14 pages + add-to-basket | 🚀 | browser check after PR #5: 0 JS errors, 0 broken images, no sideways scroll |
+| Speed (Lighthouse mobile, live) | 🚀 PR #3 | home 96 · shop 100 · product 96 (was 80); SEO 100; accessibility 98–100 |
+| Security headers, API docs hidden, config endpoint protected | 🚀 PR #4 + #6 | monitor checks headers and 404s; pip-audit clean |
+| Ads readiness: consent banner, Meta/TikTok/Snapchat/GA4 pixels (off until IDs set), `/feeds/social-catalog.csv` | 🚀 PR #5 | browser test: nothing loads before Accept or after Reject |
+| Keep-awake every 10 min | ⛔ | GitHub has not fired the schedule since 01:34 (known GitHub issue for new repos). Hourly check also not firing. Needs owner: external free pinger or Render Starter |
+| Stripe test-mode checkout end to end | 🧪 | `stripe-e2e.yml` ready; ⛔ Stripe TEST keys as GitHub secrets |
+| Oversell prevention (8 buyers, 1 item) | ✅ | 340 tests on PostgreSQL 16 in CI (`tests.yml`) |
+| Order confirmation / dispatch / refund emails | ✅ rendered | templates checked on a phone-width screen; sending ⛔ Resend account |
+| Ads Purchase event on paid-order page | 🧪 develop | once per order |
+| Search Console | ⛔ owner verification | |
+| Merchant Center | ⛔ | needs online checkout live (see docs/MERCHANT_CENTER.md) |
+| DRUVO Manager / eBay / Amazon / Vinted audit | ⛔ | MacBook not connected to this chat |
 
 ## Phase 1 — Review and consolidate
 | Item | Status | Notes |
@@ -125,7 +128,8 @@ reports the sale, both sales can happen. DRUVO detects it, flags the later order
 | Search Console | ⛔ owner verification |
 | Merchant Center / free Shopping listings (feed with shipping, returns, apparel attributes) | 🧪 feed · ⛔ account + verified company details |
 | Google Images (image sitemap, alt text) | 🧪 |
-| Facebook/Instagram catalogue (same feed) | 🧪 feed · ⛔ Meta account |
+| Facebook/Instagram, TikTok, Snapchat catalogues | 🚀 `/feeds/social-catalog.csv` · ⛔ ad accounts |
+| Ad pixels with UK-compliant consent | 🚀 off until IDs set (docs/ADVERTISING.md) |
 | Discount codes | 🧪 |
 | Email marketing with consent, abandoned basket recovery (opt-in only) | ⬜ |
 | Genuine customer reviews | ⬜ |

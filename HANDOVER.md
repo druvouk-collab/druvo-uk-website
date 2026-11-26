@@ -183,6 +183,14 @@ marketplace fees, postage. Currently paying: £0 hosting (Render Free).
 - No secrets in the repo.
 
 ## 8. Session log
+### 26 Nov 2026 (session 9)
+Owner approved PR #2/#3 and publishing tested improvements. Merged and verified live: PR #2 browser check,
+PR #3 speed (product Lighthouse 80→96), PR #4 security headers, PR #5 ads readiness (consent banner, pixels off
+until IDs set, social catalogue CSV), PR #6 (live service has no PRODUCTION_MODE → protection keyed on RENDER;
+monitor now checks headers and hidden pages). develop: merged main, Purchase event, email wrap fix, Postgres CI
+(340 pass incl. oversell race). Found: GitHub schedules not firing (keep-awake inactive). Mac not connected →
+Manager audit still blocked. New docs: MERCHANT_CENTER.md, ADVERTISING.md.
+
 ### 26 Nov 2026 (session 8b) — owner approved PR #1
 PR #1 merged and verified live. Render Free keep-alive: Render support has called keep-awake pings on Free an
 abuse of the free tier and pointed to paid instances, so treat it as temporary; recommend Starter ($7/mo) once
