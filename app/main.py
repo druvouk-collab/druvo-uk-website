@@ -60,7 +60,11 @@ async def static_cache_headers(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
     if path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=604800, immutable"
+        if request.query_params.get("v"):
+            # Versioned CSS/JS (?v=...) change URL whenever they change, so browsers can keep them a year.
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "public, max-age=604800"
     return response
 
 

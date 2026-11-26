@@ -193,4 +193,6 @@ async def test_sitemap_includes_all_mock_products(client):
 async def test_static_responses_have_cache_control(client):
     response = await client.get("/static/css/druvo.css")
     assert response.status_code == 200
-    assert response.headers.get("cache-control") == "public, max-age=604800, immutable"
+    assert response.headers.get("cache-control") == "public, max-age=604800"
+    versioned = await client.get("/static/css/druvo.css?v=abc123")
+    assert versioned.headers.get("cache-control") == "public, max-age=31536000, immutable"
