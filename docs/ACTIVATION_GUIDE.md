@@ -27,8 +27,15 @@ Steps 1–5 are free and change nothing customers see. Steps marked 💷 need yo
 4. When Resend shows **Verified**: **API keys → Create** (permission: Sending access) → copy it once.
 5. GitHub secrets (same page as Step 2): `RESEND_API_KEY` = that key. Claude sends a test email to you.
 
-## Step 4 — Make the code private (2 min)
-GitHub → repo → **Settings** → bottom **Danger zone** → **Change visibility → Private**. Render keeps working.
+## Step 4 — Wake up GitHub's timers, then make the code private (5 min)
+GitHub hasn't run any scheduled job (keep-awake, hourly check, nightly backups) since 26 Nov. A commit made by
+you usually restarts them:
+1. Open https://github.com/druvouk-collab/druvo-uk-website/actions — if a yellow banner offers to enable
+   workflows, click **Enable**.
+2. Open https://github.com/druvouk-collab/druvo-uk-website/edit/main/.github/workflows/site-monitor.yml →
+   in the first line add a space at the end → **Commit changes** → **Commit changes**.
+3. Tell Claude; Claude checks a "schedule" run appears within the hour.
+4. Then: **Settings** → bottom **Danger zone** → **Change visibility → Private**. Render keeps working.
 
 ## Step 5 — Business details (5 min)
 Send Claude (in chat, these are public details, not secrets): legal name, company number, registered office

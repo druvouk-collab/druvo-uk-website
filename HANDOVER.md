@@ -183,6 +183,16 @@ marketplace fees, postage. Currently paying: £0 hosting (Render Free).
 - No secrets in the repo.
 
 ## 8. Session log
+### 26 Nov 2026 (session 11)
+Live (PR #7, #8): UK-compliant returns/delivery/terms/privacy; £6.99 Express removed (never offered at checkout);
+seller identity appears once BUSINESS_* are set; monitor checks policy content. develop: live-Stripe lock,
+static-catalogue fallback without DATABASE_URL, MAINTENANCE_INTERVAL_SECONDS, complete render.yaml, CREDENTIALS_KEY
+accepts any long secret. Neon Free assessed (docs/COSTS.md): OK for staging/very low traffic with interval 900;
+Render Postgres recommended for payments. Vinted: only Vinted Pro Integrations (allowlist) is allowed; new
+Vinted terms (8 Oct 2026, per third-party report) ban unauthorised automation — keep assisted workflow.
+Amazon: private SP-API app, self-authorised, needs Professional plan. GitHub schedules still never fired.
+Owner guide: docs/ACTIVATION_GUIDE.md.
+
 ### 26 Nov 2026 (session 10)
 Launch checklist + journey test doc: https://claude.ai/artifact/QPK2maXuGnpTw8b5EPiNvY (6 verified · 16 built ·
 18 not done). Built on develop: secure customer order page (HMAC link from emails; lookup needs order number AND

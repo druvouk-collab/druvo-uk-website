@@ -1,21 +1,8 @@
 # DRUVO UK — Owner action list
 
 ## 👉 Current step (one at a time)
-**Verify druvo.uk in Google Search Console** (free, ~10 min):
-1. Open https://search.google.com/search-console/welcome (sign in as druvo.uk@gmail.com).
-2. Right-hand box **URL prefix** → `https://druvo.uk/` → **Continue** → **HTML tag** → copy only the code
-   inside `content="…"`.
-3. https://dashboard.render.com → **druvo-uk** → **Environment** → **Add environment variable**:
-   `GOOGLE_SITE_VERIFICATION` = that code. While there, also add `PRODUCTION_MODE` = `true`.
-   **Save, rebuild and deploy**.
-4. When the deploy shows **Live**, Search Console → **Verify** → tell Claude.
-
-**Queue after that (Claude will guide each one):**
-1. Keep-awake: GitHub isn't running the 10-minute schedule. Choose: free pinger at cron-job.org
-   (Render discourages this on Free) **or** approve Render Starter $7/mo (no sleeping at all).
-2. Stripe TEST keys → GitHub secrets, so Claude can run the full test purchase.
-3. Business details for Merchant Center (docs/MERCHANT_CENTER.md).
-4. Open this chat on the MacBook and add the Druvo AI folder (DRUVO Manager audit).
+Follow **`docs/ACTIVATION_GUIDE.md`**, starting at **Step 1 — Google Search Console**. One step at a time;
+tell Claude "done" after each.
 
 ---
 Reference list (Claude will walk you through these one by one after the current step):
