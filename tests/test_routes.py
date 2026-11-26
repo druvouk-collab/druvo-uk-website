@@ -35,7 +35,7 @@ async def test_privacy_route(client):
     assert response.status_code == 200
     assert "Privacy Policy" in response.text
     assert "druvo.uk@gmail.com" in response.text
-    assert "DRUVO AI Enterprise" in response.text
+    assert "Information Commissioner" in response.text and "Stripe" in response.text
 
 
 @pytest.mark.asyncio

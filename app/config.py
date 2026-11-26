@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     google_site_verification: str = ""
     # Background job interval (stock holds, emails, marketplace sync). Raise to 900+ on Neon's free database.
     maintenance_interval_seconds: int = 300
+    vat_number: str = ""
     # Advertising pixels — empty means off. Loaded only after the visitor accepts marketing cookies.
     meta_pixel_id: str = ""
     tiktok_pixel_id: str = ""

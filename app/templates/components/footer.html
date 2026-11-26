@@ -27,7 +27,8 @@
     </div>
   </div>
   <div class="container footer-bottom">
-    <span>&copy; {{ current_year }} {{ site_name }}. All rights reserved.</span>
+    {% set biz = business_identity() %}
+    <span>&copy; {{ current_year }} {{ biz.name }}{% if biz.company_number %} · Company no. {{ biz.company_number }}{% endif %}{% if biz.address %} · {{ biz.address }}{% endif %}{% if biz.vat_number %} · VAT {{ biz.vat_number }}{% endif %}. All rights reserved.</span>
     <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
   </div>
 </footer>

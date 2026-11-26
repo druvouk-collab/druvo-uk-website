@@ -5,14 +5,42 @@
 {% block content %}
 <article class="container prose">
   <h1>Terms &amp; Conditions</h1>
-  <p>These terms govern your use of the DRUVO UK website and purchase of products from us.</p>
-  <h2>Orders</h2>
-  <p>All orders are subject to availability and confirmation. We reserve the right to cancel orders affected by stock or pricing errors.</p>
-  <h2>Pricing</h2>
-  <p>Prices are shown in GBP and include VAT where applicable. Sale prices are valid for the period stated on the product page.</p>
-  <h2>Limitation of liability</h2>
-  <p>We are not liable for indirect losses. Nothing in these terms limits your statutory rights as a UK consumer.</p>
-  <h2>Contact</h2>
-  <p><a href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>
+  <p>These terms apply when you buy from DRUVO UK. Please read them before ordering. Nothing in them affects your legal rights as a UK consumer.</p>
+
+  <h2>1. Who we are</h2>
+  {% include "components/business_identity.html" %}
+
+  <h2>2. Your order and our contract</h2>
+  {% if email_orders %}
+  <p>You order by email. We reply to confirm availability, the total including delivery, and how to pay. The contract between us is formed when we confirm that we've accepted your order after payment.</p>
+  {% else %}
+  <p>When you pay at checkout you make an offer to buy. The contract between us is formed when we email you the order confirmation. If we can't accept your order (for example the item has sold elsewhere or there was an obvious pricing error), we'll tell you and refund you in full straight away.</p>
+  {% endif %}
+  <p>Many items are one-offs. They're reserved for you while you pay; if payment isn't completed, the item becomes available to other customers again.</p>
+
+  <h2>3. Prices and payment</h2>
+  <p>Prices are in pounds sterling (GBP){% if business_identity().vat_number %} and include VAT{% endif %}. The delivery charge is shown on product pages and in your basket before you pay; there are no other charges.{% if not email_orders %} Card, Apple Pay and Google Pay payments are processed securely by Stripe; we never see or store your full card details.{% endif %}</p>
+
+  <h2>4. Product descriptions</h2>
+  <p>We describe and photograph each item carefully, including its condition (new, new with tags, or pre-loved, with any marks or wear noted). Colours can look slightly different on different screens. Check the measurements on each listing before you buy.</p>
+
+  <h2>5. Delivery</h2>
+  <p>We deliver to UK addresses. Costs, timings and what happens if a parcel is late or lost are on our <a href="/delivery">delivery page</a>, which forms part of these terms.</p>
+
+  <h2>6. Your right to cancel and returns</h2>
+  <p>You can cancel within 14 days of receiving your order for any reason. How to do it, and your rights if an item is faulty, are on our <a href="/returns">returns page</a>, which forms part of these terms.</p>
+
+  <h2>7. Our responsibility to you</h2>
+  <p>If we break these terms we're responsible for loss or damage you suffer that is a foreseeable result. We're not responsible for losses that weren't foreseeable, or for business losses. We don't exclude or limit our liability where it would be unlawful to do so, including for death or personal injury caused by our negligence, fraud, or breach of your legal rights in relation to the goods.</p>
+
+  <h2>8. Your information</h2>
+  <p>We use your details only to process and deliver your order and to contact you about it. See our <a href="/privacy">privacy policy</a>.</p>
+
+  <h2>9. Problems and complaints</h2>
+  <p>Email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> and we'll reply within 2 working days. If we can't resolve it, you can contact Citizens Advice (<a href="https://www.citizensadvice.org.uk" rel="noopener">citizensadvice.org.uk</a>, 0808 223 1133).</p>
+
+  <h2>10. Law</h2>
+  <p>These terms are governed by the law of England and Wales. You can bring proceedings in the courts of England and Wales, or, if you live in Scotland or Northern Ireland, in the courts there.</p>
+  <p class="product-meta">Last updated 26 November 2026.</p>
 </article>
 {% endblock %}

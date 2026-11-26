@@ -5,15 +5,30 @@
 {% block content %}
 <article class="container prose">
   <h1>Delivery Information</h1>
-  <p>We ship across the United Kingdom using tracked services.</p>
+  <p>We deliver to addresses in the United Kingdom using tracked services.</p>
+
+  <h2>Cost and timing</h2>
   <ul>
-    <li><strong>Standard UK delivery:</strong> 2–4 working days — £3.99 (free on orders over £75)</li>
-    <li><strong>Express UK delivery:</strong> 1–2 working days — £6.99</li>
+    <li><strong>Standard UK delivery:</strong> {{ format_gbp(shipping_standard_gbp) }} per order, free on orders over {{ format_gbp(shipping_free_threshold_gbp) }}.</li>
+    <li><strong>Dispatch:</strong> within 1–2 working days of your order (Monday to Friday, excluding UK bank holidays).</li>
+    <li><strong>Delivery:</strong> usually 2–4 working days after dispatch.</li>
   </ul>
+  <p>The delivery charge is shown on every product page and in your basket before you pay. We don't currently offer next-day or international delivery.</p>
+
+  <h2>Tracking</h2>
   {% if email_orders %}
-  <p>We confirm the delivery cost by email before you pay. Once your order has been dispatched, we'll email you a tracking number. If you have a question about your order, reply to your order email or contact <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+  <p>We confirm the delivery cost by email before you pay. Once your order has been dispatched, we'll email you the tracking number.</p>
   {% else %}
-  <p>You will receive a tracking number by email once your order has been dispatched. Tracking links will appear in your account order history when live checkout is enabled.</p>
+  <p>We email you the tracking number when your order is dispatched. The link in your order emails also shows your order's progress.</p>
   {% endif %}
+
+  <h2>If something goes wrong</h2>
+  <ul>
+    <li>If your parcel hasn't arrived within 7 working days of dispatch, email us and we'll trace it with the carrier. If it's lost, we'll send a replacement (if we have one) or a full refund.</li>
+    <li>The goods are our responsibility until they're delivered to you or to someone you've nominated (for example a neighbour or safe place you've chosen).</li>
+    <li>If we can't deliver within 30 days of your order, we'll tell you and you can cancel for a full refund.</li>
+    <li>Please check your delivery address carefully. If a parcel is returned to us because the address was wrong, we can resend it once you've paid the postage again.</li>
+  </ul>
+  <p>Questions: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
 </article>
 {% endblock %}

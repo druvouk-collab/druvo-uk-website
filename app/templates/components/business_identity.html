@@ -1,0 +1,7 @@
+{# Seller identity required by the E-Commerce Regulations 2002. Shown only once the owner has confirmed
+   the details in Render (BUSINESS_LEGAL_NAME, COMPANY_NUMBER, BUSINESS_ADDRESS, VAT_NUMBER). #}
+{% set biz = business_identity() %}
+<p>
+  This website is run by <strong>{{ biz.name }}</strong>{% if biz.company_number %}, a company registered in England and Wales (company number {{ biz.company_number }}){% endif %}{% if biz.address %}, registered office: {{ biz.address }}{% endif %}.
+  Email: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.{% if biz.vat_number %} VAT number: {{ biz.vat_number }}.{% endif %}
+</p>

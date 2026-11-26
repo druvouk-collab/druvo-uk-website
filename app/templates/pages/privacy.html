@@ -5,64 +5,43 @@
 {% block content %}
 <article class="container prose">
   <h1>Privacy Policy</h1>
-  <p class="product-meta">Last updated: 7 August 2026</p>
-
-  <p>
-    This Privacy Policy describes how <strong>DRUVO UK</strong> (“we”, “us”) handles personal information
-    when you visit our website, create an account, or purchase products from us. It also explains how
-    DRUVO UK relates to <strong>DRUVO AI Enterprise</strong>, the desktop business management application
-    used to manage inventory and sales channels.
-  </p>
+  <p class="product-meta">Last updated: 26 November 2026</p>
+  <p>This policy explains what personal information DRUVO UK collects when you browse or buy from this website, why, who we share it with, and your rights under UK data protection law (UK GDPR and the Data Protection Act 2018).</p>
 
   <h2>Who we are</h2>
-  <p>
-    DRUVO UK is a UK-focused resale store for clothing, footwear, and accessories. DRUVO AI Enterprise
-    is separate desktop software used by the business to manage master product inventory, stock, pricing,
-    and multi-channel sales operations. The website is designed to become one sales channel alongside
-    marketplaces such as eBay — it is not limited to any single marketplace integration.
-  </p>
+  {% include "components/business_identity.html" %}
+  <p>We are the "controller" of your personal information. Contact us about privacy at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
 
-  <h2>Information we collect</h2>
-  <p>Depending on how you interact with DRUVO UK, we may collect:</p>
+  <h2>What we collect</h2>
   <ul>
-    <li><strong>Account details:</strong> name, email address, and password (when account registration is enabled)</li>
-    <li><strong>Order details:</strong> delivery address, phone number, items purchased, and payment status</li>
-    <li><strong>Customer support messages:</strong> information you send via contact forms or email</li>
-    <li><strong>Website usage data:</strong> basic technical logs such as IP address, browser type, and pages visited (when server logging is enabled on our hosting platform)</li>
-  </ul>
-  <p>
-    At present, checkout and live customer accounts are not fully connected. Until those features launch,
-    we only collect information you voluntarily submit (for example via email).
-  </p>
-
-  <h2>How we use information</h2>
-  <ul>
-    <li>Process and deliver orders</li>
-    <li>Provide customer support and respond to enquiries</li>
-    <li>Maintain order history and account access</li>
-    <li>Improve our website, catalogue, and service quality</li>
-    <li>Meet legal, tax, and accounting obligations in the United Kingdom</li>
+    <li><strong>Order details:</strong> your name, email address, phone number (optional), delivery address, the items you buy and what you paid.</li>
+    <li><strong>Payment:</strong> card, Apple Pay and Google Pay payments are handled by Stripe. We receive confirmation of payment and the card type, never your full card number.</li>
+    <li><strong>Messages:</strong> what you write to us by email or in the website's chat assistant.</li>
+    <li><strong>Technical data:</strong> your IP address, browser type and pages requested, kept briefly in our hosting provider's logs for security.</li>
+    <li><strong>Advertising and analytics data:</strong> only if you accept advertising cookies (see Cookies below).</li>
   </ul>
 
-  <h2>DRUVO AI Enterprise and sales channels</h2>
-  <p>
-    Product listings, stock quantities, variants, images, and pricing shown on this website are intended
-    to be sourced from DRUVO AI Enterprise as the master inventory system. Orders placed on DRUVO UK
-    will eventually be recorded in DRUVO AI alongside orders from other channels.
-  </p>
-  <p>
-    DRUVO AI Enterprise, when installed on a seller’s Mac, stores business data locally on that device.
-    The website does not automatically upload your personal DRUVO AI desktop data to the internet.
-    Any future connection between this website and DRUVO AI will use secure server-side APIs — not direct
-    access to your local desktop database.
-  </p>
+  <h2>Why we use it, and our legal basis</h2>
+  <ul>
+    <li>To take payment, deliver your order, handle returns and refunds, and send order emails: <em>performance of our contract with you</em>.</li>
+    <li>To keep sales and tax records for 6 years: <em>legal obligation</em>.</li>
+    <li>To prevent fraud, keep the website secure and answer your questions: <em>our legitimate interests</em>.</li>
+    <li>Advertising and analytics cookies: <em>your consent</em>, which you can withdraw at any time.</li>
+  </ul>
+  <p>We don't sell your information, and we don't send marketing emails unless you've opted in.</p>
 
-  <h2>Marketplace integrations</h2>
-  <p>
-    DRUVO AI may connect to third-party marketplaces (for example eBay) as separate sales channels.
-    Those platforms have their own privacy policies. We do not share your DRUVO UK website account
-    details with marketplaces unless required to fulfil an order or comply with law.
-  </p>
+  <h2>Who we share it with</h2>
+  <p>Only the companies that help us run the shop, each under a contract that protects your data:</p>
+  <ul>
+    <li><strong>Stripe</strong> — payments and fraud checks.</li>
+    <li><strong>Render</strong> — website hosting (servers in the EU) and our order database.</li>
+    <li><strong>Our email provider</strong> (Resend) — sending order, dispatch and refund emails.</li>
+    <li><strong>Delivery companies</strong> (for example Royal Mail) — your name and address to deliver your parcel.</li>
+    <li><strong>OpenAI</strong> — powers the chat assistant; it receives only what you type in the chat. Please don't share card details there.</li>
+    <li><strong>Google</strong> — web fonts, and Google Analytics only if you accept cookies.</li>
+    <li><strong>Meta, TikTok, Snapchat</strong> — only if you accept advertising cookies.</li>
+  </ul>
+  <p>Some of these companies process data in the United States. Where that happens, the transfer is protected by the UK International Data Transfer Addendum, standard contractual clauses or the UK–US data bridge.</p>
 
   <h2 id="cookies">Cookies and local storage</h2>
   <p>
@@ -85,35 +64,23 @@
   <p>We do not currently use advertising or analytics cookies on this site.</p>
   {% endif %}
 
-  <h2>Data retention</h2>
-  <p>
-    We retain order and account information for as long as needed to provide our services, resolve
-    disputes, and comply with UK legal requirements. You may request deletion of personal data where
-    we are not required to retain it.
-  </p>
+  <h2>How long we keep it</h2>
+  <ul>
+    <li>Orders, payments and refunds: 6 years after the end of the tax year, as required for tax records.</li>
+    <li>Emails and chat messages: up to 2 years after our last contact, unless they relate to an order.</li>
+    <li>Hosting security logs: no longer than 30 days.</li>
+  </ul>
 
-  <h2>Your rights (UK)</h2>
-  <p>
-    Under UK data protection law you may have rights to access, correct, erase, restrict, or object to
-    processing of your personal data, and to data portability where applicable. Contact us to exercise
-    these rights.
-  </p>
+  <h2>Your rights</h2>
+  <p>You can ask us for a copy of your information, to correct it, to delete it (where we don't need to keep it by law), to restrict or object to how we use it, and to move it to another provider. Email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>; we'll reply within one month. If you're unhappy with how we've handled your information you can complain to the Information Commissioner's Office: <a href="https://ico.org.uk/make-a-complaint/" rel="noopener">ico.org.uk/make-a-complaint</a>, 0303 123 1113.</p>
 
   <h2>Security</h2>
-  <p>
-    We use HTTPS for public pages and follow reasonable technical and organisational measures to protect
-    personal information. No online service can guarantee absolute security.
-  </p>
+  <p>The website uses HTTPS, payments are handled by Stripe, and access to order data is limited to the shop owner and protected by two-step sign-in.</p>
 
   <h2>Children</h2>
-  <p>DRUVO UK is not directed at children under 16 and we do not knowingly collect their personal data.</p>
+  <p>This shop is for adults. We don't knowingly collect information from children under 13.</p>
 
   <h2>Changes</h2>
-  <p>We may update this policy from time to time. The “Last updated” date above will reflect the latest version.</p>
-
-  <h2>Contact</h2>
-  <p>
-    Privacy enquiries: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
-  </p>
+  <p>If we change this policy we'll update the date at the top.</p>
 </article>
 {% endblock %}
