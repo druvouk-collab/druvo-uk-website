@@ -51,7 +51,7 @@
 
   <div>
 
-    <div class="gallery-main"><img class="druvo-img" data-gallery-main src="{{ product.images[0] }}" alt="{{ product_image_alt(product) }}" data-placeholder="{{ placeholder_product }}"></div>
+    <div class="gallery-main"><img class="druvo-img" data-gallery-main src="{{ product.images[0] }}" width="1200" height="960" fetchpriority="high" decoding="async" alt="{{ product_image_alt(product) }}" data-placeholder="{{ placeholder_product }}"></div>
 
     {% if product.images|length > 1 %}
 
