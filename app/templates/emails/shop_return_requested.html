@@ -1,0 +1,7 @@
+{% extends "_layout.html" %}{% block body %}
+<h1 style="font-size:20px;margin:0 0 12px;">Return requested — {{ order.order_number }}</h1>
+<p>{{ order.name }} ({{ order.email }}) started a return.</p>
+<p><strong>Reason:</strong> {{ return_request.reason or "not given" }}</p>
+{% include "_items.html" %}
+<p>When the parcel arrives: DRUVO Manager → Orders → {{ order.order_number }} → <strong>Return received</strong>, then <strong>Refund</strong> (tick restock). Refund within 14 days of receiving it.</p>
+{% endblock %}

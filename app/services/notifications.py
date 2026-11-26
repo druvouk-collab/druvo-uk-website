@@ -49,8 +49,20 @@ def _context(order: models.Order, settings: Settings, **extra) -> dict:
         "business_legal_name": settings.business_legal_name,
         "business_address": settings.business_address,
         "company_number": settings.company_number,
+        "order_page_url": _order_page_url(order, settings),
         **extra,
     }
+
+
+def _order_page_url(order: models.Order, settings: Settings) -> str:
+    if order.channel != "druvo.uk":
+        return ""
+    try:
+        from app.services.order_tracking import tracking_url
+
+        return tracking_url(order.order_number, settings)
+    except RuntimeError:
+        return ""
 
 
 def _render(name: str, ctx: dict) -> tuple[str, str]:
@@ -109,6 +121,21 @@ def send_refund(order: models.Order, refund: models.Refund, settings: Settings |
         f"refund-{refund.stripe_refund_id}",
         cfg,
     )
+
+
+def send_return_instructions(order: models.Order, request: models.ReturnRequest,
+                             settings: Settings | None = None) -> bool:
+    cfg = settings or get_settings()
+    return _send(order.email, f"Your return for order {order.order_number}", "return_instructions",
+                 _context(order, cfg, return_request=request), f"return-{order.order_number}-{request.id}", cfg)
+
+
+def send_shop_return_requested(order: models.Order, request: models.ReturnRequest,
+                               settings: Settings | None = None) -> bool:
+    cfg = settings or get_settings()
+    to = cfg.shop_notification_email or cfg.contact_email
+    return _send(to, f"Return requested — {order.order_number}", "shop_return_requested",
+                 _context(order, cfg, return_request=request), f"shop-return-{order.order_number}-{request.id}", cfg)
 
 
 def send_pending_notifications(order_id: int | None = None, settings: Settings | None = None) -> dict[str, int]:

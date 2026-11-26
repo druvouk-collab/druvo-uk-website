@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
+
+from app.config import get_settings
 
 from app.services.account_order_service import AccountOrderService
 from app.templating import templates
@@ -23,6 +25,8 @@ async def _orders_for_view(email: str = "") -> tuple[list[Order], bool, str, boo
 
 @router.get("", response_class=HTMLResponse)
 async def account_dashboard(request: Request, email: str = Query("")):
+    if get_settings().database_enabled:
+        return RedirectResponse("/orders/find", status_code=303)
     orders, live_mode, lookup_email, has_email = await _orders_for_view(email)
     return templates.TemplateResponse(
         request,
@@ -48,6 +52,8 @@ async def account_login(request: Request, email: str = Query("")):
 
 @router.get("/orders", response_class=HTMLResponse)
 async def order_history(request: Request, email: str = Query("")):
+    if get_settings().database_enabled:
+        return RedirectResponse("/orders/find", status_code=303)
     orders, live_mode, lookup_email, has_email = await _orders_for_view(email)
     return templates.TemplateResponse(
         request,

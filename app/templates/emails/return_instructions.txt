@@ -1,0 +1,16 @@
+Hi {{ order.name or "there" }},
+
+We've recorded your return for order {{ order.order_number }}.
+
+1. Pack the item(s) securely, unworn and with any tags, and put your order number {{ order.order_number }} inside the parcel.
+2. Send it to the returns address below with a tracked service and keep your proof of postage.
+3. We refund the item price and your original standard delivery charge within 14 days of receiving the item back (or of your proof of postage, if sooner), to your original payment method.
+
+Return to:
+{% if business_address %}{{ business_legal_name or site_name }}
+{{ business_address }}{% else %}Reply to this email and we'll send the returns address straight away.{% endif %}
+
+Return postage is paid by you unless the item is faulty or not as described.{% if order_page_url %}
+Return status: {{ order_page_url }}{% endif %}
+
+{% include "_footer.txt" %}

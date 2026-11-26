@@ -24,6 +24,7 @@ from app.config import get_settings
 from app.db import models
 from app.db.base import session_scope
 from app.services import catalog_admin, channel_sync, inventory, order_ops, reporting
+from app.services import order_tracking
 from app.services.order_ops import audit
 from app.templating import templates
 
@@ -409,10 +410,13 @@ async def order_detail(request: Request, number: str):
         refunds = db.scalars(select(models.Refund).where(models.Refund.order_id == order.id)).all()
         history = db.scalars(select(models.AuditLog).where(models.AuditLog.entity == "order", models.AuditLog.entity_id == number)
                              .order_by(models.AuditLog.created_at.desc())).all()
+        return_request = db.scalar(select(models.ReturnRequest).where(models.ReturnRequest.order_id == order.id)
+                                   .order_by(models.ReturnRequest.id.desc()))
         cogs = sum(i.unit_cost_pence * i.quantity for i in order.items)
         profit = (order.total_pence - order.refunded_pence - (order.payment_fee_pence or 0) - order.marketplace_fee_pence
                   - order.postage_cost_pence - order.packaging_cost_pence - (0 if order.refunded_pence >= order.total_pence else cogs))
     return _render(request, "order_detail", session, order=order, refunds=refunds, history=history, cogs=cogs,
+                   return_request=return_request,
                    profit=profit, carriers=["Royal Mail", "Evri", "DPD", "Parcelforce", "InPost", "Yodel", "Other"])
 
 
@@ -448,6 +452,26 @@ async def order_dispatch(request: Request, number: str):
 @router.post("/orders/{number}/delivered")
 async def order_delivered(request: Request, number: str):
     return await _order_action(request, number, lambda s, f: order_ops.mark_delivered(number, actor=s.email), "Marked as delivered.")
+
+
+@router.post("/orders/{number}/return-received")
+async def order_return_received(request: Request, number: str):
+    def run(s, f):
+        try:
+            order_tracking.mark_return(number, "received", actor=s.email)
+        except ValueError as exc:
+            raise order_ops.OrderOpError(str(exc)) from exc
+    return await _order_action(request, number, run, "Return marked as received — now issue the refund.")
+
+
+@router.post("/orders/{number}/return-rejected")
+async def order_return_rejected(request: Request, number: str):
+    def run(s, f):
+        try:
+            order_tracking.mark_return(number, "rejected", actor=s.email)
+        except ValueError as exc:
+            raise order_ops.OrderOpError(str(exc)) from exc
+    return await _order_action(request, number, run, "Return rejected — email the customer to explain why.")
 
 
 @router.post("/orders/{number}/refund")

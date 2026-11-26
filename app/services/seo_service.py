@@ -71,6 +71,7 @@ def robots_txt(settings: Settings | None = None) -> str:
         "Disallow: /account/",
         "Disallow: /cart",
         "Disallow: /checkout",
+        "Disallow: /orders/",
         "Disallow: /admin/",
         "Disallow: /search",
         "Disallow: /api/",

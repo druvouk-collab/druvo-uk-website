@@ -58,6 +58,15 @@
   {% if order.status == 'shipped' %}
   <form method="post" action="/admin/orders/{{ order.order_number }}/delivered"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn">Mark delivered</button></form>
   {% endif %}
+  {% if return_request %}
+  <h2>Customer return</h2>
+  <p><strong>{{ return_request.status | capitalize }}</strong> · started {{ return_request.created_at.strftime('%d %b %Y') }}{% if return_request.reason %} · “{{ return_request.reason }}”{% endif %}{% if return_request.received_at %}<br><span class="a-muted">Received {{ return_request.received_at.strftime('%d %b %Y') }}</span>{% endif %}</p>
+  {% if return_request.status == 'requested' %}
+  <form method="post" action="/admin/orders/{{ order.order_number }}/return-received" class="a-form inline"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn">Return received</button></form>
+  <form method="post" action="/admin/orders/{{ order.order_number }}/return-rejected" class="a-form inline"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn">Reject return</button></form>
+  {% endif %}
+  {% if return_request.status in ('requested', 'received') %}<p class="a-muted">Refund within 14 days of receiving the item: use Refund below and tick “put it back in stock”.</p>{% endif %}
+  {% endif %}
   {% if order.stripe_payment_intent_id and order.refunded_pence < order.total_pence %}
   <h2>Refund / return</h2>
   <form method="post" action="/admin/orders/{{ order.order_number }}/refund" class="a-form">

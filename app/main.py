@@ -16,6 +16,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from app.config import CANONICAL_HOST, get_settings
 from app.lib.druvo_api.client import DruvoApiClient
 from app.routes import account, admin, admin_panel, catalog_api, manager_api, chat_api, checkout_api, legal, seo, shop, stripe_webhook
+from app.routes import orders
 from app.services.readiness_service import build_readiness_report
 from app.templating import templates
 
@@ -89,6 +90,7 @@ async def _start_background_tasks() -> None:
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(shop.router)
+app.include_router(orders.router)
 app.include_router(catalog_api.router)
 app.include_router(checkout_api.router)
 app.include_router(stripe_webhook.router)

@@ -1,0 +1,11 @@
+{% extends "_layout.html" %}{% block body %}
+<h1 style="font-size:22px;margin:0 0 12px;">Your return has been started</h1>
+<p>Hi {{ order.name or "there" }}, we've recorded your return for order <strong>{{ order.order_number }}</strong>.</p>
+<ol style="padding-left:20px;">
+<li>Pack the item(s) securely, unworn and with any tags, and put your order number <strong>{{ order.order_number }}</strong> inside the parcel.</li>
+<li>Send it to the returns address below with a tracked service and keep your proof of postage.</li>
+<li>We refund the item price and your original standard delivery charge within 14 days of receiving the item back (or of your proof of postage, if sooner), to your original payment method.</li>
+</ol>
+<p><strong>Return to:</strong><br>{% if business_address %}{{ business_legal_name or site_name }}<br>{{ business_address }}{% else %}Reply to this email and we'll send the returns address straight away.{% endif %}</p>
+<p style="font-size:13px;color:#444;">Return postage is paid by you unless the item is faulty or not as described. {% if order_page_url %}<a href="{{ order_page_url }}">Your order page</a> shows the return status.{% endif %}</p>
+{% endblock %}

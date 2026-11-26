@@ -11,4 +11,6 @@ Standard UK delivery usually takes 2–4 working days.
 
 Your 14-day right to cancel starts from the day you receive your order: {{ returns_url }}
 
-{% include "_footer.txt" %}
+{% if order_page_url %}Your order page (progress and returns): {{ order_page_url }}
+
+{% endif %}{% include "_footer.txt" %}

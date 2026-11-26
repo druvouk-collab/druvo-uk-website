@@ -276,6 +276,30 @@ class Refund(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
+RETURN_STATUSES = ("requested", "received", "refunded", "rejected")
+
+
+class ReturnRequest(TimestampMixin, Base):
+    """A customer's return started from their order page (14-day right to cancel)."""
+
+    __tablename__ = "return_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="requested", nullable=False)
+    reason: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    customer_email_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    order: Mapped[Order] = relationship(lazy="joined")
+
+    __table_args__ = (
+        CheckConstraint("status IN (" + ",".join(f"'{s}'" for s in RETURN_STATUSES) + ")",
+                        name="ck_return_requests_status"),
+        Index("ix_return_requests_order", "order_id"),
+    )
+
+
 class AdminUser(TimestampMixin, Base):
     __tablename__ = "admin_users"
 

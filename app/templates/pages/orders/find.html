@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block content %}
+<div class="container page-header"><h1>Track your order</h1></div>
+<div class="container content-card" style="max-width:560px;">
+  {% if not enabled %}
+  <p>Online order tracking is coming soon. For now, email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> with your order number and we'll reply with an update.</p>
+  {% else %}
+  <p>Use the link in your order email, or enter your order number and the email you ordered with.</p>
+  {% if error %}<p class="notice" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/orders/find" class="form-grid">
+    <div class="form-field"><label for="order_number">Order number</label>
+      <input id="order_number" name="order_number" value="{{ order_number or '' }}" placeholder="DRV-…" autocomplete="off" required></div>
+    <div class="form-field"><label for="email">Email</label>
+      <input id="email" name="email" type="email" value="{{ email or '' }}" autocomplete="email" required></div>
+    <button class="btn btn-primary" type="submit">Find my order</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -178,6 +178,12 @@ def refund_order(
                 db, "stock.restocked", {"order_number": order_number, "items": [{"sku": i.sku, "quantity": i.quantity} for i in order.items]}
             )
         audit(db, actor, "order.refunded", "order", order_number, amount_pence=amount, restock=restock, reason=reason[:200])
+        open_return = db.scalar(
+            select(models.ReturnRequest).where(models.ReturnRequest.order_id == order.id,
+                                               models.ReturnRequest.status.in_(("requested", "received")))
+        )
+        if open_return is not None:
+            open_return.status = "refunded"
         enqueue_outbox(db, "order.refunded", {"order_number": order_number, "amount_pence": amount})
         order_id = order.id
         status = order.status
