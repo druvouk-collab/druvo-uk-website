@@ -24,6 +24,9 @@ ATTEMPTS = 4
 WAIT_SECONDS = 20
 
 
+LAST_HEADERS: dict[str, str] = {}
+
+
 def fetch(url: str) -> tuple[int, str, float]:
     last = (0, "", 0.0)
     for attempt in range(1, ATTEMPTS + 1):
@@ -32,6 +35,8 @@ def fetch(url: str) -> tuple[int, str, float]:
             req = urllib.request.Request(url, headers={"User-Agent": UA})
             with urllib.request.urlopen(req, timeout=90) as resp:
                 body = resp.read().decode("utf-8", "replace")
+                LAST_HEADERS.clear()
+                LAST_HEADERS.update({k.lower(): v for k, v in resp.headers.items()})
                 return resp.status, body, time.monotonic() - start
         except urllib.error.HTTPError as exc:
             last = (exc.code, "", time.monotonic() - start)
@@ -41,6 +46,18 @@ def fetch(url: str) -> tuple[int, str, float]:
             print(f"  retry {attempt}/{ATTEMPTS - 1} for {url} (got {last[0] or last[1]})")
             time.sleep(WAIT_SECONDS)
     return last
+
+
+def _quick(url: str) -> tuple[int, str, float]:
+    """Single request (no retries) for pages that are expected to be missing."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return resp.status, "", 0.0
+    except urllib.error.HTTPError as exc:
+        return exc.code, "", 0.0
+    except Exception as exc:
+        return 0, str(exc), 0.0
 
 
 def main() -> int:
@@ -57,6 +74,15 @@ def main() -> int:
 
     print(f"Checking {BASE} at {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}")
     check("/health")
+    check("/")
+    for header in ("x-content-type-options", "strict-transport-security", "x-frame-options", "referrer-policy"):
+        if header not in LAST_HEADERS:
+            problems.append(f"security header missing on /: {header}")
+    for private in ("/docs", "/openapi.json", "/health/druvo"):
+        status, _, _ = _quick(BASE + private)
+        print(f"{'OK ' if status == 404 else 'BAD'} {status} (expect 404) {BASE}{private}")
+        if status != 404:
+            problems.append(f"{private} should be hidden (got {status})")
     robots = check("/robots.txt")
     if robots and not re.search(r"^Sitemap: https?://\S+/sitemap\.xml", robots, re.M):
         problems.append("robots.txt does not point to the sitemap")

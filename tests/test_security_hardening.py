@@ -67,3 +67,11 @@ async def test_config_endpoint_needs_owner_token_in_production(monkeypatch):
 async def test_config_endpoint_closed_when_no_token_set(monkeypatch):
     async with await _client(monkeypatch, production=True, token="") as client:
         assert (await client.get("/health/druvo")).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_render_counts_as_live_even_without_production_mode(monkeypatch):
+    monkeypatch.setenv("RENDER", "true")
+    async with await _client(monkeypatch, production=False) as client:
+        assert (await client.get("/docs")).status_code == 404
+        assert (await client.get("/health/druvo")).status_code == 404
