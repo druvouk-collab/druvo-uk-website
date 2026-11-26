@@ -61,7 +61,12 @@ STATIC_DIR = BASE_DIR.parent / "static"
 def _json_error_path(path: str) -> bool:
     return path.startswith("/api/") or path.startswith("/webhooks/")
 
-_production = get_settings().production_mode
+def _is_deployed() -> bool:
+    """True on the live site even if PRODUCTION_MODE was never set (Render always sets RENDER=true)."""
+    return get_settings().production_mode or os.getenv("RENDER", "").lower() == "true"
+
+
+_production = _is_deployed()
 app = FastAPI(
     title="DRUVO UK",
     description="Public e-commerce storefront for DRUVO UK resale",
@@ -165,7 +170,7 @@ async def readiness() -> JSONResponse:
 async def druvo_health(request: Request) -> JSONResponse:
     settings = get_settings()
     # Configuration details are for the owner only on the live site.
-    if settings.production_mode:
+    if _is_deployed():
         token = settings.admin_checklist_token
         if not token or request.query_params.get("token") != token:
             return JSONResponse({"detail": "Not Found"}, status_code=404)
