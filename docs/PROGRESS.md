@@ -1,6 +1,6 @@
 # DRUVO — Master progress tracker
 
-Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **26 Nov 2026, session 9**.
+Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **26 Nov 2026, session 10**. Launch checklist (40 items) and customer journey test: https://claude.ai/artifact/QPK2maXuGnpTw8b5EPiNvY
 
 **Status key** (from the master roadmap):
 ⬜ Not started · 🔨 In development · 🧪 Built but untested in staging (automated code tests pass) ·
@@ -32,6 +32,7 @@ its working eBay/Amazon code is **moved into the cloud** as connectors. Owner re
 | Oversell prevention (8 buyers, 1 item) | ✅ | 340 tests on PostgreSQL 16 in CI (`tests.yml`) |
 | Order confirmation / dispatch / refund emails | ✅ rendered | templates checked on a phone-width screen; sending ⛔ Resend account |
 | Ads Purchase event on paid-order page | 🧪 develop | once per order |
+| Customer order page (private link in emails, find by number + email), online returns, Return received in Manager | 🧪 develop | journey test browse→refund passes; 344 tests on PostgreSQL (run 45777732229) |
 | Search Console | ⛔ owner verification | |
 | Merchant Center | ⛔ | needs online checkout live (see docs/MERCHANT_CENTER.md) |
 | DRUVO Manager / eBay / Amazon / Vinted audit | ⛔ | MacBook not connected to this chat |

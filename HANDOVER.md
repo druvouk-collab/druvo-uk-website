@@ -183,6 +183,13 @@ marketplace fees, postage. Currently paying: £0 hosting (Render Free).
 - No secrets in the repo.
 
 ## 8. Session log
+### 26 Nov 2026 (session 10)
+Launch checklist + journey test doc: https://claude.ai/artifact/QPK2maXuGnpTw8b5EPiNvY (6 verified · 16 built ·
+18 not done). Built on develop: secure customer order page (HMAC link from emails; lookup needs order number AND
+email, rate-limited) replacing email-only lookup in DB mode; online returns (return_requests table, migration
+0002, customer + shop emails, Return received/Reject in Manager, refund closes return); full journey test.
+Next: MacBook session (see doc, section "MacBook session").
+
 ### 26 Nov 2026 (session 9)
 Owner approved PR #2/#3 and publishing tested improvements. Merged and verified live: PR #2 browser check,
 PR #3 speed (product Lighthouse 80→96), PR #4 security headers, PR #5 ads readiness (consent banner, pixels off
