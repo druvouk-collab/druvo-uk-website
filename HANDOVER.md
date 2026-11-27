@@ -199,6 +199,11 @@ Owner approved PR #9 only → merged 20:33 (ed0663d). Verified live: feed `g:` p
 load, robots.txt/sitemap OK, no noindex in pages or headers (site monitor run 46064854299 all passed), browser
 check 46064358554 passed, "Order by email" unchanged. The push-triggered monitor run 46064358450 failed only
 because it ran before Render finished deploying (old feed). PR #10 still draft.
+Owner added Stripe test secrets → real Stripe test-mode journey passed 15/15 (run 46072987131). Fixes needed on
+the way: Stripe's hosted page now renders inside an Elements iframe (#payment-numberInput, #shippingAddress-*),
+never reaches network idle, locks the GB country selector, and rejects 07700 900xxx phone numbers. Findings for
+the owner: Stripe adaptive pricing showed a US visitor USD with a ~4% conversion fee (UK buyers see GBP); emails
+untested until a RESEND_API_KEY secret exists.
 
 ### 26 Nov 2026 (session 11)
 Live (PR #7, #8): UK-compliant returns/delivery/terms/privacy; £6.99 Express removed (never offered at checkout);
