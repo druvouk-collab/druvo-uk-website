@@ -1,8 +1,9 @@
 # DRUVO UK — Owner action list
 
 ## 👉 Current step (one at a time)
-Follow **`docs/ACTIVATION_GUIDE.md`**, starting at **Step 1 — Google Search Console**. One step at a time;
-tell Claude "done" after each.
+27 Nov 2026: **Stripe test keys as GitHub secrets** (`docs/ACTIVATION_GUIDE.md` Step 2) — this turns on the
+real Stripe test-mode run of the full customer journey. Then decide on Render Starter (stops the wake-up
+screen). Staging, launch and rollback steps: `docs/STAGING.md`. One step at a time; tell Claude "done".
 
 ---
 Reference list (Claude will walk you through these one by one after the current step):

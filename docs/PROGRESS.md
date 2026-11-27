@@ -1,6 +1,6 @@
 # DRUVO — Master progress tracker
 
-Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **26 Nov 2026, session 11**. Owner activation steps: `docs/ACTIVATION_GUIDE.md`. Launch checklist (40 items) and customer journey test: https://claude.ai/artifact/QPK2maXuGnpTw8b5EPiNvY
+Governing plan: `docs/MASTER_ROADMAP.md` (owner's 13 phases). Last updated **27 Nov 2026, session 12**. Owner activation steps: `docs/ACTIVATION_GUIDE.md`. Launch checklist (40 items) and customer journey test: https://claude.ai/artifact/QPK2maXuGnpTw8b5EPiNvY
 
 **Status key** (from the master roadmap):
 ⬜ Not started · 🔨 In development · 🧪 Built but untested in staging (automated code tests pass) ·
@@ -27,8 +27,10 @@ its working eBay/Amazon code is **moved into the cloud** as connectors. Owner re
 | Speed (Lighthouse mobile, live) | 🚀 PR #3 | home 96 · shop 100 · product 96 (was 80); SEO 100; accessibility 98–100 |
 | Security headers, API docs hidden, config endpoint protected | 🚀 PR #4 + #6 | monitor checks headers and 404s; pip-audit clean |
 | Ads readiness: consent banner, Meta/TikTok/Snapchat/GA4 pixels (off until IDs set), `/feeds/social-catalog.csv` | 🚀 PR #5 | browser test: nothing loads before Accept or after Reject |
-| Keep-awake every 10 min (and ALL scheduled jobs incl. nightly backups) | ⛔ | GitHub has not fired the schedule since 01:34 (known GitHub issue for new repos). Hourly check also not firing. Needs owner: external free pinger or Render Starter |
-| Stripe test-mode checkout end to end | 🧪 | `stripe-e2e.yml` ready; ⛔ Stripe TEST keys as GitHub secrets |
+| Keep-awake every 10 min (and ALL scheduled jobs incl. nightly backups) | ⛔ | 27 Nov: schedules now fire but only 9 times in 36 h (should be 216), so Render Free still sleeps → 503 / "waking up" screen. Hourly full check never fired (fixed in PR #9). Permanent fix: Render Starter (owner approval) |
+| Google Merchant feed uses `g:` prefix | 🧪 PR #9 | live feed uses `ns0:` + duplicate declaration; robots.txt and sitemap (18 URLs) fine on 27 Nov |
+| `*.onrender.com` copies noindex / disallow-all | 🧪 PR #9 | protects druvo.uk ranking from staging/legacy URL |
+| Full customer journey (browse → pay → emails → track → dispatch → return → refund + restock → last-item race → expiry) | ✅ rehearsal / ⛔ real Stripe | `scripts/staging_journey.py` 18/18 in CI with stand-in Stripe (run 46062765467); same job uses real Stripe test mode once `STRIPE_TEST_*` GitHub secrets exist (not set on 27 Nov) |
 | Oversell prevention (8 buyers, 1 item) | ✅ | 340 tests on PostgreSQL 16 in CI (`tests.yml`) |
 | Order confirmation / dispatch / refund emails | ✅ rendered | templates checked on a phone-width screen; sending ⛔ Resend account |
 | Ads Purchase event on paid-order page | 🧪 develop | once per order |

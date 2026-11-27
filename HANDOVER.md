@@ -3,7 +3,7 @@
 > Read this first at the start of every working session. Update the session log and task lists at the end of
 > every session. **Never put passwords, API keys, tokens or other secrets in this file or anywhere in the repo.**
 
-Last updated: 24 Nov 2026 (session 7)
+Last updated: 27 Nov 2026 (session 12)
 
 > **Start here:** `docs/MASTER_ROADMAP.md` (the owner's plan) → `docs/PROGRESS.md` (status of every feature)
 > → `docs/OWNER_ACTIONS.md` (what's waiting on the owner). DRUVO Manager is the product; DRUVO.uk is one of
@@ -183,6 +183,15 @@ marketplace fees, postage. Currently paying: £0 hosting (Render Free).
 - No secrets in the repo.
 
 ## 8. Session log
+### 27 Nov 2026 (session 12)
+Checked: no open PRs before today; #1–#8 merged and live; develop CI green; Stripe test keys still not in
+GitHub secrets. Live: druvo.uk in order-by-email mode, robots.txt and sitemap (18 URLs) OK; Merchant feed
+reachable but written with `ns0:` prefix. Wake-up screen cause: GitHub ran the 10-minute keep-alive only 9×
+in 36 h, so Render Free sleeps; hourly full check never fired. PR #9 (→ main, awaiting approval): monitor fix,
+feed `g:` prefix, noindex for *.onrender.com. develop: `scripts/staging_journey.py` (full journey incl.
+/admin 2FA, real refund, last-item race, Stripe expiry) — 18/18 in CI with `tests/fake_stripe.py`; real Stripe
+run waits for keys. `docs/STAGING.md`: staging settings, launch and rollback. Draft launch PR #10. 355 tests.
+
 ### 26 Nov 2026 (session 11)
 Live (PR #7, #8): UK-compliant returns/delivery/terms/privacy; £6.99 Express removed (never offered at checkout);
 seller identity appears once BUSINESS_* are set; monitor checks policy content. develop: live-Stripe lock,
