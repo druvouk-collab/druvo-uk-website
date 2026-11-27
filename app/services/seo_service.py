@@ -63,6 +63,14 @@ def is_indexable_path(path: str) -> bool:
     return True
 
 
+def is_non_public_host(host: str) -> bool:
+    """True for Render's own *.onrender.com addresses (staging, and the old address of the live service).
+
+    Only druvo.uk should appear in Google; these copies get "noindex" and a disallow-all robots.txt.
+    """
+    return host.split(":")[0].strip().lower().endswith(".onrender.com")
+
+
 def robots_txt(settings: Settings | None = None) -> str:
     base = canonical_site_url(settings)
     lines = [

@@ -7,13 +7,14 @@
 #
 # Every hour it also runs the full check (all sitemap pages, images, robots.txt, Merchant feed,
 # product structured data). If anything fails, the run fails and GitHub emails the repo owner.
-# Note: GitHub can delay scheduled runs by a few minutes at busy times.
+# Note: GitHub treats schedules as best effort. On 26–27 Nov 2026 it ran this every-10-minute schedule
+# only 9 times in 36 hours, so it can't keep a Render Free service awake. The reliable fix is an
+# always-on instance (Render Starter). This workflow stays as the outside health check.
 name: Site monitor
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # keep-alive
-    - cron: "7 * * * *"      # hourly full check
+    - cron: "*/10 * * * *"   # keep-alive + (first run of each hour) full check
   workflow_dispatch: {}
   push:
     branches: [main, "ops/**"]
@@ -30,7 +31,19 @@ jobs:
   monitor:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      full: ${{ steps.when.outputs.full }}
     steps:
+      - name: Decide whether to run the full check
+        id: when
+        # GitHub skips many scheduled runs, so don't depend on one exact schedule firing: any scheduled run
+        # in the first 15 minutes of the hour (and every manual or push run) does the full check.
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ] || [ "$(date -u +%-M)" -lt 15 ]; then
+            echo "full=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "full=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Wake the site
         run: |
           for i in 1 2 3 4; do
@@ -44,8 +57,7 @@ jobs:
 
   full-check:
     needs: monitor
-    # Hourly (the "7 * * * *" schedule), and on manual or push runs.
-    if: github.event_name != 'schedule' || github.event.schedule == '7 * * * *'
+    if: needs.monitor.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

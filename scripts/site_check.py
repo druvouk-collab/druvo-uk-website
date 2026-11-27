@@ -139,6 +139,8 @@ def main() -> int:
 
     feed = check("/google-merchant-feed.xml")
     items = feed.count("<item>")
+    if items and ("<g:id>" not in feed or "ns0:" in feed):
+        problems.append("Merchant feed should use Google's g: prefix (found ns0: or no g:id)")
     print(f"Merchant feed has {items} item(s); product pages checked: {products}")
 
     print()

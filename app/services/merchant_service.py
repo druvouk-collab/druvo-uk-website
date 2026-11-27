@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.etree.ElementTree import Element, SubElement, register_namespace, tostring
 
 from app.config import Settings, get_settings
 from app.services.catalog_service import CatalogService
@@ -13,6 +13,8 @@ from app.services.seo_service import _absolute_image_url, _product_item_conditio
 from app.types.commerce import Product, ProductVariant
 
 GOOGLE_NS = "http://base.google.com/ns/1.0"
+# Google's feed spec uses the "g:" prefix. Without this ElementTree writes "ns0:" plus a duplicate declaration.
+register_namespace("g", GOOGLE_NS)
 
 
 @dataclass(frozen=True)
@@ -162,7 +164,6 @@ def merchant_feed_xml(items: list[MerchantFeedItem], settings: Settings | None =
     updated = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     rss = Element("rss", version="2.0")
-    rss.set("xmlns:g", GOOGLE_NS)
     channel = SubElement(rss, "channel")
     SubElement(channel, "title").text = cfg.site_name
     SubElement(channel, "link").text = base

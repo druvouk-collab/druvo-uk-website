@@ -17,6 +17,7 @@ from app.config import CANONICAL_HOST, get_settings
 from app.lib.druvo_api.client import DruvoApiClient
 from app.routes import account, admin, catalog_api, chat_api, checkout_api, legal, seo, shop, stripe_webhook
 from app.services.readiness_service import build_readiness_report
+from app.services.seo_service import is_non_public_host
 from app.templating import templates
 
 logging.basicConfig(
@@ -75,6 +76,8 @@ async def security_headers(request: Request, call_next):
     headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     if request.url.scheme == "https" or get_settings().production_mode:
         headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    if is_non_public_host(request.headers.get("host", "")):
+        headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
 
 
