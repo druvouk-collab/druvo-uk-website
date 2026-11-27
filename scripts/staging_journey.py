@@ -149,16 +149,28 @@ def pay_in_browser(slug: str) -> None:
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900}, locale="en-GB")
+        page = browser.new_page(
+            viewport={"width": 1280, "height": 900}, locale="en-GB", timezone_id="Europe/London",
+            # Headless Chromium announces itself as "HeadlessChrome"; use an ordinary desktop Chrome string.
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/131.0.0.0 Safari/537.36")
         try:
             _pay_steps(page, slug)
         except Exception:
             # Stripe sometimes changes its page: keep evidence so the fix is quick.
             page.screenshot(path=str(OUT / "error.png"), full_page=True)
-            ids = page.eval_on_selector_all("input, select, button", "els => els.filter(e => e.offsetParent)"
-                                            ".map(e => e.tagName + '#' + (e.id || e.name || e.textContent.trim().slice(0, 30)))")
-            print("Visible fields on the failing page:", ids)
-            print("URL:", page.url.split("?")[0])
+            print("URL:", page.url.split("?")[0].split("#")[0], "| title:", page.title())
+            for frame in page.frames:
+                try:
+                    ids = frame.eval_on_selector_all(
+                        "input, select, button", "els => els.map(e => (e.offsetParent ? '' : '(hidden)') + "
+                        "e.tagName + '#' + (e.id || e.name || e.getAttribute('aria-label') || e.textContent.trim().slice(0, 30)))")
+                    text = frame.evaluate("() => (document.body ? document.body.innerText : '').slice(0, 400)")
+                except Exception as exc:  # noqa: BLE001
+                    ids, text = [f"<unreadable: {type(exc).__name__}>"], ""
+                print(f"Frame {frame.url.split('?')[0][:80]}: fields={ids[:40]}")
+                if text.strip():
+                    print("   text:", " ".join(text.split())[:400])
             raise
         finally:
             browser.close()
@@ -186,29 +198,47 @@ def _pay_steps(page, slug: str) -> None:
     page.wait_for_load_state("networkidle")
     page.screenshot(path=str(OUT / "2-stripe-checkout.png"), full_page=True)
 
+    def find(selector: str):
+        """First visible match in the page or any of Stripe's iframes, else None."""
+        for frame in page.frames:
+            loc = frame.locator(selector)
+            try:
+                if loc.count() and loc.first.is_visible():
+                    return loc.first
+            except Exception:  # noqa: BLE001 — frame navigated away
+                continue
+        return None
+
+    # Stripe's page can take a while to render its form; wait up to 60 s for the card number field.
+    deadline = time.time() + 60
+    while find("#cardNumber, input[name='cardnumber'], input[autocomplete='cc-number']") is None:
+        if time.time() > deadline:
+            raise TimeoutError("Stripe payment form did not appear within 60 s")
+        card_tab = find("[data-testid='card-accordion-item-button'], button:has-text('Card')")
+        if card_tab is not None:
+            card_tab.click()
+        page.wait_for_timeout(1000)
+
     def fill_if_shown(selector: str, value: str) -> None:
-        loc = page.locator(selector)
-        if loc.count() and loc.first.is_visible() and not loc.first.input_value():
-            loc.first.fill(value)
+        loc = find(selector)
+        if loc is not None and not loc.input_value():
+            loc.fill(value)
             page.keyboard.press("Escape")  # close any address suggestions list
 
-    country = page.locator("#shippingCountry")
-    if country.count() and country.is_visible():
+    country = find("#shippingCountry")
+    if country is not None:
         country.select_option("GB")
     for selector, value in (("#shippingName", "Test Customer"), ("#shippingAddressLine1", "1 Test Street"),
                             ("#shippingLocality", "Manchester"), ("#shippingPostalCode", "M1 1AA"),
                             ("#phoneNumber", "07700900123")):
         fill_if_shown(selector, value)
-    card_tab = page.locator("[data-testid='card-accordion-item-button'], button:has-text('Card')")
-    if card_tab.count() and card_tab.first.is_visible():
-        card_tab.first.click()
-    page.fill("#cardNumber", "4242 4242 4242 4242")
-    page.fill("#cardExpiry", "12 / 34")
-    page.fill("#cardCvc", "123")
+    find("#cardNumber, input[name='cardnumber'], input[autocomplete='cc-number']").fill("4242 4242 4242 4242")
+    find("#cardExpiry, input[name='exp-date'], input[autocomplete='cc-exp']").fill("12 / 34")
+    find("#cardCvc, input[name='cvc'], input[autocomplete='cc-csc']").fill("123")
     fill_if_shown("#billingName", "Test Customer")
     fill_if_shown("#billingPostalCode", "M1 1AA")
     page.screenshot(path=str(OUT / "3-card-entered.png"), full_page=True)
-    page.click(".SubmitButton, button[type=submit]")
+    find(".SubmitButton, button[type=submit], [data-testid='hosted-payment-submit-button']").click()
     page.wait_for_url(lambda url: "checkout.stripe.com" not in url, timeout=90000)
     page.screenshot(path=str(OUT / "4-back-on-shop.png"), full_page=True)
 
