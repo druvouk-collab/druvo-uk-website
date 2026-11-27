@@ -168,7 +168,7 @@ def pay_in_browser(slug: str) -> None:
                     text = frame.evaluate("() => (document.body ? document.body.innerText : '').slice(0, 400)")
                 except Exception as exc:  # noqa: BLE001
                     ids, text = [f"<unreadable: {type(exc).__name__}>"], ""
-                print(f"Frame {frame.url.split('?')[0][:80]}: fields={ids[:40]}")
+                print(f"Frame {frame.url.split('?')[0][:80]}: fields={ids[:80]}")
                 if text.strip():
                     print("   text:", " ".join(text.split())[:400])
             raise
@@ -209,9 +209,11 @@ def _pay_steps(page, slug: str) -> None:
                 continue
         return None
 
-    # Stripe's page can take a while to render its form; wait up to 60 s for the card number field.
+    # Stripe's hosted page (Nov 2026) renders its form inside a Stripe Elements iframe with ids such as
+    # #payment-numberInput and #shippingAddress-nameInput; older pages used #cardNumber in the main frame.
+    card_sel = "#payment-numberInput, #cardNumber, input[autocomplete='cc-number']"
     deadline = time.time() + 60
-    while find("#cardNumber, input[name='cardnumber'], input[autocomplete='cc-number']") is None:
+    while find(card_sel) is None:
         if time.time() > deadline:
             raise TimeoutError("Stripe payment form did not appear within 60 s")
         card_tab = find("[data-testid='card-accordion-item-button'], button:has-text('Card')")
@@ -223,23 +225,42 @@ def _pay_steps(page, slug: str) -> None:
         loc = find(selector)
         if loc is not None and not loc.input_value():
             loc.fill(value)
-            page.keyboard.press("Escape")  # close any address suggestions list
+            loc.press("Escape")  # close any address suggestions list
 
-    country = find("#shippingCountry")
+    # Pay in pounds like a UK customer (Stripe offers its own currency conversion to foreign visitors).
+    for frame in page.frames:  # the currency radio buttons are visually hidden, so don't require visibility
+        gbp = frame.locator("#currency-gbp")
+        if gbp.count():
+            gbp.first.check(force=True)
+            page.wait_for_timeout(1500)
+            break
+    country = find("#shippingAddress-countryInput, #shippingCountry")
     if country is not None:
         country.select_option("GB")
-    for selector, value in (("#shippingName", "Test Customer"), ("#shippingAddressLine1", "1 Test Street"),
-                            ("#shippingLocality", "Manchester"), ("#shippingPostalCode", "M1 1AA"),
-                            ("#phoneNumber", "07700900123")):
+    for selector, value in (("#linkAuthentication-emailInput, #email", EMAIL),
+                            ("#shippingAddress-nameInput, #shippingName", "Test Customer"),
+                            ("#shippingAddress-addressLine1Input, #shippingAddressLine1", "1 Test Street"),
+                            ("#shippingAddress-localityInput, #shippingLocality", "Manchester"),
+                            ("#shippingAddress-postalCodeInput, #shippingPostalCode", "M1 1AA"),
+                            ("#shippingAddress-phoneInput, #phoneNumber", "7700900123")):
         fill_if_shown(selector, value)
-    find("#cardNumber, input[name='cardnumber'], input[autocomplete='cc-number']").fill("4242 4242 4242 4242")
-    find("#cardExpiry, input[name='exp-date'], input[autocomplete='cc-exp']").fill("12 / 34")
-    find("#cardCvc, input[name='cvc'], input[autocomplete='cc-csc']").fill("123")
+    find(card_sel).fill("4242 4242 4242 4242")
+    find("#payment-expiryInput, #cardExpiry, input[autocomplete='cc-exp']").fill("12 / 34")
+    find("#payment-cvcInput, #cardCvc, input[autocomplete='cc-csc']").fill("123")
     fill_if_shown("#billingName", "Test Customer")
     fill_if_shown("#billingPostalCode", "M1 1AA")
     page.screenshot(path=str(OUT / "3-card-entered.png"), full_page=True)
-    find(".SubmitButton, button[type=submit], [data-testid='hosted-payment-submit-button']").click()
-    page.wait_for_url(lambda url: "checkout.stripe.com" not in url, timeout=90000)
+    submit = find("[data-testid='hosted-payment-submit-button'], .SubmitButton, button[type=submit]")
+    if submit is None:
+        raise RuntimeError("No Pay button found on Stripe's page")
+    print("Pressing Stripe's pay button:", " ".join((submit.text_content() or "").split())[:40])
+    submit.click()
+    try:
+        page.wait_for_url(lambda url: "checkout.stripe.com" not in url, timeout=90000)
+    except Exception:
+        captcha = [f.url for f in page.frames if "hcaptcha" in f.url and "challenge" in f.url]
+        raise RuntimeError("Stripe did not finish the payment within 90 s"
+                           + (" — an hCaptcha challenge was shown (Stripe's bot check)" if captcha else ""))
     page.screenshot(path=str(OUT / "4-back-on-shop.png"), full_page=True)
 
 
