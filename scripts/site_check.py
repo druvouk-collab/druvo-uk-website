@@ -106,6 +106,8 @@ def main() -> int:
             continue
         if 'name="robots" content="noindex' in body:
             problems.append(f"noindex on {url}")
+        if "noindex" in LAST_HEADERS.get("x-robots-tag", "").lower():
+            problems.append(f"X-Robots-Tag noindex header on {url} (only *.onrender.com should send it)")
         if "/product/" in url:
             products += 1
             blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', body, re.S)
@@ -139,6 +141,8 @@ def main() -> int:
 
     feed = check("/google-merchant-feed.xml")
     items = feed.count("<item>")
+    if items and ("<g:id>" not in feed or "ns0:" in feed):
+        problems.append("Merchant feed should use Google's g: prefix (found ns0: or no g:id)")
     print(f"Merchant feed has {items} item(s); product pages checked: {products}")
 
     print()

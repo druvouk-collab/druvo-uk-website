@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse, Response
 
 from app.services.merchant_service import build_merchant_feed_xml, build_social_catalog_csv
-from app.services.seo_service import build_sitemap_urls, robots_txt, sitemap_xml
+from app.services.seo_service import build_sitemap_urls, is_non_public_host, robots_txt, sitemap_xml
 
 router = APIRouter(tags=["seo"])
 
 
 @router.get("/robots.txt", response_class=PlainTextResponse)
-async def robots() -> PlainTextResponse:
+async def robots(request: Request) -> PlainTextResponse:
+    if is_non_public_host(request.headers.get("host", "")):
+        # Staging and the old *.onrender.com address must never be crawled (duplicate of druvo.uk).
+        return PlainTextResponse("User-agent: *\nDisallow: /\n", media_type="text/plain; charset=utf-8")
     return PlainTextResponse(robots_txt(), media_type="text/plain; charset=utf-8")
 
 

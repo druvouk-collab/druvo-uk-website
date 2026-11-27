@@ -84,6 +84,10 @@ def test_merchant_feed_xml_structure():
     ns = {"g": "http://base.google.com/ns/1.0"}
     items = root.findall(".//item")
     assert len(items) == 3
+    # Google's documented "g:" prefix, declared once (no "ns0:" duplicates).
+    assert "<g:id>" in xml and "ns0" not in xml
+    assert xml.count('xmlns:g="http://base.google.com/ns/1.0"') == 1
+    assert items[0].find("g:id", ns) is not None
 
 
 def test_feed_price_and_availability_match_structured_data():
