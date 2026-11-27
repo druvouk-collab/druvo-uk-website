@@ -157,6 +157,9 @@ def pay_in_browser(slug: str) -> None:
         try:
             _pay_steps(page, slug)
         except Exception:
+            import traceback
+
+            traceback.print_exc()
             # Stripe sometimes changes its page: keep evidence so the fix is quick.
             page.screenshot(path=str(OUT / "error.png"), full_page=True)
             print("URL:", page.url.split("?")[0].split("#")[0], "| title:", page.title())
@@ -195,7 +198,9 @@ def _pay_steps(page, slug: str) -> None:
 
     # On Stripe's hosted page (test mode): delivery address, phone, then the 4242 test card.
     page.wait_for_url("https://checkout.stripe.com/**", timeout=60000)
-    page.wait_for_load_state("networkidle")
+    # Not "networkidle": Stripe's page keeps background connections open (wallets, bot check), so it never
+    # goes quiet. The loop below waits for the card field itself.
+    page.wait_for_load_state("domcontentloaded")
     page.screenshot(path=str(OUT / "2-stripe-checkout.png"), full_page=True)
 
     def find(selector: str):
