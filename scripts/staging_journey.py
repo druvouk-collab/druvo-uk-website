@@ -231,8 +231,14 @@ def _pay_steps(page, slug: str) -> None:
     for frame in page.frames:  # the currency radio buttons are visually hidden, so don't require visibility
         gbp = frame.locator("#currency-gbp")
         if gbp.count():
-            gbp.first.check(force=True)
-            page.wait_for_timeout(1500)
+            try:  # best effort: the total is charged in GBP to the shop either way
+                label = frame.locator("label[for='currency-gbp']")
+                (label.first if label.count() else gbp.first).click(force=True, timeout=5000)
+                page.wait_for_timeout(1500)
+                print("Currency chosen on Stripe's page: GBP" if gbp.first.is_checked() else
+                      "Stripe's page kept its own currency choice (adaptive pricing)")
+            except Exception as exc:  # noqa: BLE001
+                print("Could not switch Stripe's currency selector:", type(exc).__name__)
             break
     country = find("#shippingAddress-countryInput, #shippingCountry")
     if country is not None:
