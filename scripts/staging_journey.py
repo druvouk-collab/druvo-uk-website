@@ -187,7 +187,7 @@ def _pay_steps(page, slug: str) -> None:
     page.goto(f"{APP}/checkout", wait_until="networkidle")
     # Database mode asks only for contact details here (Stripe collects the address); the older form also had
     # address fields, so fill whichever are on the page.
-    for selector, value in (("#email", EMAIL), ("#phone", "07700900123"), ("#first-name", "Test"),
+    for selector, value in (("#email", EMAIL), ("#phone", "07911123456"), ("#first-name", "Test"),
                             ("#last-name", "Customer"), ("#address", "1 Test Street"), ("#city", "Manchester"),
                             ("#postcode", "M1 1AA")):
         loc = page.locator(selector)
@@ -255,9 +255,13 @@ def _pay_steps(page, slug: str) -> None:
                             ("#shippingAddress-nameInput, #shippingName", "Test Customer"),
                             ("#shippingAddress-addressLine1Input, #shippingAddressLine1", "1 Test Street"),
                             ("#shippingAddress-localityInput, #shippingLocality", "Manchester"),
-                            ("#shippingAddress-postalCodeInput, #shippingPostalCode", "M1 1AA"),
-                            ("#shippingAddress-phoneInput, #phoneNumber", "7700900123")):
+                            ("#shippingAddress-postalCodeInput, #shippingPostalCode", "M1 1AA")):
         fill_if_shown(selector, value)
+    # Phone: Stripe rejects Ofcom's reserved 07700 900xxx drama numbers, so use a valid-format UK mobile
+    # (test mode only — nothing is called or texted). Overwrite whatever was prefilled.
+    phone = find("#shippingAddress-phoneInput, #phoneNumber")
+    if phone is not None:
+        phone.fill("7911 123456", timeout=10000)
     find(card_sel).fill("4242 4242 4242 4242")
     find("#payment-expiryInput, #cardExpiry, input[autocomplete='cc-exp']").fill("12 / 34")
     find("#payment-cvcInput, #cardCvc, input[autocomplete='cc-csc']").fill("123")
