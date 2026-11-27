@@ -217,14 +217,28 @@ def _pay_steps(page, slug: str) -> None:
     # Stripe's hosted page (Nov 2026) renders its form inside a Stripe Elements iframe with ids such as
     # #payment-numberInput and #shippingAddress-nameInput; older pages used #cardNumber in the main frame.
     card_sel = "#payment-numberInput, #cardNumber, input[autocomplete='cc-number']"
-    deadline = time.time() + 60
-    while find(card_sel) is None:
-        if time.time() > deadline:
-            raise TimeoutError("Stripe payment form did not appear within 60 s")
-        card_tab = find("[data-testid='card-accordion-item-button'], button:has-text('Card')")
-        if card_tab is not None:
-            card_tab.click()
-        page.wait_for_timeout(1000)
+    form_sel = card_sel + ", #shippingAddress-nameInput, #shippingName"
+
+    def wait_for(selector: str, what: str, click_card: bool = False) -> None:
+        deadline = time.time() + 60
+        while find(selector) is None:
+            if time.time() > deadline:
+                raise TimeoutError(f"Stripe {what} did not appear within 60 s")
+            if click_card:  # card may sit in a collapsed list of payment methods
+                for frame in page.frames:
+                    try:
+                        tab = frame.locator("[data-testid='card-accordion-item-button'], "
+                                            "button:has-text('Card'), [role=radio]:has-text('Card')")
+                        if tab.count() and tab.first.is_visible():
+                            tab.first.click(timeout=3000)
+                            break
+                    except Exception:  # noqa: BLE001
+                        continue
+            page.wait_for_timeout(1000)
+
+    # Stripe sometimes shows the card section only after contact and delivery details are complete,
+    # so fill those first, then wait for the card fields.
+    wait_for(form_sel, "checkout form")
 
     def fill_if_shown(selector: str, value: str) -> None:
         loc = find(selector)
@@ -262,6 +276,7 @@ def _pay_steps(page, slug: str) -> None:
     phone = find("#shippingAddress-phoneInput, #phoneNumber")
     if phone is not None:
         phone.fill("7911 123456", timeout=10000)
+    wait_for(card_sel, "card fields", click_card=True)
     find(card_sel).fill("4242 4242 4242 4242")
     find("#payment-expiryInput, #cardExpiry, input[autocomplete='cc-exp']").fill("12 / 34")
     find("#payment-cvcInput, #cardCvc, input[autocomplete='cc-csc']").fill("123")
