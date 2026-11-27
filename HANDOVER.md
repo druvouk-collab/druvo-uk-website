@@ -195,6 +195,10 @@ Later (session 12b): PR #9 reviewed (scope, feed validity, druvo.uk indexable, r
 X-Robots-Tag guard added to the site check. Real-browser step fixed for the database-mode checkout form (no
 address fields) after driving Chrome locally; run summary lists real vs simulated services. Stripe test
 secrets still missing at 20:30, so the real Stripe run has not happened yet.
+Owner approved PR #9 only → merged 20:33 (ed0663d). Verified live: feed `g:` prefix, homepage + product page
+load, robots.txt/sitemap OK, no noindex in pages or headers (site monitor run 46064854299 all passed), browser
+check 46064358554 passed, "Order by email" unchanged. The push-triggered monitor run 46064358450 failed only
+because it ran before Render finished deploying (old feed). PR #10 still draft.
 
 ### 26 Nov 2026 (session 11)
 Live (PR #7, #8): UK-compliant returns/delivery/terms/privacy; £6.99 Express removed (never offered at checkout);

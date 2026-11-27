@@ -28,8 +28,8 @@ its working eBay/Amazon code is **moved into the cloud** as connectors. Owner re
 | Security headers, API docs hidden, config endpoint protected | 🚀 PR #4 + #6 | monitor checks headers and 404s; pip-audit clean |
 | Ads readiness: consent banner, Meta/TikTok/Snapchat/GA4 pixels (off until IDs set), `/feeds/social-catalog.csv` | 🚀 PR #5 | browser test: nothing loads before Accept or after Reject |
 | Keep-awake every 10 min (and ALL scheduled jobs incl. nightly backups) | ⛔ | 27 Nov: schedules now fire but only 9 times in 36 h (should be 216), so Render Free still sleeps → 503 / "waking up" screen. Hourly full check never fired (fixed in PR #9). Permanent fix: Render Starter (owner approval) |
-| Google Merchant feed uses `g:` prefix | 🧪 PR #9 | live feed uses `ns0:` + duplicate declaration; robots.txt and sitemap (18 URLs) fine on 27 Nov |
-| `*.onrender.com` copies noindex / disallow-all | 🧪 PR #9 | protects druvo.uk ranking from staging/legacy URL |
+| Google Merchant feed uses `g:` prefix | 🚀 PR #9 (27 Nov 20:33) | site monitor run 46064854299: all checks passed, feed `g:` only |
+| `*.onrender.com` copies noindex / disallow-all | 🚀 PR #9 | druvo.uk verified indexable: no X-Robots-Tag on any sitemap page, meta robots index,follow, robots.txt unchanged |
 | Full customer journey (browse → pay → emails → track → dispatch → return → refund + restock → last-item race → expiry) | ✅ rehearsal / ⛔ real Stripe | `scripts/staging_journey.py` 18/18 in CI with stand-in Stripe (run 46062765467); same job uses real Stripe test mode once `STRIPE_TEST_*` GitHub secrets exist (not set on 27 Nov) |
 | Oversell prevention (8 buyers, 1 item) | ✅ | 340 tests on PostgreSQL 16 in CI (`tests.yml`) |
 | Order confirmation / dispatch / refund emails | ✅ rendered | templates checked on a phone-width screen; sending ⛔ Resend account |
