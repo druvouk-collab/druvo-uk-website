@@ -106,6 +106,8 @@ def main() -> int:
             continue
         if 'name="robots" content="noindex' in body:
             problems.append(f"noindex on {url}")
+        if "noindex" in LAST_HEADERS.get("x-robots-tag", "").lower():
+            problems.append(f"X-Robots-Tag noindex header on {url} (only *.onrender.com should send it)")
         if "/product/" in url:
             products += 1
             blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', body, re.S)
