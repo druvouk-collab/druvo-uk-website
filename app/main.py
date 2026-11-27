@@ -18,6 +18,7 @@ from app.lib.druvo_api.client import DruvoApiClient
 from app.routes import account, admin, admin_panel, catalog_api, manager_api, chat_api, checkout_api, legal, seo, shop, stripe_webhook
 from app.routes import orders
 from app.services.readiness_service import build_readiness_report
+from app.services.seo_service import is_non_public_host
 from app.templating import templates
 
 logging.basicConfig(
@@ -129,6 +130,8 @@ async def security_headers(request: Request, call_next):
         )
     else:
         headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    if is_non_public_host(request.headers.get("host", "")):
+        headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
 
 

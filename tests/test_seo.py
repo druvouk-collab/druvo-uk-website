@@ -230,3 +230,18 @@ async def test_shipping_returns_distinct_h1(client):
     shipping = await client.get("/shipping-returns")
     assert "Delivery Information" in delivery.text
     assert "Shipping &amp; Returns" in shipping.text or "Shipping & Returns" in shipping.text
+
+
+def test_onrender_copies_are_never_indexed():
+    """Staging (druvo-uk-staging.onrender.com) and the old live address must not compete with druvo.uk."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as client:
+        staging = client.get("/robots.txt", headers={"host": "druvo-uk-staging.onrender.com"})
+        assert staging.text == "User-agent: *\nDisallow: /\n"
+        assert client.get("/", headers={"host": "druvo-uk-website.onrender.com"}).headers["x-robots-tag"].startswith("noindex")
+        live = client.get("/robots.txt", headers={"host": "druvo.uk"})
+        assert "Allow: /" in live.text and "Sitemap:" in live.text
+        assert "x-robots-tag" not in client.get("/", headers={"host": "druvo.uk"}).headers
