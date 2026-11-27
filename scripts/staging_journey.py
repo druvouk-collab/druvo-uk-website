@@ -272,9 +272,30 @@ def _pay_steps(page, slug: str) -> None:
     try:
         page.wait_for_url(lambda url: "checkout.stripe.com" not in url, timeout=90000)
     except Exception:
-        captcha = [f.url for f in page.frames if "hcaptcha" in f.url and "challenge" in f.url]
+        # Why did Stripe not finish? Form errors, or a visible bot-check challenge?
+        errors, values = [], {}
+        for frame in page.frames:
+            try:
+                errors += frame.eval_on_selector_all(
+                    "[role=alert], .FieldError, .p-FieldError, [id$='-error'], .Error",
+                    "els => els.map(e => e.textContent.trim()).filter(t => t)")
+                for sel in ("#shippingAddress-addressLine1Input", "#shippingAddress-localityInput",
+                            "#shippingAddress-postalCodeInput", "#shippingAddress-nameInput", "#payment-numberInput"):
+                    if frame.locator(sel).count():
+                        values[sel] = bool(frame.locator(sel).first.input_value())
+            except Exception:  # noqa: BLE001
+                continue
+        visible_challenge = False
+        for el in page.query_selector_all("iframe[src*='hcaptcha']"):
+            box = el.bounding_box()
+            if box and box["width"] > 100 and box["height"] > 100 and el.is_visible():
+                visible_challenge = True
+        print("Form errors shown by Stripe:", errors[:10])
+        print("Fields holding a value:", values)
+        print("Visible hCaptcha challenge:", visible_challenge)
         raise RuntimeError("Stripe did not finish the payment within 90 s"
-                           + (" — an hCaptcha challenge was shown (Stripe's bot check)" if captcha else ""))
+                           + (" — Stripe showed its hCaptcha bot check" if visible_challenge else "")
+                           + (f" — form errors: {errors[:3]}" if errors else ""))
     page.screenshot(path=str(OUT / "4-back-on-shop.png"), full_page=True)
 
 
