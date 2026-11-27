@@ -393,6 +393,10 @@ def main() -> int:
         after = http.get(track).text
         check("6 Customer requests a return from the order page",
               r.status_code == 303 and 'data-return-status="requested"' in after)
+        if EMAILS_ON:
+            check("6 Return instructions email sent", bool(wait_for(lambda: one(
+                "SELECT bool_and(customer_email_sent_at IS NOT NULL) FROM return_requests rr JOIN orders o "
+                "ON o.id = rr.order_id WHERE o.order_number=:n", n=number)[0], 30)))
 
         # 7. Return received + refund with restock (real Stripe test refund)
         admin.action(number, "return-received")
@@ -463,6 +467,19 @@ def summary() -> int:
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed")
     for a, b in services:
         print(f"  {a}: {b}")
+    # What the email provider actually answered, per email (from the shop's log).
+    email_lines = []
+    log_path = os.environ.get("APP_LOG")
+    if log_path and Path(log_path).exists():
+        for line in Path(log_path).read_text(errors="replace").splitlines():
+            m = re.search(r"(Email sent via Resend|Resend rejected email) subject=(.*?)( status=(\d+))?$", line)
+            if m:
+                verdict = "accepted by Resend" if m.group(1).startswith("Email sent") else f"REJECTED ({m.group(4)})"
+                email_lines.append((re.sub(r"DRV-[0-9A-Z-]+", "DRV-…", m.group(2)).strip(), verdict))
+    if email_lines:
+        print("Emails (shop log):")
+        for subject, verdict in email_lines:
+            print(f"  {verdict}: {subject}")
     step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if step_summary:
         with open(step_summary, "a") as fh:
@@ -471,6 +488,9 @@ def summary() -> int:
             fh.writelines(f"| {'✅' if ok else '❌'} | {name}{(' — ' + d) if d else ''} |\n" for name, ok, d in results)
             fh.write("\n| Service | How it was tested |\n|---|---|\n")
             fh.writelines(f"| {a} | {b} |\n" for a, b in services)
+            if email_lines:
+                fh.write("\n| Email | Resend's answer |\n|---|---|\n")
+                fh.writelines(f"| {subj} | {verdict} |\n" for subj, verdict in email_lines)
     return 1 if failed else 0
 
 
