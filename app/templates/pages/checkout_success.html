@@ -3,7 +3,13 @@
 {% block content %}
 <div class="container page-header"><h1>Payment successful</h1></div>
 <div class="container content-card">
-  {% if paid and order %}
+  {% if paid and db_order %}
+  <p>Thank you — your payment was received and your order is confirmed.</p>
+  <p><strong>Order number:</strong> {{ db_order.order_number }}</p>
+  <p>A confirmation email is on its way to {{ db_order.email }}. We'll email your tracking number when your order is dispatched.</p>
+  <div hidden data-purchase='{{ {"order": db_order.order_number, "value": db_order.total_gbp, "content_ids": db_order.skus or []} | tojson }}'></div>
+  <script>try { localStorage.removeItem("druvo_uk_cart"); sessionStorage.removeItem("druvo_checkout_order_id"); } catch (e) {}</script>
+  {% elif paid and order %}
   <p>Thank you — your payment was received and your order is confirmed in DRUVO AI.</p>
   <p><strong>Order reference:</strong> #{{ order.order_id or order.external_order_id }}</p>
   {% if customer_email %}

@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}{% block title %}Account{% endblock %}
+{% block content %}
+<h1>Your account</h1>
+<div class="a-grid two">
+<section class="a-card">
+  <h2>Change password</h2>
+  <form method="post" action="/admin/account/password" class="a-form">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <label>Current password<input type="password" name="current" required autocomplete="current-password"></label>
+    <label>New password (12+)<input type="password" name="new" minlength="12" required autocomplete="new-password"></label>
+    <label>Repeat new password<input type="password" name="new2" minlength="12" required autocomplete="new-password"></label>
+    <button class="a-btn primary">Change password</button>
+  </form>
+</section>
+<section class="a-card">
+  <h2>Two-factor authentication</h2>
+  <p>On. Recovery codes left: <strong>{{ codes_left }}</strong></p>
+  {% if new_codes %}<p><strong>New recovery codes — save them now:</strong></p><ul class="a-codes">{% for c in new_codes %}<li><code>{{ c }}</code></li>{% endfor %}</ul>{% endif %}
+  <form method="post" action="/admin/account/recovery-codes"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn">Generate new recovery codes</button></form>
+  <h2>Sessions</h2>
+  <form method="post" action="/admin/logout"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><input type="hidden" name="everywhere" value="1"><button class="a-btn danger">Sign out on all devices</button></form>
+</section>
+</div>
+{% endblock %}

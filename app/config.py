@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import model_validator, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.lib.druvo_api.key_sanitize import sanitize_api_base_url, sanitize_api_key
@@ -21,6 +21,26 @@ class Settings(BaseSettings):
     site_url: str = "http://127.0.0.1:8080"
     contact_email: str = "druvo.uk@gmail.com"
     catalog_source: str = "mock"
+    database_url: str = ""
+    # Transactional email (Resend HTTP API — works on any host, no SMTP ports needed)
+    # One-time token for creating the first admin at /admin/setup?token=... (remove after setup)
+    admin_setup_token: str = ""
+    # Optional error monitoring (Sentry free developer plan). Leave blank to disable.
+    sentry_dsn: str = ""
+    # Shared secret for the DRUVO Manager sync API (Authorization: Bearer ...). 32+ random characters.
+    manager_api_key: str = ""
+    # Fernet key (44 chars) that encrypts marketplace credentials in the database. Generate once, keep safe:
+    # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    credentials_key: str = ""
+    resend_api_key: str = ""
+    email_from: str = "DRUVO UK <orders@druvo.uk>"
+    shop_notification_email: str = ""
+    # Legal business details — leave blank until verified by the owner; shown in emails/footer when set.
+    business_legal_name: str = ""
+    business_address: str = ""
+    company_number: str = ""
+    # Stripe Checkout sessions last at least 30 minutes; hold stock slightly longer.
+    stock_reservation_minutes: int = 35
     druvo_api_base_url: str = ""
     druvo_api_key: str = ""
     druvo_api_timeout_seconds: int = 30
@@ -45,16 +65,25 @@ class Settings(BaseSettings):
     chat_enabled: bool = True
     chat_rate_limit_per_hour: int = 30
     google_site_verification: str = ""
-    # Seller identity (E-Commerce Regulations 2002). Shown on Terms/Returns/footer only once set by the owner.
-    business_legal_name: str = ""
-    business_address: str = ""
-    company_number: str = ""
+    # Background job interval (stock holds, emails, marketplace sync). Raise to 900+ on Neon's free database.
+    maintenance_interval_seconds: int = 300
     vat_number: str = ""
     # Advertising pixels — empty means off. Loaded only after the visitor accepts marketing cookies.
     meta_pixel_id: str = ""
     tiktok_pixel_id: str = ""
     snap_pixel_id: str = ""
     ga4_measurement_id: str = ""
+
+    @model_validator(mode="after")
+    def _db_needs_url(self):
+        # Safety net: CATALOG_SOURCE=db without DATABASE_URL would show an empty shop. Fall back to the
+        # static catalogue with email ordering until the database is connected.
+        if self.catalog_source == "db" and not self.database_url.strip():
+            import logging
+
+            logging.getLogger(__name__).warning("CATALOG_SOURCE=db but DATABASE_URL is empty; using static catalogue.")
+            self.catalog_source = "static"
+        return self
 
     @property
     def stripe_mode(self) -> str:
@@ -65,9 +94,17 @@ class Settings(BaseSettings):
         return "missing"
 
     @property
+    def database_enabled(self) -> bool:
+        return self.catalog_source == "db" and bool(self.database_url)
+
+    @property
     def email_orders_enabled(self) -> bool:
         """Free-hosting mode: customers order by email, no online payment."""
         return self.catalog_source == "static"
+
+    @property
+    def resend_enabled(self) -> bool:
+        return bool(self.resend_api_key)
 
     @property
     def email_configured(self) -> bool:
@@ -75,10 +112,20 @@ class Settings(BaseSettings):
 
     @property
     def stripe_enabled(self) -> bool:
+        # Safety lock: a LIVE key takes no payments until the owner also sets STRIPE_LIVE_MODE_CONFIRMED=true.
+        if self.stripe_mode == "live" and not self.stripe_live_mode_confirmed:
+            return False
         return bool(self.stripe_secret_key and self.stripe_publishable_key)
 
     @property
+    def db_payments_enabled(self) -> bool:
+        """Mac-independent checkout: PostgreSQL stock + Stripe Checkout."""
+        return self.database_enabled and self.stripe_enabled and bool(self.stripe_webhook_secret)
+
+    @property
     def payments_enabled(self) -> bool:
+        if self.db_payments_enabled:
+            return True
         return (
             self.catalog_source == "druvo_api"
             and bool(self.druvo_api_base_url)

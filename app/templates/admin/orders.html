@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}{% from "admin/_status.html" import status as st %}{% block title %}Orders{% endblock %}
+{% block content %}
+<div class="a-head"><h1>Orders</h1><span><a class="a-btn" href="/admin/orders/import">+ Record a marketplace sale</a> <a class="a-btn" href="/admin/orders.csv">Export CSV</a></span></div>
+<form class="a-filters" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Order number, name or email">
+  <select name="status"><option value="">All (excl. unpaid)</option><option value="open" {% if status=='open' %}selected{% endif %}>To dispatch</option>
+  {% for s in statuses %}<option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s.replace('_',' ') }}</option>{% endfor %}</select>
+  <select name="channel"><option value="">All platforms</option>{% for c in channels %}<option value="{{ c.code }}" {% if channel==c.code %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+  <button class="a-btn">Filter</button>
+</form>
+<div class="a-scroll"><table class="a-table">
+<thead><tr><th>Order</th><th>Platform</th><th>Customer</th><th>Status</th><th class="r">Total</th><th>Date</th><th>Dispatch by</th></tr></thead>
+<tbody>
+{% for o in orders %}{% set due = o.dispatch_by.replace(tzinfo=now.tzinfo) if o.dispatch_by and not o.dispatch_by.tzinfo else o.dispatch_by %}<tr><td><a href="/admin/orders/{{ o.order_number }}">{{ o.order_number }}</a>{% if 'CONFLICT' in (o.notes or '') %} <span class="a-pill warn">conflict</span>{% endif %}</td><td><span class="a-pill">{{ o.channel }}</span></td><td>{{ o.name }}<br><span class="a-muted">{{ o.email }}</span></td><td>{{ st(o.status) }}</td><td class="r">{{ money(o.total_pence) }}</td><td>{{ (o.paid_at or o.created_at).strftime('%d %b %Y %H:%M') }}</td><td>{% if due and o.status in ('paid','packed') %}<span class="{{ 'neg' if due < now else '' }}">{{ due.strftime('%d %b') }}{% if due < now %} · overdue{% endif %}</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="7" class="a-muted">No orders found.</td></tr>{% endfor %}
+</tbody></table></div>
+<p>{% if page > 1 %}<a href="?status={{ status }}&q={{ q }}&page={{ page-1 }}">← Newer</a>{% endif %} {% if has_more %}<a href="?status={{ status }}&q={{ q }}&page={{ page+1 }}">Older →</a>{% endif %}</p>
+{% endblock %}

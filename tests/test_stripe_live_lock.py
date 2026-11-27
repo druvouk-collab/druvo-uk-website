@@ -1,0 +1,22 @@
+"""Live Stripe keys stay inactive until the owner explicitly confirms live mode."""
+
+from app.config import Settings
+
+
+def test_test_keys_enabled():
+    assert Settings(stripe_secret_key="sk_test_x", stripe_publishable_key="pk_test_x").stripe_enabled
+
+
+def test_live_keys_locked_without_confirmation():
+    s = Settings(stripe_secret_key="sk_live_x", stripe_publishable_key="pk_live_x")
+    assert s.stripe_mode == "live" and not s.stripe_enabled
+
+
+def test_live_keys_enabled_after_confirmation():
+    s = Settings(stripe_secret_key="sk_live_x", stripe_publishable_key="pk_live_x", stripe_live_mode_confirmed=True)
+    assert s.stripe_enabled
+
+
+def test_db_mode_without_database_falls_back_to_static_catalogue():
+    s = Settings(catalog_source="db", database_url="")
+    assert s.catalog_source == "static" and s.email_orders_enabled and not s.database_enabled

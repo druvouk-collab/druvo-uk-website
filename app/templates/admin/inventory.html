@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}{% block title %}Inventory{% endblock %}
+{% block content %}
+<h1>Inventory</h1>
+<div class="a-grid four">
+  <section class="a-card kpi"><h2>Units in stock</h2><p class="big">{{ units }}</p></section>
+  <section class="a-card kpi"><h2>Value at cost</h2><p class="big">{{ money(cost_value) }}</p></section>
+  <section class="a-card kpi"><h2>Value at price</h2><p class="big">{{ money(retail_value) }}</p></section>
+  <section class="a-card kpi"><h2>Potential margin</h2><p class="big">{{ money(retail_value - cost_value) }}</p></section>
+</div>
+<form class="a-filters" method="get"><input type="search" name="q" value="{{ q }}" placeholder="Name or SKU">
+<select name="show"><option value="live" {% if show=='live' %}selected{% endif %}>Live products</option><option value="all" {% if show=='all' %}selected{% endif %}>All</option></select><button class="a-btn">Filter</button></form>
+<div class="a-scroll"><table class="a-table">
+<thead><tr><th>Product / SKU</th><th class="r">Available</th><th class="r">Held in checkout</th><th class="r">Cost</th><th class="r">Price</th><th>Listed on</th><th></th></tr></thead>
+<tbody>{% for r in rows %}<tr>
+<td><a href="/admin/products/{{ r.p.id }}">{{ r.p.name }}</a><br><span class="a-muted">{{ r.v.sku }} {{ r.v.size }}</span></td>
+<td class="r"><span class="a-status {{ 's-cancelled' if r.v.stock_quantity == 0 else ('s-packed' if r.v.stock_quantity <= r.v.low_stock_threshold else 's-paid') }}">{{ r.v.stock_quantity }}</span></td>
+<td class="r">{{ r.reserved }}</td><td class="r">{{ money(r.v.cost_pence) }}</td><td class="r">{{ money(r.v.price_pence) }}</td>
+<td>{% for l in r.listings %}<span class="a-pill {{ 'warn' if l.status != 'published' else '' }}">{{ l.channel_code }}</span> {% endfor %}</td>
+<td><a href="/admin/inventory/{{ r.v.id }}">History</a></td></tr>
+{% else %}<tr><td colspan="7" class="a-muted">No stock.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

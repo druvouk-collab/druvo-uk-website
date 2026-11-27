@@ -1,0 +1,15 @@
+New paid order {{ order.order_number }} — {{ order.total_pence | money }}
+
+Customer: {{ order.name }} <{{ order.email }}>{% if order.phone %} · {{ order.phone }}{% endif %}
+Payment: {{ order.payment_method_type or "card" }} · Stripe {{ order.stripe_payment_intent_id or "" }}
+
+{% include "_items.txt" %}
+{% set a = order.shipping_address or {} %}
+Ship to:
+{{ a.name }}
+{{ a.line1 }}{% if a.line2 %}, {{ a.line2 }}{% endif %}
+{{ a.city }} {{ a.postal_code }} {{ a.country }}
+{% if order.notes %}
+ATTENTION: {{ order.notes }}
+{% endif %}
+Items SKUs: {% for item in items %}{{ item.sku }}×{{ item.quantity }} {% endfor %}

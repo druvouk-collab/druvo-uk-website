@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}{% from "admin/_status.html" import status %}{% block title %}Overview{% endblock %}
+{% block content %}
+<h1>Overview</h1>
+<p><a class="a-btn primary" href="/admin/products/new">+ Add product</a> <a class="a-btn" href="/admin/orders/import">+ Record marketplace sale</a> <a class="a-btn" href="/admin/tasks">Tasks</a></p>
+{% if attention %}<div class="a-flash err"><strong>{{ attention|length }} order(s) need attention</strong> (stock conflict or amount mismatch):
+  {% for o in attention %}<a href="/admin/orders/{{ o.order_number }}">{{ o.order_number }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+<div class="a-grid four">
+{% for label, t in cards %}
+  <section class="a-card kpi">
+    <h2>{{ label }}</h2>
+    <p class="big">{{ money(t.net_sales_pence) }}</p>
+    <p class="a-muted">{{ t.orders }} order{{ '' if t.orders == 1 else 's' }} · profit <strong class="{{ 'neg' if t.profit_pence < 0 else 'pos' }}">{{ money(t.profit_pence) }}</strong></p>
+  </section>
+{% endfor %}
+</div>
+<div class="a-grid two">
+<section class="a-card">
+  <h2>To dispatch ({{ pending|length }})</h2>
+  {% if pending %}<table class="a-table"><tbody>
+  {% for o in pending %}<tr><td><a href="/admin/orders/{{ o.order_number }}">{{ o.order_number }}</a><br><span class="a-muted">{{ o.name }}</span></td><td>{{ status(o.status) }}</td><td class="r">{{ money(o.total_pence) }}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="a-muted">Nothing waiting. 🎉</p>{% endif %}
+</section>
+<section class="a-card">
+  <h2>Low stock</h2>
+  {% if low_stock %}<table class="a-table"><tbody>
+  {% for v in low_stock %}<tr><td><a href="/admin/products/{{ v.product_id }}">{{ v.name }}</a><br><span class="a-muted">{{ v.sku }} {{ v.size }}</span></td><td class="r"><span class="a-status {{ 's-cancelled' if v.stock == 0 else 's-packed' }}">{{ 'Sold out' if v.stock == 0 else v.stock ~ ' left' }}</span></td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="a-muted">All live products are above their alert level.</p>{% endif %}
+</section>
+</div>
+{% endblock %}

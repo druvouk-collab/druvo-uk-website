@@ -138,6 +138,18 @@ function init() {
   if (location.pathname === "/checkout") {
     track("InitiateCheckout", {});
   }
+  // Paid-order page: record the purchase once per order (a refresh must not count twice).
+  const purchase = document.querySelector("[data-purchase]");
+  if (purchase) {
+    try {
+      const d = JSON.parse(purchase.dataset.purchase);
+      const key = `druvo_purchase_${d.order}`;
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        track("Purchase", { value: d.value, content_ids: d.content_ids });
+      }
+    } catch { /* ignore */ }
+  }
 }
 
 window.addEventListener("druvo:add_to_cart", (e) => {

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block content %}
+{% set status_labels = {"paid": "Order confirmed", "packed": "Being packed", "shipped": "On its way", "delivered": "Delivered",
+  "refunded": "Refunded", "partially_refunded": "Partly refunded", "cancelled": "Cancelled", "expired": "Not completed"} %}
+{% set return_labels = {"requested": "Return started — waiting for your parcel", "received": "Return received — refund on its way",
+  "refunded": "Return refunded", "rejected": "Return not accepted — we've emailed you"} %}
+<div class="container page-header">
+  <h1>Order {{ order.order_number }}</h1>
+  <p class="product-meta" data-order-status="{{ order.status }}">{{ status_labels.get(order.status, order.status) }}</p>
+</div>
+<div class="container content-card" style="max-width:720px;">
+  {% if just_returned %}<p class="notice" role="status">Your return has been started. We've emailed you the instructions.</p>{% endif %}
+  {% if error %}<p class="notice" role="alert">{{ error }}</p>{% endif %}
+
+  <ol class="order-steps">
+    {% for label, when in order.steps %}
+    <li class="{{ 'done' if when else '' }}"><strong>{{ label }}</strong>{% if when %} · {{ when.strftime('%d %b %Y') }}{% endif %}</li>
+    {% endfor %}
+  </ol>
+
+  {% if order.tracking_number %}
+  <p>{% if order.carrier %}{{ order.carrier }} · {% endif %}Tracking number <strong>{{ order.tracking_number }}</strong>
+    {% if order.tracking_url %} · <a href="{{ order.tracking_url }}" rel="noopener" target="_blank">Track parcel</a>{% endif %}</p>
+  {% endif %}
+
+  <h2 style="font-size:1.1rem;margin-top:1.5rem;">Items</h2>
+  <ul class="order-lines">
+    {% for item in order["items"] %}
+    <li>{{ item.name }}{% if item.colour or item.size %} <span class="product-meta">({{ [item.colour, item.size] | select | join(" / ") }})</span>{% endif %}
+      × {{ item.quantity }} — {{ format_gbp(item.line_pence / 100) }}</li>
+    {% endfor %}
+  </ul>
+  <p>Delivery {{ format_gbp(order.shipping_pence / 100) if order.shipping_pence else "free" }}{% if order.discount_pence %} · Discount −{{ format_gbp(order.discount_pence / 100) }}{% endif %} ·
+     <strong>Total {{ format_gbp(order.total_pence / 100) }}</strong>{% if order.refunded_pence %} · Refunded {{ format_gbp(order.refunded_pence / 100) }}{% endif %}</p>
+
+  <h2 style="font-size:1.1rem;margin-top:1.5rem;">Returns</h2>
+  {% if order["return"] %}
+  <p data-return-status="{{ order['return'].status }}">{{ return_labels.get(order["return"].status, order["return"].status) }}</p>
+  {% elif order.can_return %}
+  <p>You can return items within 14 days of receiving them{% if order.return_deadline %} (until {{ order.return_deadline.strftime('%d %b %Y') }}){% endif %}. <a href="/returns">Returns policy</a>.</p>
+  <form method="post" action="/orders/{{ order.order_number }}/return">
+    <input type="hidden" name="t" value="{{ token }}">
+    <div class="form-field"><label for="reason">Reason (optional)</label>
+      <input id="reason" name="reason" maxlength="500" placeholder="e.g. doesn't fit"></div>
+    <button class="btn btn-secondary" type="submit" data-start-return>Start a return</button>
+  </form>
+  {% else %}
+  <p>Online returns aren't available for this order. Email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> and we'll help.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}{% block title %}Discount codes{% endblock %}
+{% block content %}
+<h1>Discount codes</h1>
+<div class="a-grid two">
+<section class="a-card">
+  <h2>Create a code</h2>
+  <form method="post" action="/admin/promotions" class="a-form">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <div class="a-row"><label>Code<input name="code" required placeholder="WINTER10" maxlength="30"></label><label>Name<input name="name" placeholder="Winter sale"></label></div>
+    <div class="a-row"><label>Type<select name="discount_type"><option value="percent">% off</option><option value="fixed">£ off</option></select></label><label>Value<input name="value" inputmode="decimal" required placeholder="10"></label></div>
+    <div class="a-row"><label>Minimum spend £<input name="min_spend" inputmode="decimal"></label><label>Max uses<input name="usage_limit" inputmode="numeric" placeholder="unlimited"></label></div>
+    <div class="a-row"><label>Starts (YYYY-MM-DD)<input name="starts_at" type="date"></label><label>Ends<input name="ends_at" type="date"></label></div>
+    <label>Terms shown to customers<input name="description" maxlength="500"></label>
+    <button class="a-btn primary">Create code</button>
+  </form>
+  <p class="a-muted">Customers enter the code at checkout; the discount is applied before delivery is calculated.</p>
+</section>
+<section class="a-card">
+  <h2>Codes</h2>
+  <table class="a-table"><tbody>{% for p in promos %}
+  <tr><td><strong>{{ p.code }}</strong><br><span class="a-muted">{{ p.name }}</span></td>
+  <td>{{ (p.discount_value ~ '%') if p.discount_type == 'percent' else money(p.discount_value) }} off{% if p.min_spend_pence %}<br><span class="a-muted">min {{ money(p.min_spend_pence) }}</span>{% endif %}</td>
+  <td>{{ p.times_used }}{% if p.usage_limit %}/{{ p.usage_limit }}{% endif %} used<br>{% if p.ends_at %}<span class="a-muted">ends {{ p.ends_at.strftime('%d %b %Y') }}</span>{% endif %}</td>
+  <td><form method="post" action="/admin/promotions/{{ p.id }}/toggle"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn {{ '' if p.active else 'primary' }}">{{ 'Pause' if p.active else 'Activate' }}</button></form></td></tr>
+  {% else %}<tr><td class="a-muted">No codes yet.</td></tr>{% endfor %}</tbody></table>
+</section>
+</div>
+{% endblock %}

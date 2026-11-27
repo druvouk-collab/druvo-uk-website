@@ -1,0 +1,8 @@
+Hi {{ order.name or "there" }},
+
+We've issued a refund of {{ refund.amount_pence | money }} for order {{ order.order_number }}.{% if refund.reason %}
+Reason: {{ refund.reason }}{% endif %}
+
+It goes back to your original payment method and usually appears within 5–10 working days, depending on your bank.
+
+{% include "_footer.txt" %}

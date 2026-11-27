@@ -1,0 +1,1 @@
+{% set a = order.shipping_address or {} %}{% if a.line1 %}<p style="margin:0 0 12px;"><strong>Delivery address</strong><br>{{ a.name }}<br>{{ a.line1 }}{% if a.line2 %}<br>{{ a.line2 }}{% endif %}<br>{{ a.city }} {{ a.postal_code }}</p>{% endif %}

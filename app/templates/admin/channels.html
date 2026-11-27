@@ -1,0 +1,29 @@
+{% extends "admin/base.html" %}{% block title %}Platforms{% endblock %}
+{% block content %}
+<h1>Selling platforms</h1>
+<p class="a-muted"><strong>Automatic</strong> = updated by API. <strong>Assisted</strong> = DRUVO Manager prepares the listing and tells you exactly what to change by hand, because the platform doesn't allow automation for this account yet.
+Credential vault: <strong>{{ 'ready' if vault_ready else 'not configured (set CREDENTIALS_KEY)' }}</strong> ·
+DRUVO Manager sync API: <strong>{{ 'ready' if manager_api_ready else 'not configured (set MANAGER_API_KEY)' }}</strong> · {{ pending_manager }} job(s) waiting for DRUVO Manager.</p>
+<div class="a-grid two">
+{% for c in channels %}
+<section class="a-card">
+  <div class="a-head"><h2>{{ c.name }}</h2><span class="a-pill {{ '' if c.connection_status in ('connected','via_manager') else 'warn' }}">{{ c.mode }} · {{ c.connection_status.replace('_',' ') }}</span></div>
+  <p class="a-muted">{{ c.notes }}</p>
+  {% set cr = creds.get(c.code) %}
+  {% if c.mode == 'automatic' %}<p>Cloud connector: <strong>{{ 'installed' if c.code in cloud_connectors else 'not yet (porting from DRUVO Manager after audit)' }}</strong> ·
+  Credentials: <strong>{% if cr %}{{ cr.environment }}{% if cr.account %} ({{ cr.account }}){% endif %}{% else %}none stored{% endif %}</strong></p>{% endif %}
+  <p>{{ counts.get(c.code, 0) }} live listing(s){% if c.last_sync_at %} · last sync {{ c.last_sync_at.strftime('%d %b %H:%M') }}{% endif %}</p>
+  {% if c.last_error %}<p class="neg">{{ c.last_error }}</p>{% endif %}
+  <form method="post" action="/admin/channels/{{ c.code }}" class="a-form">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <div class="a-row"><label>Fee estimate %<input name="fee_percent" inputmode="decimal" value="{{ '%.2f'|format(c.fee_percent_bp/100) }}"></label>
+    <label>+ fixed fee £<input name="fee_fixed" inputmode="decimal" value="{{ '%.2f'|format(c.fee_fixed_pence/100) }}"></label>
+    <label>Dispatch within (days)<input name="dispatch_days" inputmode="numeric" value="{{ c.dispatch_days }}"></label></div>
+    <label class="a-check"><input type="checkbox" name="enabled" value="1" {% if c.enabled %}checked{% endif %}> Enabled</label>
+    <button class="a-btn">Save</button>
+  </form>
+</section>
+{% endfor %}
+</div>
+<p class="a-muted">Fee estimates are used for profit until the platform reports the real fee (shown as "estimated" on orders). Check each platform's current seller fees and enter them here.</p>
+{% endblock %}

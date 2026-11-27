@@ -1,0 +1,10 @@
+{% extends "admin/base.html" %}{% block title %}Customers{% endblock %}
+{% block content %}
+<h1>Customers</h1>
+<form class="a-filters" method="get"><input type="search" name="q" value="{{ q }}" placeholder="Name or email"><button class="a-btn">Search</button></form>
+<div class="a-scroll"><table class="a-table">
+<thead><tr><th>Customer</th><th class="r">Orders</th><th class="r">Spent</th><th>Last order</th></tr></thead>
+<tbody>{% for c, orders, spent, last in rows %}
+<tr><td><a href="/admin/customers/{{ c.id }}">{{ c.name or '—' }}</a><br><span class="a-muted">{{ c.email }}</span></td><td class="r">{{ orders or 0 }}</td><td class="r">{{ money(spent or 0) }}</td><td>{{ last.strftime('%d %b %Y') if last else '—' }}</td></tr>
+{% else %}<tr><td colspan="4" class="a-muted">No customers yet.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

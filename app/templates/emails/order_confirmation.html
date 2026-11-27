@@ -1,0 +1,11 @@
+{% extends "_layout.html" %}{% block body %}
+<h1 style="font-size:22px;margin:0 0 12px;">Thank you for your order</h1>
+<p>Hi {{ order.name or "there" }}, your payment has been received.</p>
+<p><strong>Order number:</strong> {{ order.order_number }}</p>
+{% include "_items.html" %}
+{% include "_address.html" %}
+<p>We dispatch within 1–2 working days and will email your tracking number when your order is on its way. Standard UK delivery takes 2–4 working days after dispatch.</p>
+<p style="font-size:13px;color:#444;"><strong>Your right to cancel:</strong> you can cancel this order for any reason within 14 days of receiving it. Start a return from your order page{% if not order_page_url %} or email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> with your order number{% endif %}. <a href="{{ returns_url }}">Returns &amp; cancellations</a>.</p>
+{% if order_page_url %}<p><a href="{{ order_page_url }}" style="display:inline-block;background:#111;color:#fff;padding:12px 18px;border-radius:4px;text-decoration:none;">View or track your order</a></p>{% endif %}
+<p>Questions? Just reply to this email.</p>
+{% endblock %}

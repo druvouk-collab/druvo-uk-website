@@ -1,0 +1,9 @@
+{% extends "_layout.html" %}{% block body %}
+<h1 style="font-size:22px;margin:0 0 12px;">Your order is on its way</h1>
+<p>Hi {{ order.name or "there" }}, order <strong>{{ order.order_number }}</strong> has been dispatched.</p>
+{% if order.tracking_number %}<p>{% if order.carrier %}{{ order.carrier }} · {% endif %}Tracking number: <strong>{{ order.tracking_number }}</strong></p>{% endif %}
+{% if order.tracking_url %}<p><a href="{{ order.tracking_url }}" style="display:inline-block;background:#111;color:#fff;padding:12px 18px;border-radius:4px;text-decoration:none;">Track your parcel</a></p>{% endif %}
+{% include "_items.html" %}
+{% if order_page_url %}<p><a href="{{ order_page_url }}">Your order page</a> — delivery progress and returns.</p>{% endif %}
+<p style="font-size:13px;color:#444;">Your 14-day right to cancel starts from the day you receive your order. <a href="{{ returns_url }}">Returns &amp; cancellations</a>.</p>
+{% endblock %}

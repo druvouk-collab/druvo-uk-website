@@ -79,6 +79,7 @@ def robots_txt(settings: Settings | None = None) -> str:
         "Disallow: /account/",
         "Disallow: /cart",
         "Disallow: /checkout",
+        "Disallow: /orders/",
         "Disallow: /admin/",
         "Disallow: /search",
         "Disallow: /api/",
@@ -99,18 +100,19 @@ async def build_sitemap_urls() -> list[dict[str, str]]:
     entries: list[dict[str, str]] = []
     seen: set[str] = set()
 
-    def add(path: str, priority: str = "0.7", changefreq: str = "weekly") -> None:
+    def add(path: str, priority: str = "0.7", changefreq: str = "weekly", images: list[str] | None = None) -> None:
         if path in seen or not is_indexable_path(path):
             return
         seen.add(path)
-        entries.append(
-            {
-                "loc": f"{base}{path}",
-                "lastmod": now,
-                "changefreq": changefreq,
-                "priority": priority,
-            }
-        )
+        entry = {
+            "loc": f"{base}{path}",
+            "lastmod": now,
+            "changefreq": changefreq,
+            "priority": priority,
+        }
+        if images:
+            entry["images"] = images
+        entries.append(entry)
 
     for path in PUBLIC_STATIC_PATHS:
         pri = "1.0" if path == "/" else "0.8" if path in {"/shop", "/categories"} else "0.6"
@@ -126,19 +128,28 @@ async def build_sitemap_urls() -> list[dict[str, str]]:
 
         if not is_public_indexable_product(product):
             continue
-        add(f"/product/{product.slug}", priority="0.8", changefreq="daily")
+        images = [
+            _absolute_image_url(img, base)
+            for img in product.images
+            if img and "placeholder" not in img
+        ][:10]
+        add(f"/product/{product.slug}", priority="0.8", changefreq="daily", images=images)
 
     return entries
 
 
 def sitemap_xml(urls: list[dict[str, str]]) -> str:
     urlset = Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+    urlset.set("xmlns:image", "http://www.google.com/schemas/sitemap-image/1.1")
     for item in urls:
         url_el = SubElement(urlset, "url")
         SubElement(url_el, "loc").text = item["loc"]
         SubElement(url_el, "lastmod").text = item["lastmod"]
         SubElement(url_el, "changefreq").text = item["changefreq"]
         SubElement(url_el, "priority").text = item["priority"]
+        for image in item.get("images", []):
+            image_el = SubElement(url_el, "image:image")
+            SubElement(image_el, "image:loc").text = image
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + tostring(urlset, encoding="unicode")
 
 

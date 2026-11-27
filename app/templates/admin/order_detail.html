@@ -1,0 +1,89 @@
+{% extends "admin/base.html" %}{% from "admin/_status.html" import status as st %}{% block title %}{{ order.order_number }}{% endblock %}
+{% block content %}
+<p><a href="/admin/orders">← Orders</a></p>
+<div class="a-head"><h1>{{ order.order_number }}</h1><span><span class="a-pill">{{ order.channel }}</span> {{ st(order.status) }}</span></div>
+{% if order.notes %}<div class="a-flash err">{{ order.notes }}</div>{% endif %}
+<div class="a-grid two">
+<section class="a-card">
+  <h2>Items</h2>
+  <table class="a-table"><tbody>
+  {% for i in order.items %}<tr><td>{{ i.product_name }}<br><span class="a-muted">{{ i.sku }} {{ i.colour }} {{ i.size }}</span></td><td>× {{ i.quantity }}</td><td class="r">{{ money(i.unit_price_pence * i.quantity) }}</td></tr>{% endfor %}
+  <tr><td colspan="2">Items</td><td class="r">{{ money(order.subtotal_pence) }}</td></tr>
+  {% if order.discount_pence %}<tr><td colspan="2">Discount {{ order.promo_code }}</td><td class="r">−{{ money(order.discount_pence) }}</td></tr>{% endif %}
+  <tr><td colspan="2">Delivery charged</td><td class="r">{{ money(order.shipping_pence) }}</td></tr>
+  <tr><th colspan="2">Total paid</th><th class="r">{{ money(order.total_pence) }}</th></tr>
+  {% if order.refunded_pence %}<tr><td colspan="2">Refunded</td><td class="r neg">−{{ money(order.refunded_pence) }}</td></tr>{% endif %}
+  </tbody></table>
+  <h2>Profit on this order</h2>
+  <table class="a-table compact"><tbody>
+    <tr><td>Item cost</td><td class="r">{{ money(cogs) }}</td></tr>
+    <tr><td>Stripe fee</td><td class="r">{{ money(order.payment_fee_pence) }}{% if order.payment_fee_pence is none %} <span class="a-muted">(pending)</span>{% endif %}</td></tr>
+    {% if order.channel != 'druvo.uk' %}<tr><td>Marketplace commission{% if order.fee_status != 'actual' %} <span class="a-pill warn">estimated</span>{% endif %}</td><td class="r">{{ money(order.marketplace_fee_pence) }}</td></tr>{% endif %}
+    <tr><td>Postage paid</td><td class="r">{{ money(order.postage_cost_pence) }}</td></tr>
+    <tr><td>Packaging</td><td class="r">{{ money(order.packaging_cost_pence) }}</td></tr>
+    <tr><th>Profit</th><th class="r {{ 'neg' if profit < 0 else 'pos' }}">{{ money(profit) }}</th></tr>
+  </tbody></table>
+  <form method="post" action="/admin/orders/{{ order.order_number }}/costs" class="a-form inline">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <label>Postage paid £<input name="postage_cost" inputmode="decimal" value="{{ '%.2f'|format(order.postage_cost_pence/100) }}"></label>
+    <label>Packaging £<input name="packaging_cost" inputmode="decimal" value="{{ '%.2f'|format(order.packaging_cost_pence/100) }}"></label>
+    <button class="a-btn">Save costs</button>
+  </form>
+</section>
+<section class="a-card">
+  <h2>Customer</h2>
+  <p>{{ order.name }}<br><a href="mailto:{{ order.email }}">{{ order.email }}</a>{% if order.phone %}<br>{{ order.phone }}{% endif %}</p>
+  {% set a = order.shipping_address or {} %}
+  {% if a.line1 %}<h2>Ship to</h2><p class="a-address">{{ a.name }}<br>{{ a.line1 }}{% if a.line2 %}<br>{{ a.line2 }}{% endif %}<br>{{ a.city }}<br><strong>{{ a.postal_code }}</strong></p>{% endif %}
+  {% if order.dispatch_by %}<p><strong>Dispatch by {{ order.dispatch_by.strftime('%a %d %b') }}</strong></p>{% endif %}
+  {% if order.external_order_id %}<p class="a-muted">{{ order.channel }} order {{ order.external_order_id }}</p>{% endif %}
+  <p class="a-muted">Paid {{ order.paid_at.strftime('%d %b %Y %H:%M') if order.paid_at else '—' }} · {{ order.payment_method_type or 'card' }}{% if order.stripe_payment_intent_id %} · {{ order.stripe_payment_intent_id }}{% endif %}</p>
+  {% if order.status == 'paid' %}
+  <form method="post" action="/admin/orders/{{ order.order_number }}/packed"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn">Mark packed</button></form>
+  {% endif %}
+  {% if order.status in ('paid', 'packed') %}
+  <h2>Dispatch</h2>
+  <form method="post" action="/admin/orders/{{ order.order_number }}/dispatch" class="a-form">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <label>Carrier<select name="carrier">{% for c in carriers %}<option>{{ c }}</option>{% endfor %}</select></label>
+    <label>If "Other", carrier name<input name="carrier_other"></label>
+    <label>Tracking number<input name="tracking_number" autocomplete="off"></label>
+    <label>Tracking link (optional, https://…)<input name="tracking_url" type="url"></label>
+    <label>Postage paid £<input name="postage_cost" inputmode="decimal"></label>
+    <button class="a-btn primary">Dispatch &amp; email customer</button>
+  </form>
+  {% elif order.tracking_number or order.carrier %}
+  <h2>Tracking</h2><p>{{ order.carrier }} {{ order.tracking_number }}{% if order.tracking_url %} · <a href="{{ order.tracking_url }}" rel="noopener" target="_blank">Track</a>{% endif %}<br><span class="a-muted">Dispatched {{ order.shipped_at.strftime('%d %b %Y') if order.shipped_at else '' }}</span></p>
+  {% endif %}
+  {% if order.status == 'shipped' %}
+  <form method="post" action="/admin/orders/{{ order.order_number }}/delivered"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn">Mark delivered</button></form>
+  {% endif %}
+  {% if return_request %}
+  <h2>Customer return</h2>
+  <p><strong>{{ return_request.status | capitalize }}</strong> · started {{ return_request.created_at.strftime('%d %b %Y') }}{% if return_request.reason %} · “{{ return_request.reason }}”{% endif %}{% if return_request.received_at %}<br><span class="a-muted">Received {{ return_request.received_at.strftime('%d %b %Y') }}</span>{% endif %}</p>
+  {% if return_request.status == 'requested' %}
+  <form method="post" action="/admin/orders/{{ order.order_number }}/return-received" class="a-form inline"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn">Return received</button></form>
+  <form method="post" action="/admin/orders/{{ order.order_number }}/return-rejected" class="a-form inline"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><button class="a-btn">Reject return</button></form>
+  {% endif %}
+  {% if return_request.status in ('requested', 'received') %}<p class="a-muted">Refund within 14 days of receiving the item: use Refund below and tick “put it back in stock”.</p>{% endif %}
+  {% endif %}
+  {% if order.stripe_payment_intent_id and order.refunded_pence < order.total_pence %}
+  <h2>Refund / return</h2>
+  <form method="post" action="/admin/orders/{{ order.order_number }}/refund" class="a-form">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <label>Amount £ (leave blank for the full remaining {{ money(order.total_pence - order.refunded_pence) }})<input name="amount" inputmode="decimal"></label>
+    <label>Reason (shown to customer)<input name="reason" maxlength="300"></label>
+    <label class="a-check"><input type="checkbox" name="restock" value="1"> Item returned — put it back in stock</label>
+    <label class="a-check"><input type="checkbox" name="confirm" value="1" required> I confirm this refund{% if test_mode %} (test mode){% endif %}</label>
+    <button class="a-btn danger">Issue refund</button>
+  </form>
+  {% endif %}
+  {% if refunds %}<h2>Refunds</h2><ul>{% for r in refunds %}<li>{{ money(r.amount_pence) }} · {{ r.created_at.strftime('%d %b %Y') }} · {{ r.reason }}{% if r.restocked %} · restocked{% endif %}</li>{% endfor %}</ul>{% endif %}
+</section>
+</div>
+<section class="a-card">
+  <h2>History &amp; notes</h2>
+  <form method="post" action="/admin/orders/{{ order.order_number }}/note" class="a-form inline"><input type="hidden" name="csrf" value="{{ admin.csrf }}"><input name="note" placeholder="Add an internal note" maxlength="1000"><button class="a-btn">Add</button></form>
+  <ul class="a-timeline">{% for h in history %}<li><span class="a-muted">{{ h.created_at.strftime('%d %b %H:%M') }} · {{ h.actor }}</span> {{ h.action.replace('order.', '') }}{% if h.details.note %}: {{ h.details.note }}{% endif %}{% if h.details.tracking %} {{ h.details.tracking }}{% endif %}</li>{% endfor %}</ul>
+</section>
+{% endblock %}

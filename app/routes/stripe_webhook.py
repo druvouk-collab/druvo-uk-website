@@ -6,15 +6,19 @@ import logging
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
+from app.config import get_settings
 from app.lib.druvo_api.errors import CatalogApiError
+from app.services.db_checkout import BasketLine, CheckoutError, DbCheckoutService, OutOfStockError
 from app.services.order_service import CheckoutLine, WebsiteOrderService
 from app.services.stripe_service import StripeCheckoutService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["stripe"])
 stripe_checkout = StripeCheckoutService()
+db_checkout = DbCheckoutService()
 orders = WebsiteOrderService()
 
 
@@ -29,11 +33,30 @@ class PaymentSessionPayload(BaseModel):
     customer_email: str
     customer_name: str = ""
     external_order_id: str = ""
+    phone: str = ""
+    promo_code: str = ""
     lines: list[CheckoutLinePayload]
 
 
 @router.post("/api/checkout/payment-session")
 async def create_payment_session(payload: PaymentSessionPayload) -> dict:
+    if get_settings().db_payments_enabled:
+        try:
+            return await run_in_threadpool(
+                db_checkout.create_checkout,
+                customer_email=payload.customer_email,
+                customer_name=payload.customer_name,
+                phone=payload.phone,
+                idempotency_key=payload.external_order_id,
+                promo_code=payload.promo_code,
+                lines=[BasketLine(sku=line.sku, quantity=line.quantity) for line in payload.lines],
+            )
+        except OutOfStockError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except CheckoutError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
     if not stripe_checkout.enabled:
         raise HTTPException(
             status_code=503,
@@ -62,6 +85,28 @@ async def create_payment_session(payload: PaymentSessionPayload) -> dict:
 
 @router.post("/webhooks/stripe")
 async def stripe_webhook(request: Request) -> dict:
+    if get_settings().database_enabled:
+        payload = await request.body()
+        signature = request.headers.get("stripe-signature", "")
+        try:
+            event = db_checkout.verify_event(payload, signature)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        try:
+            return await run_in_threadpool(db_checkout.handle_event, event)
+        except LookupError as exc:
+            logger.warning("Stripe webhook for unknown order: %s", exc)
+            raise HTTPException(status_code=404, detail="Order not found.") from exc
+        except Exception as exc:
+            logger.exception("Stripe webhook processing failed")
+            from app.services.alerts import send_alert
+
+            send_alert("stripe-webhook-failure", "Payment webhook failed",
+                       f"Stripe event {getattr(event, 'id', None) or event.get('id')} could not be processed "
+                       f"({type(exc).__name__}). Stripe will retry automatically; check the admin dashboard.")
+            raise HTTPException(status_code=500, detail="Webhook processing failed.") from exc
     if not stripe_checkout._settings.stripe_webhook_secret:
         raise HTTPException(status_code=503, detail="Stripe webhook secret is not configured.")
     payload = await request.body()

@@ -1,0 +1,5 @@
+{{ order.name }} ({{ order.email }}) started a return for order {{ order.order_number }}.
+Reason: {{ return_request.reason or "not given" }}
+
+{% include "_items.txt" %}
+When the parcel arrives: DRUVO Manager > Orders > {{ order.order_number }} > Return received, then Refund (tick restock). Refund within 14 days of receiving it.

@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}{% from "admin/_status.html" import status as st %}{% block title %}Customer{% endblock %}
+{% block content %}
+<p><a href="/admin/customers">← Customers</a></p>
+<h1>{{ customer.name or customer.email }}</h1>
+<div class="a-grid two">
+<section class="a-card">
+  <p><a href="mailto:{{ customer.email }}">{{ customer.email }}</a>{% if customer.phone %}<br>{{ customer.phone }}{% endif %}<br>
+  <span class="a-muted">Customer since {{ customer.created_at.strftime('%d %b %Y') }} · Marketing emails: {{ 'yes' if customer.marketing_opt_in else 'no' }}</span></p>
+  <h2>Orders</h2>
+  <table class="a-table"><tbody>{% for o in orders %}<tr><td><a href="/admin/orders/{{ o.order_number }}">{{ o.order_number }}</a></td><td>{{ st(o.status) }}</td><td class="r">{{ money(o.total_pence) }}</td></tr>{% else %}<tr><td class="a-muted">No orders.</td></tr>{% endfor %}</tbody></table>
+</section>
+<section class="a-card">
+  <h2>Data protection (UK GDPR)</h2>
+  <p><a class="a-btn" href="/admin/customers/{{ customer.id }}/export.json">Download their data (subject access request)</a></p>
+  <form method="post" action="/admin/customers/{{ customer.id }}/erase" class="a-form">
+    <input type="hidden" name="csrf" value="{{ admin.csrf }}">
+    <p class="a-muted">Erasure removes name, email, phone and addresses. Order amounts stay for your accounts (HMRC requires records for 6 years).</p>
+    <label>Type ERASE to confirm<input name="confirm" autocomplete="off"></label>
+    <button class="a-btn danger">Erase personal data</button>
+  </form>
+</section>
+</div>
+{% endblock %}

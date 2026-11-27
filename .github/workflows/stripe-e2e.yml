@@ -1,0 +1,149 @@
+# Free staging run of the complete customer journey in Stripe TEST mode. No real money moves.
+#
+# The GitHub runner is the staging server: the shop runs from this branch with its own throwaway
+# PostgreSQL database (never the live one), Stripe in test mode, and Resend's test inbox. Steps:
+# browse → basket → pay with card 4242 → confirmation emails → track order → /admin sign-in with 2-step
+# code → dispatch → return → refund (real Stripe test refund) → stock restored → two buyers race for the
+# last item → expired checkout releases stock. See scripts/staging_journey.py. Results + screenshots are
+# saved as an artifact.
+#
+# Job "rehearsal" runs every time with a stand-in Stripe (tests/fake_stripe.py) and needs no keys.
+# Job "checkout" uses the real Stripe test mode once the owner adds (GitHub → repo → Settings → Secrets
+# and variables → Actions):
+#   STRIPE_TEST_SECRET_KEY       sk_test_...  (Stripe Dashboard → Developers → API keys, TEST mode)
+#   STRIPE_TEST_PUBLISHABLE_KEY  pk_test_...
+#   RESEND_API_KEY (optional)    emails go only to Resend's test inbox delivered@resend.dev
+# The job refuses to run with a live key.
+name: Stripe test checkout
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["develop/**", "ops/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: druvo
+          POSTGRES_PASSWORD: druvo
+          POSTGRES_DB: druvo
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://druvo:druvo@localhost:5432/druvo
+      CATALOG_SOURCE: db
+      SITE_URL: http://127.0.0.1:8080
+      PRODUCTION_MODE: "false"
+      CHAT_ENABLED: "false"
+      SESSION_SECRET: ci-only-not-a-secret-0123456789abcdef
+      STRIPE_SECRET_KEY: sk_test_rehearsal_only
+      STRIPE_PUBLISHABLE_KEY: pk_test_rehearsal_only
+      STRIPE_WEBHOOK_SECRET: whsec_rehearsal_only
+      STRIPE_API_BASE: http://127.0.0.1:12111
+      RESEND_API_KEY: re_rehearsal_only
+      ADMIN_SETUP_TOKEN: ci-only-setup-token-0123456789
+      PAY_MODE: fake
+      APP_LOG: app.log
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Full journey against the stand-in Stripe
+        run: |
+          python -m alembic upgrade head && python -m app.db.catalog_repo --if-empty
+          nohup python tests/fake_stripe.py 12111 http://127.0.0.1:8080/webhooks/stripe "$STRIPE_WEBHOOK_SECRET" > fake.log 2>&1 &
+          nohup python tests/fake_stripe.py --serve-app 12111 > app.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8080/health && break; sleep 2; done
+          python scripts/staging_journey.py http://127.0.0.1:8080 "postgresql+psycopg://druvo:druvo@localhost:5432/druvo"
+      - name: Logs
+        if: failure()
+        run: tail -80 app.log
+
+  checkout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: druvo
+          POSTGRES_PASSWORD: druvo
+          POSTGRES_DB: druvo
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+      STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_TEST_PUBLISHABLE_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      DATABASE_URL: postgresql://druvo:druvo@localhost:5432/druvo
+      CATALOG_SOURCE: db
+      SITE_URL: http://127.0.0.1:8080
+      PRODUCTION_MODE: "false"
+      CHAT_ENABLED: "false"
+      SESSION_SECRET: ci-only-not-a-secret-0123456789abcdef
+      # Resend test inbox only — works before druvo.uk is verified in Resend, reaches no real person.
+      SHOP_NOTIFICATION_EMAIL: delivered+shop@resend.dev
+      EMAIL_FROM: DRUVO UK staging <onboarding@resend.dev>
+      JOURNEY_EMAIL: delivered@resend.dev
+      ADMIN_SETUP_TOKEN: ci-only-setup-token-0123456789
+      JOURNEY_OUT: stripe-e2e
+      APP_LOG: app.log
+    steps:
+      - name: Skip unless Stripe test keys are configured
+        id: keys
+        run: |
+          case "$STRIPE_SECRET_KEY" in
+            sk_test_*) echo "ok=true" >> "$GITHUB_OUTPUT" ;;
+            sk_live_*) echo "::error::A LIVE Stripe key was given. Use the TEST key (sk_test_...)."; exit 1 ;;
+            *) echo "::notice::Stripe test keys not set yet — see the comment at the top of this file."; echo "ok=false" >> "$GITHUB_OUTPUT"
+               { echo "## Real Stripe test-mode journey: NOT RUN"; echo
+                 echo "Add the repository secrets \`STRIPE_TEST_SECRET_KEY\` and \`STRIPE_TEST_PUBLISHABLE_KEY\`"
+                 echo "(Settings → Secrets and variables → Actions), then re-run this workflow."; } >> "$GITHUB_STEP_SUMMARY" ;;
+          esac
+      - uses: actions/checkout@v4
+        if: steps.keys.outputs.ok == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.keys.outputs.ok == 'true'
+        with:
+          python-version: "3.12"
+      - name: Install
+        if: steps.keys.outputs.ok == 'true'
+        run: |
+          pip install -r requirements.txt playwright==1.49.1
+          python -m playwright install --with-deps chromium
+          curl -sL https://github.com/stripe/stripe-cli/releases/download/v1.21.8/stripe_1.21.8_linux_x86_64.tar.gz | tar xz -C /usr/local/bin stripe
+      - name: Start Stripe webhook forwarding and the shop
+        if: steps.keys.outputs.ok == 'true'
+        run: |
+          export STRIPE_WEBHOOK_SECRET=$(stripe listen --api-key "$STRIPE_SECRET_KEY" --print-secret)
+          echo "::add-mask::$STRIPE_WEBHOOK_SECRET"
+          echo "STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET" >> "$GITHUB_ENV"
+          nohup stripe listen --api-key "$STRIPE_SECRET_KEY" \
+            --events checkout.session.completed,checkout.session.expired,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,charge.refunded \
+            --forward-to http://127.0.0.1:8080/webhooks/stripe > stripe-listen.log 2>&1 &
+          PORT=8080 HOST=127.0.0.1 nohup bash scripts/start.sh > app.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8080/health && break; sleep 2; done
+      - name: Complete customer journey (Stripe test mode)
+        if: steps.keys.outputs.ok == 'true'
+        run: python scripts/staging_journey.py http://127.0.0.1:8080 "postgresql+psycopg://druvo:druvo@localhost:5432/druvo"
+      - name: Logs
+        if: always() && steps.keys.outputs.ok == 'true'
+        run: |
+          echo "--- Stripe CLI"; tail -40 stripe-listen.log || true
+          echo "--- App (emails, webhooks)"; grep -iE "email|webhook|order|error" app.log | tail -60 || true
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.keys.outputs.ok == 'true'
+        with:
+          name: stripe-e2e
+          path: stripe-e2e/
+          retention-days: 14

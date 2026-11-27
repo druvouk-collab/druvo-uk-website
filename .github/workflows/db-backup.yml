@@ -1,0 +1,57 @@
+# Nightly encrypted PostgreSQL backup (free GitHub Actions minutes; no paid backup service).
+#
+# One-time setup (repo → Settings → Secrets and variables → Actions → New repository secret):
+#   BACKUP_DATABASE_URL  – the database's EXTERNAL connection string (Render → Postgres → Connect → External)
+#   BACKUP_PASSPHRASE    – a long random passphrase; store it in your password manager too
+# Backups are encrypted with AES-256 (gpg) before upload and kept as workflow artifacts for 7 days.
+# Restore: download the artifact, then
+#   gpg --decrypt druvo-YYYYMMDD.dump.gpg > druvo.dump && pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" druvo.dump
+# Restore round trip verified 24 Nov 2026 (encrypted dump → decrypt → restore → identical row counts).
+name: Database backup
+
+on:
+  schedule:
+    - cron: "17 2 * * *"   # 02:17 UTC daily
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check secrets are configured
+        id: check
+        env:
+          DB: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$PASS" ]; then
+            echo "Backup secrets not configured yet — skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Dump and encrypt
+        if: steps.check.outputs.skip != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y%m%d)
+          docker run --rm -e DATABASE_URL postgres:17 \
+            sh -c 'pg_dump --format=custom --no-owner --no-privileges "$DATABASE_URL"' > "druvo-$stamp.dump"
+          test -s "druvo-$stamp.dump"
+          gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase-fd 0 \
+            --output "druvo-$stamp.dump.gpg" "druvo-$stamp.dump" <<< "$BACKUP_PASSPHRASE"
+          rm "druvo-$stamp.dump"
+          ls -la druvo-*.gpg
+      - name: Upload encrypted backup
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: druvo-db-backup
+          path: druvo-*.dump.gpg
+          retention-days: 7  # GitHub Free includes ~500 MB of artifact storage; 7 nightly copies fit comfortably
+          if-no-files-found: error

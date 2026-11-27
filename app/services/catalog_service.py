@@ -53,17 +53,23 @@ class CatalogService:
     def _local_catalog(self):
         if self._settings.catalog_source == "static":
             return static_catalog
+        if self._settings.catalog_source == "db":
+            from app.db import catalog_repo
+
+            return catalog_repo
         return mock_catalog
 
     async def load_snapshot(self, filters: CatalogFilters | None = None) -> CatalogSnapshot:
         filters = filters or CatalogFilters()
         if not self.uses_live_api:
             source = self._local_catalog
-            products = self._apply_filters(source.all_products(), filters)
-            return CatalogSnapshot(
-                products=products,
-                categories=source.all_categories(),
-            )
+            try:
+                products = self._apply_filters(source.all_products(), filters)
+                categories = source.all_categories()
+            except Exception:
+                logger.exception("Catalogue database unavailable")
+                return CatalogSnapshot(degraded=True, notice=_DEGRADED_NOTICE)
+            return CatalogSnapshot(products=products, categories=categories)
 
         client = DruvoApiClient.from_settings(self._settings)
         try:
@@ -90,7 +96,11 @@ class CatalogService:
 
     async def get_product(self, slug: str) -> Product | None:
         if not self.uses_live_api:
-            return self._local_catalog.get_product(slug)
+            try:
+                return self._local_catalog.get_product(slug)
+            except Exception:
+                logger.exception("Catalogue database unavailable")
+                return None
 
         client = DruvoApiClient.from_settings(self._settings)
         try:

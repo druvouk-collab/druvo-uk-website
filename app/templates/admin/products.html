@@ -1,0 +1,20 @@
+{% extends "admin/base.html" %}{% block title %}Products{% endblock %}
+{% block content %}
+<div class="a-head"><h1>Products</h1><a class="a-btn primary" href="/admin/products/new">+ Add product</a></div>
+<form class="a-filters" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Name or brand">
+  <select name="status"><option value="">All</option>{% for s in ['live','draft','archived'] %}<option {% if status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+  <button class="a-btn">Filter</button>
+</form>
+<div class="a-products">
+{% for p in products %}
+  <a class="a-product" href="/admin/products/{{ p.id }}">
+    <img src="{{ (p.images[0].url if p.images else '/static/images/placeholder-product.svg') }}" alt="" loading="lazy" width="80" height="80">
+    <span><strong>{{ p.name }}</strong><br><span class="a-muted">{{ p.brand }} · {{ p.variants|length }} variant{{ '' if p.variants|length == 1 else 's' }}</span><br>
+    <span class="a-status s-{{ 'paid' if p.status == 'live' else ('cancelled' if p.status == 'archived' else 'pending_payment') }}">{{ p.status }}</span>
+    {% set stock = p.variants|sum(attribute='stock_quantity') %}<span class="a-pill {{ 'warn' if stock == 0 else '' }}">{{ stock }} in stock</span>
+    {% if p.variants %}<span class="a-pill">{{ money(p.variants|map(attribute='price_pence')|min) }}</span>{% endif %}</span>
+  </a>
+{% else %}<p class="a-muted">No products yet.</p>{% endfor %}
+</div>
+{% endblock %}
