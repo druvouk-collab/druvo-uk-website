@@ -228,9 +228,9 @@ def _pay_steps(page, slug: str) -> None:
 
     def fill_if_shown(selector: str, value: str) -> None:
         loc = find(selector)
-        if loc is not None and not loc.input_value():
-            loc.fill(value)
-            loc.press("Escape")  # close any address suggestions list
+        if loc is not None and not loc.input_value(timeout=5000):
+            loc.fill(value, timeout=10000)
+            loc.press("Escape", timeout=5000)  # close any address suggestions list
 
     # Pay in pounds like a UK customer (Stripe offers its own currency conversion to foreign visitors).
     for frame in page.frames:  # the currency radio buttons are visually hidden, so don't require visibility
@@ -246,8 +246,11 @@ def _pay_steps(page, slug: str) -> None:
                 print("Could not switch Stripe's currency selector:", type(exc).__name__)
             break
     country = find("#shippingAddress-countryInput, #shippingCountry")
-    if country is not None:
-        country.select_option("GB")
+    if country is not None and country.input_value() != "GB":
+        try:  # GB is the only allowed country, so Stripe usually pre-selects and locks it
+            country.select_option("GB", timeout=5000)
+        except Exception as exc:  # noqa: BLE001
+            print("Country selector left as Stripe set it:", type(exc).__name__)
     for selector, value in (("#linkAuthentication-emailInput, #email", EMAIL),
                             ("#shippingAddress-nameInput, #shippingName", "Test Customer"),
                             ("#shippingAddress-addressLine1Input, #shippingAddressLine1", "1 Test Street"),
