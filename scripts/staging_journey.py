@@ -149,41 +149,68 @@ def pay_in_browser(slug: str) -> None:
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
-        page.route("https://druvo.uk/**", lambda route: route.fulfill(status=200, body="redirected"))
-        page.goto(f"{APP}/product/{slug}", wait_until="networkidle")
-        page.click("[data-add-to-cart]")
-        page.wait_for_timeout(800)
-        page.goto(f"{APP}/checkout", wait_until="networkidle")
-        page.fill("#email", EMAIL)
-        page.fill("#first-name", "Test")
-        page.fill("#last-name", "Customer")
-        page.fill("#address", "1 Test Street")
-        page.fill("#city", "Manchester")
-        page.fill("#postcode", "M1 1AA")
-        page.screenshot(path=str(OUT / "1-checkout-form.png"), full_page=True)
-        page.click("#place-order")
-        page.wait_for_url("https://checkout.stripe.com/**", timeout=60000)
-        page.wait_for_load_state("networkidle")
-        page.screenshot(path=str(OUT / "2-stripe-checkout.png"), full_page=True)
-        card_tab = page.locator("[data-testid='card-accordion-item-button'], button:has-text('Card')")
-        if card_tab.count() and card_tab.first.is_visible():
-            card_tab.first.click()
-        page.fill("#cardNumber", "4242 4242 4242 4242")
-        page.fill("#cardExpiry", "12 / 34")
-        page.fill("#cardCvc", "123")
-        if page.locator("#billingName").count():
-            page.fill("#billingName", "Test Customer")
-        for field, value in (("#shippingName", "Test Customer"), ("#shippingAddressLine1", "1 Test Street"),
-                             ("#shippingLocality", "Manchester"), ("#shippingPostalCode", "M1 1AA"),
-                             ("#billingPostalCode", "M1 1AA"), ("#phoneNumber", "07700900123")):
-            loc = page.locator(field)
-            if loc.count() and loc.is_visible() and not loc.input_value():
-                loc.fill(value)
-        page.screenshot(path=str(OUT / "3-card-entered.png"), full_page=True)
-        page.click(".SubmitButton, button[type=submit]")
-        page.wait_for_url(lambda url: "checkout.stripe.com" not in url, timeout=90000)
-        browser.close()
+        page = browser.new_page(viewport={"width": 1280, "height": 900}, locale="en-GB")
+        try:
+            _pay_steps(page, slug)
+        except Exception:
+            # Stripe sometimes changes its page: keep evidence so the fix is quick.
+            page.screenshot(path=str(OUT / "error.png"), full_page=True)
+            ids = page.eval_on_selector_all("input, select, button", "els => els.filter(e => e.offsetParent)"
+                                            ".map(e => e.tagName + '#' + (e.id || e.name || e.textContent.trim().slice(0, 30)))")
+            print("Visible fields on the failing page:", ids)
+            print("URL:", page.url.split("?")[0])
+            raise
+        finally:
+            browser.close()
+
+
+def _pay_steps(page, slug: str) -> None:
+    # On the shop: product page → basket → checkout form.
+    page.goto(f"{APP}/product/{slug}", wait_until="networkidle")
+    page.click("[data-add-to-cart]")
+    page.wait_for_timeout(800)
+    page.goto(f"{APP}/checkout", wait_until="networkidle")
+    # Database mode asks only for contact details here (Stripe collects the address); the older form also had
+    # address fields, so fill whichever are on the page.
+    for selector, value in (("#email", EMAIL), ("#phone", "07700900123"), ("#first-name", "Test"),
+                            ("#last-name", "Customer"), ("#address", "1 Test Street"), ("#city", "Manchester"),
+                            ("#postcode", "M1 1AA")):
+        loc = page.locator(selector)
+        if loc.count() and loc.first.is_visible():
+            loc.first.fill(value)
+    page.screenshot(path=str(OUT / "1-checkout-form.png"), full_page=True)
+    page.click("#place-order")
+
+    # On Stripe's hosted page (test mode): delivery address, phone, then the 4242 test card.
+    page.wait_for_url("https://checkout.stripe.com/**", timeout=60000)
+    page.wait_for_load_state("networkidle")
+    page.screenshot(path=str(OUT / "2-stripe-checkout.png"), full_page=True)
+
+    def fill_if_shown(selector: str, value: str) -> None:
+        loc = page.locator(selector)
+        if loc.count() and loc.first.is_visible() and not loc.first.input_value():
+            loc.first.fill(value)
+            page.keyboard.press("Escape")  # close any address suggestions list
+
+    country = page.locator("#shippingCountry")
+    if country.count() and country.is_visible():
+        country.select_option("GB")
+    for selector, value in (("#shippingName", "Test Customer"), ("#shippingAddressLine1", "1 Test Street"),
+                            ("#shippingLocality", "Manchester"), ("#shippingPostalCode", "M1 1AA"),
+                            ("#phoneNumber", "07700900123")):
+        fill_if_shown(selector, value)
+    card_tab = page.locator("[data-testid='card-accordion-item-button'], button:has-text('Card')")
+    if card_tab.count() and card_tab.first.is_visible():
+        card_tab.first.click()
+    page.fill("#cardNumber", "4242 4242 4242 4242")
+    page.fill("#cardExpiry", "12 / 34")
+    page.fill("#cardCvc", "123")
+    fill_if_shown("#billingName", "Test Customer")
+    fill_if_shown("#billingPostalCode", "M1 1AA")
+    page.screenshot(path=str(OUT / "3-card-entered.png"), full_page=True)
+    page.click(".SubmitButton, button[type=submit]")
+    page.wait_for_url(lambda url: "checkout.stripe.com" not in url, timeout=90000)
+    page.screenshot(path=str(OUT / "4-back-on-shop.png"), full_page=True)
 
 
 def pay_fake(slug: str, sku: str, price: float) -> None:
@@ -316,9 +343,29 @@ def main() -> int:
 
 def summary() -> int:
     failed = [r for r in results if not r[1]]
+    real = PAY_MODE == "browser" and not os.environ.get("STRIPE_API_BASE")
+    services = [
+        ("Stripe API (checkout, refunds, expiry)", "REAL — Stripe test mode" if real else "SIMULATED — tests/fake_stripe.py"),
+        ("Stripe hosted payment page + test card 4242", "REAL — Chromium on checkout.stripe.com" if real else "SIMULATED — no browser"),
+        ("Stripe webhooks", "REAL — sent by Stripe, forwarded by Stripe CLI, signature checked" if real
+         else "SIMULATED — signed by the stand-in, signature checked"),
+        ("Emails", ("REAL — Resend API, test inbox delivered@resend.dev" if real else "SIMULATED — stand-in Resend")
+         if EMAILS_ON else "NOT TESTED — no RESEND_API_KEY"),
+        ("Shop, /admin with 2-step sign-in, PostgreSQL 16", "REAL — this branch, throwaway database (not druvo.uk)"),
+    ]
     lines = [f"{'PASS' if ok else 'FAIL'}  {name}{(' — ' + d) if d else ''}" for name, ok, d in results]
-    (OUT / "results.txt").write_text("\n".join(lines) + "\n")
+    (OUT / "results.txt").write_text("\n".join(lines) + "\n\n" + "\n".join(f"{a}: {b}" for a, b in services) + "\n")
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed")
+    for a, b in services:
+        print(f"  {a}: {b}")
+    step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if step_summary:
+        with open(step_summary, "a") as fh:
+            fh.write(f"## Customer journey — {len(results) - len(failed)}/{len(results)} checks passed\n\n")
+            fh.write("| Result | Check |\n|---|---|\n")
+            fh.writelines(f"| {'✅' if ok else '❌'} | {name}{(' — ' + d) if d else ''} |\n" for name, ok, d in results)
+            fh.write("\n| Service | How it was tested |\n|---|---|\n")
+            fh.writelines(f"| {a} | {b} |\n" for a, b in services)
     return 1 if failed else 0
 
 

@@ -103,7 +103,10 @@ jobs:
           case "$STRIPE_SECRET_KEY" in
             sk_test_*) echo "ok=true" >> "$GITHUB_OUTPUT" ;;
             sk_live_*) echo "::error::A LIVE Stripe key was given. Use the TEST key (sk_test_...)."; exit 1 ;;
-            *) echo "::notice::Stripe test keys not set yet — see the comment at the top of this file."; echo "ok=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::notice::Stripe test keys not set yet — see the comment at the top of this file."; echo "ok=false" >> "$GITHUB_OUTPUT"
+               { echo "## Real Stripe test-mode journey: NOT RUN"; echo
+                 echo "Add the repository secrets \`STRIPE_TEST_SECRET_KEY\` and \`STRIPE_TEST_PUBLISHABLE_KEY\`"
+                 echo "(Settings → Secrets and variables → Actions), then re-run this workflow."; } >> "$GITHUB_STEP_SUMMARY" ;;
           esac
       - uses: actions/checkout@v4
         if: steps.keys.outputs.ok == 'true'
