@@ -191,6 +191,10 @@ in 36 h, so Render Free sleeps; hourly full check never fired. PR #9 (→ main, 
 feed `g:` prefix, noindex for *.onrender.com. develop: `scripts/staging_journey.py` (full journey incl.
 /admin 2FA, real refund, last-item race, Stripe expiry) — 18/18 in CI with `tests/fake_stripe.py`; real Stripe
 run waits for keys. `docs/STAGING.md`: staging settings, launch and rollback. Draft launch PR #10. 355 tests.
+Later (session 12b): PR #9 reviewed (scope, feed validity, druvo.uk indexable, red monitor = live old feed),
+X-Robots-Tag guard added to the site check. Real-browser step fixed for the database-mode checkout form (no
+address fields) after driving Chrome locally; run summary lists real vs simulated services. Stripe test
+secrets still missing at 20:30, so the real Stripe run has not happened yet.
 
 ### 26 Nov 2026 (session 11)
 Live (PR #7, #8): UK-compliant returns/delivery/terms/privacy; £6.99 Express removed (never offered at checkout);
